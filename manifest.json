@@ -2,7 +2,7 @@
   "name": "ManLore - Ton Codex Visuel",
   "short_name": "ManLore",
   "description": "Ton lore personnel pour Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#6c5ce7",
