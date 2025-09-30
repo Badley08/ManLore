@@ -3,7 +3,7 @@
 let items = [];
 let currentEditId = null;
 let allGenres = new Set();
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.22';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -311,9 +311,13 @@ function openEditModal(id) {
     
     setRating(item.rating || 0);
     
+    // Show image preview if exists
     if (item.image) {
-        document.getElementById('imagePreviewImg').src = item.image;
+        const imgElement = document.getElementById('imagePreviewImg');
+        imgElement.src = item.image;
         document.getElementById('imagePreview').style.display = 'block';
+    } else {
+        document.getElementById('imagePreview').style.display = 'none';
     }
     
     document.getElementById('addModal').classList.add('active');
@@ -375,18 +379,35 @@ function handleImageUpload(e) {
     if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-            document.getElementById('imagePreviewImg').src = event.target.result;
+            const imgElement = document.getElementById('imagePreviewImg');
+            imgElement.src = event.target.result;
             document.getElementById('imagePreview').style.display = 'block';
+            // Clear URL input when file is uploaded
+            document.getElementById('itemImage').value = '';
         };
         reader.readAsDataURL(file);
     }
 }
 
 function handleImageUrlChange(e) {
-    const url = e.target.value;
+    const url = e.target.value.trim();
     if (url) {
-        document.getElementById('imagePreviewImg').src = url;
+        const imgElement = document.getElementById('imagePreviewImg');
+        imgElement.src = url;
         document.getElementById('imagePreview').style.display = 'block';
+        
+        // Clear file input when URL is provided
+        document.getElementById('itemImageFile').value = '';
+        
+        // Handle image load error
+        imgElement.onerror = () => {
+            document.getElementById('imagePreview').style.display = 'none';
+            alert('Impossible de charger l\'image. Vérifiez l\'URL.');
+        };
+        
+        imgElement.onload = () => {
+            document.getElementById('imagePreview').style.display = 'block';
+        };
     } else {
         document.getElementById('imagePreview').style.display = 'none';
     }
@@ -436,10 +457,13 @@ function handleFormSubmit(e) {
     const chapters = parseInt(document.getElementById('itemChapters').value) || 0;
     const notes = document.getElementById('itemNotes').value.trim();
     
+    // Get image from preview or URL
     let image = '';
-    const imagePreview = document.getElementById('imagePreviewImg').src;
-    if (imagePreview && imagePreview !== window.location.href) {
-        image = imagePreview;
+    const imagePreviewImg = document.getElementById('imagePreviewImg');
+    if (imagePreviewImg && imagePreviewImg.src && imagePreviewImg.src !== '' && !imagePreviewImg.src.includes('about:blank')) {
+        image = imagePreviewImg.src;
+    } else if (imageUrl) {
+        image = imageUrl;
     }
     
     genres.forEach(genre => allGenres.add(genre));
