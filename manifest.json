@@ -1,0 +1,41 @@
+{
+  "name": "ManLore - Ton Codex Visuel",
+  "short_name": "ManLore",
+  "description": "Ton lore personnel pour Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#6c5ce7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "manlore.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "manlore.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "manlore.png",
+      "sizes": "540x720",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["entertainment", "lifestyle", "books"],
+  "shortcuts": [
+    {
+      "name": "Ajouter un titre",
+      "short_name": "Ajouter",
+      "description": "Ajouter un nouveau manga ou manwha",
+      "url": "/?action=add",
+      "icons": [{ "src": "manlore.png", "sizes": "192x192" }]
+    }
+  ]
+}

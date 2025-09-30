@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags -->
+    <title>ManLore - Ton Codex Visuel, Ton Lore Personnel</title>
+    <meta name="description" content="ManLore - Gérez votre collection de Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels. Votre bibliothèque personnelle de lecture avec système de notation et organisation par catégories.">
+    <meta name="keywords" content="ManLore, manga, manwha, manhua, webtoon, light novel, webnovel, webcomics, tracker, bibliothèque manga, gestionnaire manga, liste lecture">
+    <meta name="author" content="ManLore">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="ManLore - Ton Codex Visuel">
+    <meta property="og:description" content="Gérez votre collection de Manga, Manwha, Manhua, Webtoons et plus encore">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="manlore.png">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ManLore - Ton Codex Visuel">
+    <meta name="twitter:description" content="Ton lore personnel pour Manga, Manwha, Manhua et Webtoons">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ManLore">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="manlore.png">
+    <link rel="apple-touch-icon" href="manlore.png">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo-container">
+                <img src="manlore.png" alt="ManLore Logo" class="logo">
+                <h1 class="site-title">ManLore</h1>
+            </div>
+            <p class="tagline">Ton Codex Visuel, Ton Lore Personnel</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Add Button -->
+            <button class="btn-add" id="openAddModal">
+                <span class="btn-icon">+</span>
+                Ajouter un titre
+            </button>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="filterType">Type:</label>
+                    <select id="filterType" class="filter-select">
+                        <option value="all">Tous</option>
+                        <option value="manga">Manga</option>
+                        <option value="manwha">Manwha</option>
+                        <option value="manhua">Manhua</option>
+                        <option value="webtoon">Webtoon</option>
+                        <option value="light-novel">Light Novel</option>
+                        <option value="webnovel">WebNovel</option>
+                        <option value="webcomic">Webcomic</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterStatus">Statut:</label>
+                    <select id="filterStatus" class="filter-select">
+                        <option value="all">Tous</option>
+                        <option value="reading">En cours</option>
+                        <option value="completed">Terminé</option>
+                        <option value="plan-to-read">À lire</option>
+                        <option value="dropped">Abandonné</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterGenre">Genre:</label>
+                    <select id="filterGenre" class="filter-select">
+                        <option value="all">Tous</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sortBy">Trier par:</label>
+                    <select id="sortBy" class="filter-select">
+                        <option value="date-desc">Date (récent)</option>
+                        <option value="date-asc">Date (ancien)</option>
+                        <option value="title-asc">Titre (A-Z)</option>
+                        <option value="title-desc">Titre (Z-A)</option>
+                        <option value="rating-desc">Note (haute)</option>
+                        <option value="rating-asc">Note (basse)</option>
+                    </select>
+                </div>
+
+                <button class="btn-filter" id="searchToggle">
+                    🔍 Rechercher
+                </button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container" id="searchContainer" style="display: none;">
+                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher un titre...">
+            </div>
+
+            <!-- Stats -->
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">En cours</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">Terminés</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">À lire</div>
+                </div>
+            </div>
+
+            <!-- Items Grid -->
+            <div class="items-grid" id="itemsGrid">
+                <!-- Items will be dynamically inserted here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">📚</div>
+                <h2>Aucun titre ajouté</h2>
+                <p>Commencez à construire votre collection en ajoutant votre premier titre</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Ajouter un titre</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <form id="addForm" class="modal-form">
+                <input type="hidden" id="itemId">
+
+                <div class="form-group">
+                    <label for="itemTitle">Titre *</label>
+                    <input type="text" id="itemTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemType">Type *</label>
+                    <select id="itemType" required>
+                        <option value="manga">Manga</option>
+                        <option value="manwha">Manwha</option>
+                        <option value="manhua">Manhua</option>
+                        <option value="webtoon">Webtoon</option>
+                        <option value="light-novel">Light Novel</option>
+                        <option value="webnovel">WebNovel</option>
+                        <option value="webcomic">Webcomic</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemStatus">Statut *</label>
+                    <select id="itemStatus" required>
+                        <option value="reading">En cours</option>
+                        <option value="completed">Terminé</option>
+                        <option value="plan-to-read">À lire</option>
+                        <option value="dropped">Abandonné</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemRating">Note</label>
+                    <div class="rating-input" id="ratingInput">
+                        <span class="star" data-rating="1">☆</span>
+                        <span class="star" data-rating="2">☆</span>
+                        <span class="star" data-rating="3">☆</span>
+                        <span class="star" data-rating="4">☆</span>
+                        <span class="star" data-rating="5">☆</span>
+                    </div>
+                    <input type="hidden" id="itemRating" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemGenres">Genres (séparés par des virgules)</label>
+                    <input type="text" id="itemGenres" placeholder="Action, Aventure, Fantasy">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemLink">Lien</label>
+                    <input type="url" id="itemLink" placeholder="https://...">
+                    <div class="link-preview" id="linkPreview" style="display: none;">
+                        <img id="linkPreviewImage" src="" alt="Preview">
+                        <div id="linkPreviewTitle"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemImage">Image (URL ou Upload)</label>
+                    <input type="url" id="itemImage" placeholder="https://...">
+                    <input type="file" id="itemImageFile" accept="image/*" style="margin-top: 10px;">
+                    <div class="image-preview" id="imagePreview" style="display: none;">
+                        <img id="imagePreviewImg" src="" alt="Preview">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemChapters">Chapitres lus</label>
+                    <input type="number" id="itemChapters" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemNotes">Notes personnelles</label>
+                    <textarea id="itemNotes" rows="4"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
+                    <button type="submit" class="btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content modal-view">
+            <div class="modal-header">
+                <h2 id="viewTitle"></h2>
+                <button class="modal-close" id="closeViewModal">&times;</button>
+            </div>
+            <div class="modal-body" id="viewContent">
+                <!-- Content will be dynamically inserted -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 ManLore - Ton Codex Visuel</p>
+            <p>Developed by Karlito</p>
+            <a href='https://ko-fi.com/Y8Y31I5HND' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+            <p class="offline-indicator" id="offlineIndicator" style="display: none;">
+                📡 Mode Hors Ligne
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
