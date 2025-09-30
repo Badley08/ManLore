@@ -3,7 +3,7 @@
 let items = [];
 let currentEditId = null;
 let allGenres = new Set();
-const APP_VERSION = '1.0.22';
+const APP_VERSION = '1.0.2';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
