@@ -1,41 +1,128 @@
 {
-  "name": "ManLore - Ton Codex Visuel",
+  "name": "ManLore - Ton Codex Visuel, Ton Lore Personnel",
   "short_name": "ManLore",
-  "description": "Ton lore personnel pour Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels",
+  "description": "Gérez votre collection personnelle de Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels. Organisez, notez et suivez vos lectures avec style.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#6c5ce7",
   "orientation": "portrait-primary",
+  "scope": "./",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["entertainment", "lifestyle", "books", "productivity"],
   "icons": [
     {
-      "src": "manlore.png",
+      "src": "./manlore.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "manlore.png",
+      "src": "./manlore.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./manlore.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./manlore.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "screenshots": [
     {
-      "src": "manlore.png",
+      "src": "./manlore.png",
       "sizes": "540x720",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Interface principale ManLore"
+    },
+    {
+      "src": "./manlore.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vue bureau ManLore"
     }
   ],
-  "categories": ["entertainment", "lifestyle", "books"],
   "shortcuts": [
     {
       "name": "Ajouter un titre",
       "short_name": "Ajouter",
-      "description": "Ajouter un nouveau manga ou manwha",
-      "url": "/?action=add",
-      "icons": [{ "src": "manlore.png", "sizes": "192x192" }]
+      "description": "Ajouter rapidement un nouveau manga ou manwha",
+      "url": "./?action=add",
+      "icons": [
+        {
+          "src": "./manlore.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Ma Collection",
+      "short_name": "Collection",
+      "description": "Voir toute ma collection",
+      "url": "./?view=collection",
+      "icons": [
+        {
+          "src": "./manlore.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "En Cours",
+      "short_name": "Lecture",
+      "description": "Mes titres en cours de lecture",
+      "url": "./?filter=reading",
+      "icons": [
+        {
+          "src": "./manlore.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Statistiques",
+      "short_name": "Stats",
+      "description": "Voir mes statistiques de lecture",
+      "url": "./?view=stats",
+      "icons": [
+        {
+          "src": "./manlore.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "share_target": {
+    "action": "./share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }
