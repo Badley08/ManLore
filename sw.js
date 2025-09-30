@@ -1,5 +1,5 @@
 // Service Worker for ManLore PWA
-const CACHE_NAME = 'manlore-v1';
+const CACHE_NAME = 'manlore-v1.0.1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -36,6 +36,13 @@ self.addEventListener('activate', event => {
     })
   );
   self.clients.claim();
+});
+
+// Handle messages from client
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch Strategy: Cache First, then Network

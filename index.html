@@ -42,6 +42,11 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
+            <button class="hamburger-menu" id="hamburgerMenu" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <div class="logo-container">
                 <img src="manlore.png" alt="ManLore Logo" class="logo">
                 <h1 class="site-title">ManLore</h1>
@@ -49,6 +54,57 @@
             <p class="tagline">Ton Codex Visuel, Ton Lore Personnel</p>
         </div>
     </header>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="manlore.png" alt="ManLore Logo" class="sidebar-logo">
+            <h2>ManLore</h2>
+            <button class="sidebar-close" id="sidebarClose">&times;</button>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="#" id="menuHome">
+                        <span class="menu-icon">🏠</span>
+                        <span>Accueil</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" id="menuStats">
+                        <span class="menu-icon">📊</span>
+                        <span>Statistiques</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" id="menuExport">
+                        <span class="menu-icon">💾</span>
+                        <span>Exporter les données</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" id="menuImport">
+                        <span class="menu-icon">📥</span>
+                        <span>Importer les données</span>
+                    </a>
+                </li>
+                <li class="menu-divider"></li>
+                <li>
+                    <a href="#" id="menuUpdate">
+                        <span class="menu-icon">🔄</span>
+                        <span>Mettre à jour</span>
+                    </a>
+                </li>
+                <li class="menu-info">
+                    <span class="menu-icon">ℹ️</span>
+                    <span>Version <strong id="appVersion">1.0.0</strong></span>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -257,8 +313,6 @@
     <footer class="footer">
         <div class="container">
             <p>&copy; 2025 ManLore - Ton Codex Visuel</p>
-            <p>Developed by Karlito</p>
-            <a href='https://ko-fi.com/Y8Y31I5HND' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
             <p class="offline-indicator" id="offlineIndicator" style="display: none;">
                 📡 Mode Hors Ligne
             </p>

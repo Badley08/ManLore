@@ -3,6 +3,7 @@
 let items = [];
 let currentEditId = null;
 let allGenres = new Set();
+const APP_VERSION = '1.0.1';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,14 +14,45 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStats();
     registerServiceWorker();
     checkOnlineStatus();
+    displayVersion();
+    initSidebar();
 });
 
 // Service Worker Registration
+let deferredPrompt;
+let swRegistration = null;
+
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker enregistré', reg))
+            .then(reg => {
+                console.log('Service Worker enregistré', reg);
+                swRegistration = reg;
+                
+                // Check for updates
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateNotification();
+                        }
+                    });
+                });
+            })
             .catch(err => console.log('Erreur Service Worker', err));
+            
+        // Check for updates every hour
+        setInterval(() => {
+            if (swRegistration) {
+                swRegistration.update();
+            }
+        }, 3600000);
+    }
+}
+
+function showUpdateNotification() {
+    if (confirm('Une nouvelle version de ManLore est disponible ! Voulez-vous mettre à jour maintenant ?')) {
+        updateApp();
     }
 }
 
@@ -102,6 +134,149 @@ function initEventListeners() {
     document.getElementById('viewModal').addEventListener('click', (e) => {
         if (e.target.id === 'viewModal') closeViewModal();
     });
+}
+
+// Sidebar Functions
+function initSidebar() {
+    const hamburger = document.getElementById('hamburgerMenu');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const closeBtn = document.getElementById('sidebarClose');
+    
+    hamburger.addEventListener('click', openSidebar);
+    closeBtn.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    
+    // Menu items
+    document.getElementById('menuHome').addEventListener('click', (e) => {
+        e.preventDefault();
+        closeSidebar();
+    });
+    
+    document.getElementById('menuStats').addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToStats();
+        closeSidebar();
+    });
+    
+    document.getElementById('menuExport').addEventListener('click', (e) => {
+        e.preventDefault();
+        exportData();
+        closeSidebar();
+    });
+    
+    document.getElementById('menuImport').addEventListener('click', (e) => {
+        e.preventDefault();
+        importData();
+        closeSidebar();
+    });
+    
+    document.getElementById('menuUpdate').addEventListener('click', (e) => {
+        e.preventDefault();
+        checkForUpdates();
+    });
+}
+
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('active');
+    document.getElementById('sidebarOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('active');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function displayVersion() {
+    document.getElementById('appVersion').textContent = APP_VERSION;
+}
+
+// Update App Function
+function checkForUpdates() {
+    if (swRegistration) {
+        document.getElementById('menuUpdate').innerHTML = '<span class="menu-icon">⏳</span><span>Vérification...</span>';
+        
+        swRegistration.update().then(() => {
+            setTimeout(() => {
+                if (navigator.serviceWorker.controller) {
+                    alert('Vous utilisez déjà la dernière version de ManLore v' + APP_VERSION);
+                } else {
+                    alert('Mise à jour vérifiée. Veuillez recharger la page si une mise à jour est disponible.');
+                }
+                document.getElementById('menuUpdate').innerHTML = '<span class="menu-icon">🔄</span><span>Mettre à jour</span>';
+            }, 1000);
+        });
+    } else {
+        alert('Service Worker non disponible. Veuillez vérifier votre connexion.');
+    }
+}
+
+function updateApp() {
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    }
+    window.location.reload();
+}
+
+// Export Data
+function exportData() {
+    const dataStr = JSON.stringify(items, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `manlore-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    alert('Données exportées avec succès !');
+}
+
+// Import Data
+function importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (Array.isArray(importedData)) {
+                        if (confirm(`Importer ${importedData.length} éléments ? Cela remplacera vos données actuelles.`)) {
+                            items = importedData;
+                            allGenres.clear();
+                            items.forEach(item => {
+                                if (item.genres) {
+                                    item.genres.forEach(genre => allGenres.add(genre));
+                                }
+                            });
+                            saveData();
+                            updateGenreFilter();
+                            renderItems();
+                            updateStats();
+                            alert('Données importées avec succès !');
+                        }
+                    } else {
+                        alert('Format de fichier invalide.');
+                    }
+                } catch (error) {
+                    alert('Erreur lors de l\'importation : ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+    
+    input.click();
+}
+
+function scrollToStats() {
+    document.getElementById('stats').scrollIntoView({ behavior: 'smooth' });
 }
 
 // Modal Functions
