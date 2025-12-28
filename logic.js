@@ -1,370 +1,523 @@
-// logic.js - Back4App Database Logic
-// Initialize Parse
-Parse.initialize("vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr", "5ehozciKmSQZkc8cmmshKfMbvnCLsc2PDB8K1VGS");
-Parse.serverURL = 'https://parseapi.back4app.com';
+/* ============================================
+   MANLORE - LOGIC.JS
+   Back4App Parse SDK Integration
+   ============================================ */
 
-// Global Variables
+// Configuration Parse SDK
+Parse.initialize(
+    "vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr",
+    "5ehozciKmSQZkc8cmmshKfMbvnCLsc2PDB8K1VGS"
+);
+Parse.serverURL = 'https://parseapi.back4app.com/';
+
+// Variables globales
 let currentUser = null;
-let items = [];
 let syncQueue = [];
 let isOnline = navigator.onLine;
+let autoSyncInterval = null;
 
-// Authentication Functions
-async function loginUser(username, password) {
-    try {
-        currentUser = await Parse.User.logIn(username, password);
-        return { success: true, user: currentUser };
-    } catch (error) {
-        return { success: false, error: error.message };
-    }
-}
+// ============================================
+// AUTHENTIFICATION
+// ============================================
 
-async function signupUser(username, email, password) {
+/**
+ * Inscription d'un nouvel utilisateur
+ */
+async function signUp(username, email, password) {
     try {
         const user = new Parse.User();
-        user.set('username', username);
-        user.set('email', email);
-        user.set('password', password);
+        user.set("username", username);
+        user.set("email", email);
+        user.set("password", password);
         
-        currentUser = await user.signUp();
-        return { success: true, user: currentUser };
+        await user.signUp();
+        currentUser = user;
+        return { success: true, user };
     } catch (error) {
+        console.error('❌ Erreur inscription:', error);
         return { success: false, error: error.message };
     }
 }
 
-async function logoutUser() {
+/**
+ * Connexion utilisateur
+ */
+async function logIn(usernameOrEmail, password) {
+    try {
+        // Tenter connexion avec username
+        let user;
+        try {
+            user = await Parse.User.logIn(usernameOrEmail, password);
+        } catch (e) {
+            // Si échec, tenter avec email
+            const query = new Parse.Query(Parse.User);
+            query.equalTo("email", usernameOrEmail);
+            const userByEmail = await query.first();
+            
+            if (userByEmail) {
+                user = await Parse.User.logIn(userByEmail.get("username"), password);
+            } else {
+                throw e;
+            }
+        }
+        
+        currentUser = user;
+        return { success: true, user };
+    } catch (error) {
+        console.error('❌ Erreur connexion:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Déconnexion utilisateur
+ */
+async function logOut() {
     try {
         await Parse.User.logOut();
         currentUser = null;
-        items = [];
-        localStorage.clear();
         return { success: true };
     } catch (error) {
+        console.error('❌ Erreur déconnexion:', error);
         return { success: false, error: error.message };
     }
 }
 
+/**
+ * Vérifier si un utilisateur est connecté
+ */
 function getCurrentUser() {
-    return Parse.User.current();
-}
-
-function isUserLoggedIn() {
-    return Parse.User.current() !== null;
-}
-
-// Data Loading Functions
-async function loadFromCloud() {
-    if (!currentUser) {
-        throw new Error('No user logged in');
+    const user = Parse.User.current();
+    if (user) {
+        currentUser = user;
+        return user;
     }
-    
-    const ItemClass = Parse.Object.extend('Items');
-    const query = new Parse.Query(ItemClass);
-    query.equalTo('user', currentUser);
-    query.descending('createdAt');
-    query.limit(1000);
-    
-    const results = await query.find();
-    items = results.map(obj => ({
-        id: obj.id,
-        title: obj.get('title'),
-        type: obj.get('type'),
-        status: obj.get('status'),
-        rating: obj.get('rating') || 0,
-        genres: obj.get('genres') || [],
-        link: obj.get('link') || '',
-        image: obj.get('image') || '',
-        chapters: obj.get('chapters') || 0,
-        notes: obj.get('notes') || '',
-        createdAt: obj.get('createdAt'),
-        updatedAt: obj.get('updatedAt')
-    }));
-    
-    return items;
+    return null;
 }
 
-function saveToLocalStorage() {
-    localStorage.setItem('manlore_items', JSON.stringify(items));
-    localStorage.setItem('manlore_user', currentUser ? currentUser.get('username') : '');
-}
+// ============================================
+// GESTION DES ITEMS (CRUD)
+// ============================================
 
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem('manlore_items');
-    if (saved) {
-        items = JSON.parse(saved);
-    }
-    return items;
-}
-
-// CRUD Operations
-async function createItem(data) {
-    const ItemClass = Parse.Object.extend('Items');
-    const item = new ItemClass();
-    
-    item.set('user', currentUser);
-    item.set('title', data.title);
-    item.set('type', data.type);
-    item.set('status', data.status);
-    item.set('rating', data.rating);
-    item.set('genres', data.genres);
-    item.set('chapters', data.chapters);
-    item.set('link', data.link);
-    item.set('image', data.image);
-    item.set('notes', data.notes);
-    
-    if (isOnline) {
-        try {
-            const savedItem = await item.save();
-            const newItem = {
-                id: savedItem.id,
-                ...data,
-                createdAt: savedItem.get('createdAt'),
-                updatedAt: savedItem.get('updatedAt')
-            };
-            items.push(newItem);
-            saveToLocalStorage();
-            return { success: true, item: newItem };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    } else {
-        // Offline mode - save locally
-        syncQueue.push({ action: 'create', data: item });
-        const tempId = 'temp_' + Date.now();
-        const newItem = { id: tempId, ...data, createdAt: new Date(), updatedAt: new Date() };
-        items.push(newItem);
-        saveToLocalStorage();
-        localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
-        return { success: true, item: newItem, offline: true };
-    }
-}
-
-async function updateItem(id, data) {
-    const ItemClass = Parse.Object.extend('Items');
-    const query = new Parse.Query(ItemClass);
-    
-    if (isOnline && !id.startsWith('temp_')) {
-        try {
-            const item = await query.get(id);
-            item.set('title', data.title);
-            item.set('type', data.type);
-            item.set('status', data.status);
-            item.set('rating', data.rating);
-            item.set('genres', data.genres);
-            item.set('chapters', data.chapters);
-            item.set('link', data.link);
-            item.set('image', data.image);
-            item.set('notes', data.notes);
-            
-            await item.save();
-            
-            // Update local array
-            const index = items.findIndex(i => i.id === id);
-            if (index !== -1) {
-                items[index] = { ...items[index], ...data, updatedAt: new Date() };
-                saveToLocalStorage();
-            }
-            
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    } else {
-        // Offline or temp item - update locally
-        const index = items.findIndex(i => i.id === id);
-        if (index !== -1) {
-            items[index] = { ...items[index], ...data, updatedAt: new Date() };
-            saveToLocalStorage();
+/**
+ * Créer un nouvel item dans la collection
+ */
+async function createItem(itemData) {
+    try {
+        if (!currentUser) {
+            throw new Error("Utilisateur non connecté");
         }
         
+        const Item = Parse.Object.extend("Items");
+        const item = new Item();
+        
+        // Définir les champs
+        item.set("title", itemData.title);
+        item.set("type", itemData.type);
+        item.set("status", itemData.status);
+        item.set("rating", itemData.rating || 0);
+        item.set("genres", itemData.genres || []);
+        item.set("link", itemData.link || "");
+        item.set("image", itemData.image || "");
+        item.set("imageUrl", itemData.imageUrl || "");
+        item.set("chapters", itemData.chapters || 0);
+        item.set("notes", itemData.notes || "");
+        item.set("userId", currentUser);
+        
+        const savedItem = await item.save();
+        
+        // Sauvegarder aussi en localStorage
+        saveToLocalStorage(savedItem);
+        
+        return { success: true, item: savedItem };
+    } catch (error) {
+        console.error('❌ Erreur création item:', error);
+        
+        // Si offline, ajouter à la queue
         if (!isOnline) {
-            syncQueue.push({ action: 'update', id, data });
-            localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
+            addToSyncQueue('create', itemData);
+            // Créer un ID temporaire local
+            const tempId = 'temp_' + Date.now();
+            const tempItem = { id: tempId, ...itemData, createdAt: new Date() };
+            saveToLocalStorage(tempItem);
+            return { success: true, item: tempItem, offline: true };
         }
         
-        return { success: true, offline: true };
+        return { success: false, error: error.message };
     }
 }
 
-async function deleteItem(id) {
-    const ItemClass = Parse.Object.extend('Items');
-    const query = new Parse.Query(ItemClass);
-    
-    if (isOnline && !id.startsWith('temp_')) {
-        try {
-            const item = await query.get(id);
-            await item.destroy();
-            
-            // Remove from local array
-            items = items.filter(i => i.id !== id);
-            saveToLocalStorage();
-            
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    } else {
-        // Offline or temp item - delete locally
-        items = items.filter(i => i.id !== id);
-        saveToLocalStorage();
-        
-        if (!isOnline && !id.startsWith('temp_')) {
-            syncQueue.push({ action: 'delete', id });
-            localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
+/**
+ * Récupérer tous les items de l'utilisateur
+ */
+async function fetchAllItems() {
+    try {
+        if (!currentUser) {
+            // Si pas connecté, charger depuis localStorage
+            return { success: true, items: loadFromLocalStorage(), offline: true };
         }
         
-        return { success: true, offline: true };
+        const Item = Parse.Object.extend("Items");
+        const query = new Parse.Query(Item);
+        query.equalTo("userId", currentUser);
+        query.descending("createdAt");
+        query.limit(1000); // Limite raisonnable
+        
+        const results = await query.find();
+        
+        // Sauvegarder en localStorage
+        results.forEach(item => saveToLocalStorage(item));
+        
+        return { success: true, items: results };
+    } catch (error) {
+        console.error('❌ Erreur récupération items:', error);
+        
+        // Fallback sur localStorage
+        const localItems = loadFromLocalStorage();
+        return { success: true, items: localItems, offline: true };
     }
 }
 
-// Sync Functions
+/**
+ * Mettre à jour un item existant
+ */
+async function updateItem(itemId, updates) {
+    try {
+        if (!currentUser) {
+            throw new Error("Utilisateur non connecté");
+        }
+        
+        // Vérifier si c'est un ID temporaire
+        if (itemId.startsWith('temp_')) {
+            // Mettre à jour en localStorage seulement
+            updateInLocalStorage(itemId, updates);
+            addToSyncQueue('create', { ...updates, tempId: itemId });
+            return { success: true, offline: true };
+        }
+        
+        const Item = Parse.Object.extend("Items");
+        const query = new Parse.Query(Item);
+        const item = await query.get(itemId);
+        
+        // Mettre à jour les champs
+        if (updates.title !== undefined) item.set("title", updates.title);
+        if (updates.type !== undefined) item.set("type", updates.type);
+        if (updates.status !== undefined) item.set("status", updates.status);
+        if (updates.rating !== undefined) item.set("rating", updates.rating);
+        if (updates.genres !== undefined) item.set("genres", updates.genres);
+        if (updates.link !== undefined) item.set("link", updates.link);
+        if (updates.image !== undefined) item.set("image", updates.image);
+        if (updates.imageUrl !== undefined) item.set("imageUrl", updates.imageUrl);
+        if (updates.chapters !== undefined) item.set("chapters", updates.chapters);
+        if (updates.notes !== undefined) item.set("notes", updates.notes);
+        
+        const savedItem = await item.save();
+        
+        // Mettre à jour localStorage
+        saveToLocalStorage(savedItem);
+        
+        return { success: true, item: savedItem };
+    } catch (error) {
+        console.error('❌ Erreur mise à jour item:', error);
+        
+        // Si offline, ajouter à la queue
+        if (!isOnline) {
+            addToSyncQueue('update', { id: itemId, ...updates });
+            updateInLocalStorage(itemId, updates);
+            return { success: true, offline: true };
+        }
+        
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Supprimer un item
+ */
+async function deleteItem(itemId) {
+    try {
+        if (!currentUser) {
+            throw new Error("Utilisateur non connecté");
+        }
+        
+        // Vérifier si c'est un ID temporaire
+        if (itemId.startsWith('temp_')) {
+            removeFromLocalStorage(itemId);
+            return { success: true, offline: true };
+        }
+        
+        const Item = Parse.Object.extend("Items");
+        const query = new Parse.Query(Item);
+        const item = await query.get(itemId);
+        
+        await item.destroy();
+        
+        // Supprimer de localStorage
+        removeFromLocalStorage(itemId);
+        
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Erreur suppression item:', error);
+        
+        // Si offline, ajouter à la queue
+        if (!isOnline) {
+            addToSyncQueue('delete', { id: itemId });
+            removeFromLocalStorage(itemId);
+            return { success: true, offline: true };
+        }
+        
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================
+// GESTION LOCALSTORAGE
+// ============================================
+
+/**
+ * Sauvegarder un item dans localStorage
+ */
+function saveToLocalStorage(item) {
+    try {
+        const items = loadFromLocalStorage();
+        const itemData = parseItemToObject(item);
+        
+        // Vérifier si l'item existe déjà
+        const index = items.findIndex(i => i.id === itemData.id);
+        
+        if (index !== -1) {
+            items[index] = itemData;
+        } else {
+            items.push(itemData);
+        }
+        
+        localStorage.setItem('manlore_items', JSON.stringify(items));
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde localStorage:', error);
+    }
+}
+
+/**
+ * Charger tous les items depuis localStorage
+ */
+function loadFromLocalStorage() {
+    try {
+        const data = localStorage.getItem('manlore_items');
+        return data ? JSON.parse(data) : [];
+    } catch (error) {
+        console.error('❌ Erreur chargement localStorage:', error);
+        return [];
+    }
+}
+
+/**
+ * Mettre à jour un item dans localStorage
+ */
+function updateInLocalStorage(itemId, updates) {
+    try {
+        const items = loadFromLocalStorage();
+        const index = items.findIndex(i => i.id === itemId);
+        
+        if (index !== -1) {
+            items[index] = { ...items[index], ...updates, updatedAt: new Date().toISOString() };
+            localStorage.setItem('manlore_items', JSON.stringify(items));
+        }
+    } catch (error) {
+        console.error('❌ Erreur mise à jour localStorage:', error);
+    }
+}
+
+/**
+ * Supprimer un item de localStorage
+ */
+function removeFromLocalStorage(itemId) {
+    try {
+        const items = loadFromLocalStorage();
+        const filtered = items.filter(i => i.id !== itemId);
+        localStorage.setItem('manlore_items', JSON.stringify(filtered));
+    } catch (error) {
+        console.error('❌ Erreur suppression localStorage:', error);
+    }
+}
+
+/**
+ * Convertir un Parse Object en objet JavaScript
+ */
+function parseItemToObject(item) {
+    if (item instanceof Parse.Object) {
+        return {
+            id: item.id,
+            title: item.get("title"),
+            type: item.get("type"),
+            status: item.get("status"),
+            rating: item.get("rating") || 0,
+            genres: item.get("genres") || [],
+            link: item.get("link") || "",
+            image: item.get("image") || "",
+            imageUrl: item.get("imageUrl") || "",
+            chapters: item.get("chapters") || 0,
+            notes: item.get("notes") || "",
+            createdAt: item.get("createdAt"),
+            updatedAt: item.get("updatedAt")
+        };
+    }
+    return item;
+}
+
+// ============================================
+// SYNCHRONISATION
+// ============================================
+
+/**
+ * Ajouter une opération à la queue de synchronisation
+ */
+function addToSyncQueue(operation, data) {
+    syncQueue.push({ operation, data, timestamp: Date.now() });
+    localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
+}
+
+/**
+ * Charger la queue de synchronisation
+ */
+function loadSyncQueue() {
+    try {
+        const data = localStorage.getItem('manlore_sync_queue');
+        syncQueue = data ? JSON.parse(data) : [];
+    } catch (error) {
+        console.error('❌ Erreur chargement queue sync:', error);
+        syncQueue = [];
+    }
+}
+
+/**
+ * Processer la queue de synchronisation
+ */
 async function processSyncQueue() {
-    if (syncQueue.length === 0) return { success: true, synced: 0 };
+    if (!isOnline || syncQueue.length === 0) return;
     
-    let synced = 0;
-    const errors = [];
+    console.log('🔄 Traitement de la queue de sync...', syncQueue.length, 'opérations');
+    
+    const processedQueue = [];
     
     for (const task of syncQueue) {
         try {
-            if (task.action === 'create') {
-                await task.data.save();
-                synced++;
-            } else if (task.action === 'update') {
-                const ItemClass = Parse.Object.extend('Items');
-                const query = new Parse.Query(ItemClass);
-                const item = await query.get(task.id);
-                
-                Object.keys(task.data).forEach(key => {
-                    item.set(key, task.data[key]);
-                });
-                
-                await item.save();
-                synced++;
-            } else if (task.action === 'delete') {
-                const ItemClass = Parse.Object.extend('Items');
-                const query = new Parse.Query(ItemClass);
-                const item = await query.get(task.id);
-                await item.destroy();
-                synced++;
+            switch (task.operation) {
+                case 'create':
+                    await createItem(task.data);
+                    break;
+                case 'update':
+                    await updateItem(task.data.id, task.data);
+                    break;
+                case 'delete':
+                    await deleteItem(task.data.id);
+                    break;
             }
         } catch (error) {
-            errors.push({ task, error: error.message });
-            console.error('Sync error:', error);
+            console.error('❌ Erreur traitement sync:', error);
+            processedQueue.push(task); // Garder en queue si échec
         }
     }
     
-    // Clear successful syncs
-    if (synced > 0) {
-        syncQueue = errors.map(e => e.task);
-        localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
-    }
+    syncQueue = processedQueue;
+    localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
     
-    return { 
-        success: errors.length === 0, 
-        synced, 
-        errors: errors.length,
-        remaining: syncQueue.length 
-    };
+    if (syncQueue.length === 0) {
+        console.log('✅ Synchronisation terminée');
+    }
 }
 
-async function syncNow() {
-    if (!isOnline) {
-        return { success: false, error: 'Offline' };
-    }
+/**
+ * Démarrer l'auto-sync
+ */
+function startAutoSync() {
+    if (autoSyncInterval) return;
     
-    try {
-        // Process pending sync queue first
-        if (syncQueue.length > 0) {
+    autoSyncInterval = setInterval(async () => {
+        if (isOnline && currentUser) {
             await processSyncQueue();
         }
-        
-        // Then load fresh data from cloud
-        await loadFromCloud();
-        saveToLocalStorage();
-        
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: error.message };
+    }, 30000); // Toutes les 30 secondes
+}
+
+/**
+ * Arrêter l'auto-sync
+ */
+function stopAutoSync() {
+    if (autoSyncInterval) {
+        clearInterval(autoSyncInterval);
+        autoSyncInterval = null;
     }
 }
 
-// Online/Offline Status
+// ============================================
+// GESTION ONLINE/OFFLINE
+// ============================================
+
+/**
+ * Mettre à jour le statut online/offline
+ */
 function updateOnlineStatus(online) {
     isOnline = online;
     
-    if (online) {
-        // Auto-sync when coming back online
-        if (syncQueue.length > 0) {
-            processSyncQueue().then(result => {
-                console.log('Auto-sync completed:', result);
-            });
+    const statusIndicator = document.getElementById('onlineStatus');
+    if (statusIndicator) {
+        const dot = statusIndicator.querySelector('.pulse');
+        const text = statusIndicator.querySelector('span');
+        
+        if (online) {
+            dot.classList.remove('bg-danger');
+            dot.classList.add('bg-success');
+            if (text) text.textContent = 'En ligne';
+            
+            // Processer la queue au retour online
+            processSyncQueue();
+        } else {
+            dot.classList.remove('bg-success');
+            dot.classList.add('bg-danger');
+            if (text) text.textContent = 'Hors ligne';
         }
     }
 }
 
-function getOnlineStatus() {
-    return isOnline;
-}
+// Écouter les changements de statut réseau
+window.addEventListener('online', () => {
+    console.log('🌐 Connexion rétablie');
+    updateOnlineStatus(true);
+});
 
-function getSyncQueueLength() {
-    return syncQueue.length;
-}
+window.addEventListener('offline', () => {
+    console.log('📴 Connexion perdue');
+    updateOnlineStatus(false);
+});
 
-// Initialize sync queue from localStorage
-function initSyncQueue() {
-    const saved = localStorage.getItem('manlore_sync_queue');
-    if (saved) {
-        try {
-            syncQueue = JSON.parse(saved);
-        } catch (e) {
-            syncQueue = [];
-        }
+// ============================================
+// INITIALISATION
+// ============================================
+
+/**
+ * Initialiser la logique Back4App
+ */
+function initializeBackend() {
+    console.log('🚀 Initialisation Backend...');
+    
+    // Charger la queue de sync
+    loadSyncQueue();
+    
+    // Mettre à jour le statut online
+    updateOnlineStatus(navigator.onLine);
+    
+    // Vérifier l'utilisateur connecté
+    const user = getCurrentUser();
+    if (user) {
+        console.log('✅ Utilisateur connecté:', user.get('username'));
+        currentUser = user;
+        
+        // Démarrer l'auto-sync
+        startAutoSync();
     }
+    
+    console.log('✅ Backend initialisé');
 }
 
-// Get all items (for filtering/rendering)
-function getAllItems() {
-    return items;
-}
-
-function getItemById(id) {
-    return items.find(i => i.id === id);
-}
-
-// Statistics
-function getStats() {
-    return {
-        total: items.length,
-        reading: items.filter(i => i.status === 'reading').length,
-        completed: items.filter(i => i.status === 'completed').length,
-        planToRead: items.filter(i => i.status === 'plan-to-read').length,
-        dropped: items.filter(i => i.status === 'dropped').length
-    };
-}
-
-// Export for import in app.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        loginUser,
-        signupUser,
-        logoutUser,
-        getCurrentUser,
-        isUserLoggedIn,
-        loadFromCloud,
-        saveToLocalStorage,
-        loadFromLocalStorage,
-        createItem,
-        updateItem,
-        deleteItem,
-        processSyncQueue,
-        syncNow,
-        updateOnlineStatus,
-        getOnlineStatus,
-        getSyncQueueLength,
-        initSyncQueue,
-        getAllItems,
-        getItemById,
-        getStats
-    };
-}
+// Initialiser au chargement
+document.addEventListener('DOMContentLoaded', initializeBackend);
