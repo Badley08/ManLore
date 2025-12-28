@@ -1,5 +1,5 @@
 // Service Worker for ManLore PWA
-const CACHE_NAME = 'manlore-v1.0.2';
+const CACHE_NAME = 'manlore-v1.0.5';
 const urlsToCache = [
   '/',
   '/index.html',
