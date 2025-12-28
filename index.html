@@ -3,159 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#6c5ce7">
     <meta name="description" content="ManLore - Ton Univers de collection de BD">
+    <meta name="theme-color" content="#6c5ce7">
     <title>ManLore - Ton Codex Visuel</title>
+    
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="manlore.png">
+    
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://npmcdn.com/parse@3.5.1/dist/parse.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="app.css">
+    
+    <!-- Parse SDK -->
+    <script src="https://npmcdn.com/parse@3.4.4/dist/parse.min.js"></script>
 </head>
-<body class="bg-gradient-to-br from-primary-dark to-accent-dark min-h-screen">
+<body class="bg-gradient-to-br from-bg-primary to-bg-accent min-h-screen">
     
-    <!-- Overlay Sidebar -->
-    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-2xl font-bold gradient-text">Menu</h2>
-            <button onclick="toggleSidebar()" class="text-white text-2xl hover:text-primary transition">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        
-        <nav class="space-y-4">
-            <a href="#" onclick="showSection('collection')" class="nav-link active">
-                <i class="fas fa-book"></i>
-                <span>Ma Collection</span>
-            </a>
-            <a href="#" onclick="showSection('stats')" class="nav-link">
-                <i class="fas fa-chart-pie"></i>
-                <span>Statistiques</span>
-            </a>
-            <a href="#" onclick="exportData()" class="nav-link">
-                <i class="fas fa-download"></i>
-                <span>Export JSON</span>
-            </a>
-            <a href="#" onclick="document.getElementById('importFile').click()" class="nav-link">
-                <i class="fas fa-upload"></i>
-                <span>Import JSON</span>
-            </a>
-            <a href="#" onclick="syncNow()" class="nav-link">
-                <i class="fas fa-sync"></i>
-                <span>Synchroniser</span>
-            </a>
-            <a href="#" onclick="logout()" class="nav-link text-danger">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Déconnexion</span>
-            </a>
-        </nav>
-        
-        <div class="mt-auto pt-8">
-            <p class="text-xs text-secondary opacity-70">Version 1.0.7</p>
-            <p class="text-xs text-secondary opacity-70" id="userInfo"></p>
-        </div>
-    </aside>
-
-    <!-- Input caché pour import -->
-    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-
-    <!-- Header -->
-    <header class="header">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="hamburger-btn">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h1 class="logo">ManLore</h1>
+    <!-- Auth Screen -->
+    <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-bg-primary to-bg-accent">
+        <div class="glass-card w-full max-w-md mx-4 p-8 rounded-2xl">
+            <div class="text-center mb-8">
+                <img src="manlore.png" alt="ManLore" class="w-24 h-24 mx-auto mb-4 rounded-full">
+                <h1 class="text-4xl font-bold text-primary mb-2">ManLore</h1>
+                <p class="text-text-secondary">Ton Univers de collection de BD</p>
             </div>
             
-            <div class="flex items-center gap-4">
-                <div id="offlineIndicator" class="offline-indicator">
-                    <i class="fas fa-wifi"></i>
-                    <span>En ligne</span>
-                </div>
-                <button onclick="openAddModal()" class="btn-primary">
-                    <i class="fas fa-plus"></i>
-                    <span class="hidden sm:inline">Ajouter</span>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Auth Section -->
-    <div id="authSection" class="auth-section">
-        <div class="auth-container">
-            <div class="auth-header">
-                <h1 class="logo text-5xl mb-2">ManLore</h1>
-                <p class="text-secondary text-lg">Ton Univers de collection de BD</p>
-            </div>
-
             <!-- Login Form -->
-            <form id="loginForm" class="auth-form">
-                <h2 class="text-2xl font-bold mb-6 text-center">Connexion</h2>
+            <form id="loginForm" class="space-y-4">
+                <h2 class="text-2xl font-semibold text-center mb-6">Connexion</h2>
                 <div class="form-group">
-                    <label><i class="fas fa-envelope"></i> Email</label>
-                    <input type="email" id="loginEmail" required class="form-input">
+                    <label class="block text-sm font-medium mb-2">Nom d'utilisateur ou Email</label>
+                    <input type="text" id="loginUsername" class="input-field" required>
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-lock"></i> Mot de passe</label>
-                    <input type="password" id="loginPassword" required class="form-input">
+                    <label class="block text-sm font-medium mb-2">Mot de passe</label>
+                    <input type="password" id="loginPassword" class="input-field" required>
                 </div>
                 <button type="submit" class="btn-primary w-full">
-                    <i class="fas fa-sign-in-alt"></i> Se connecter
+                    <i class="fas fa-sign-in-alt mr-2"></i>Se connecter
                 </button>
-                <p class="text-center mt-4 text-secondary">
+                <p class="text-center text-sm text-text-secondary mt-4">
                     Pas de compte ? 
-                    <a href="#" onclick="showSignup()" class="text-primary hover:text-secondary">S'inscrire</a>
+                    <a href="#" id="showSignup" class="text-primary hover:text-secondary">S'inscrire</a>
                 </p>
             </form>
-
+            
             <!-- Signup Form -->
-            <form id="signupForm" class="auth-form hidden">
-                <h2 class="text-2xl font-bold mb-6 text-center">Inscription</h2>
+            <form id="signupForm" class="space-y-4 hidden">
+                <h2 class="text-2xl font-semibold text-center mb-6">Créer un compte</h2>
                 <div class="form-group">
-                    <label><i class="fas fa-user"></i> Nom d'utilisateur</label>
-                    <input type="text" id="signupUsername" required class="form-input">
+                    <label class="block text-sm font-medium mb-2">Nom d'utilisateur</label>
+                    <input type="text" id="signupUsername" class="input-field" required>
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-envelope"></i> Email</label>
-                    <input type="email" id="signupEmail" required class="form-input">
+                    <label class="block text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="signupEmail" class="input-field" required>
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-lock"></i> Mot de passe</label>
-                    <input type="password" id="signupPassword" required class="form-input" minlength="6">
+                    <label class="block text-sm font-medium mb-2">Mot de passe</label>
+                    <input type="password" id="signupPassword" class="input-field" required>
                 </div>
                 <button type="submit" class="btn-primary w-full">
-                    <i class="fas fa-user-plus"></i> Créer un compte
+                    <i class="fas fa-user-plus mr-2"></i>Créer mon compte
                 </button>
-                <p class="text-center mt-4 text-secondary">
+                <p class="text-center text-sm text-text-secondary mt-4">
                     Déjà un compte ? 
-                    <a href="#" onclick="showLogin()" class="text-primary hover:text-secondary">Se connecter</a>
+                    <a href="#" id="showLogin" class="text-primary hover:text-secondary">Se connecter</a>
                 </p>
             </form>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <main id="mainContent" class="main-content hidden">
-        <div class="container mx-auto px-4 py-8">
+    <!-- Main App -->
+    <div id="appContainer" class="hidden">
+        <!-- Header -->
+        <header class="glass-header sticky top-0 z-40 backdrop-blur-md">
+            <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="menuToggle" class="lg:hidden text-2xl hover:text-primary transition-colors">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <img src="manlore.png" alt="ManLore" class="w-12 h-12 rounded-full">
+                    <h1 class="text-2xl lg:text-3xl font-bold gradient-text">ManLore</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="onlineStatus" class="flex items-center gap-2 text-sm">
+                        <div class="w-2 h-2 rounded-full bg-success pulse"></div>
+                        <span class="hidden sm:inline">En ligne</span>
+                    </div>
+                    <button id="userMenuBtn" class="flex items-center gap-2 hover:text-primary transition-colors">
+                        <i class="fas fa-user-circle text-2xl"></i>
+                        <span id="currentUsername" class="hidden sm:inline font-medium"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <nav class="p-6 space-y-2">
+                <a href="#" data-page="home" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Accueil</span>
+                </a>
+                <a href="#" data-page="stats" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Statistiques</span>
+                </a>
+                <a href="#" data-page="wishlist" class="nav-item">
+                    <i class="fas fa-heart"></i>
+                    <span>Liste de souhaits</span>
+                </a>
+                <a href="#" data-page="export" class="nav-item">
+                    <i class="fas fa-download"></i>
+                    <span>Exporter</span>
+                </a>
+                <a href="#" data-page="import" class="nav-item">
+                    <i class="fas fa-upload"></i>
+                    <span>Importer</span>
+                </a>
+                <a href="#" data-page="settings" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Paramètres</span>
+                </a>
+                <a href="#" id="logoutBtn" class="nav-item text-danger">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Déconnexion</span>
+                </a>
+            </nav>
             
-            <!-- Section Collection -->
-            <section id="collectionSection" class="section active">
-                <!-- Filtres et Recherche -->
-                <div class="filters-section">
-                    <div class="search-bar">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="Rechercher un titre, genre, notes..." class="search-input">
+            <!-- Ko-fi Link -->
+            <div class="p-6 mt-auto">
+                <a href="https://ko-fi.com/karlito" target="_blank" class="btn-kofi">
+                    <i class="fas fa-coffee mr-2"></i>
+                    Support sur Ko-fi
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home Page -->
+            <div id="homePage" class="page active">
+                <!-- Filters & Search -->
+                <div class="glass-card p-6 mb-6 rounded-2xl">
+                    <div class="flex flex-col lg:flex-row gap-4 mb-4">
+                        <div class="flex-1">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="searchInput" placeholder="Rechercher un titre..." class="search-input">
+                            </div>
+                        </div>
+                        <button id="addBtn" class="btn-primary whitespace-nowrap">
+                            <i class="fas fa-plus mr-2"></i>Ajouter un titre
+                        </button>
                     </div>
                     
-                    <div class="filters-grid">
-                        <select id="filterType" class="filter-select" onchange="applyFilters()">
+                    <!-- Filter Options -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <select id="filterType" class="filter-select">
                             <option value="">Tous les types</option>
                             <option value="Manga">Manga</option>
                             <option value="Manwha">Manwha</option>
@@ -166,7 +182,7 @@
                             <option value="Webcomic">Webcomic</option>
                         </select>
                         
-                        <select id="filterStatus" class="filter-select" onchange="applyFilters()">
+                        <select id="filterStatus" class="filter-select">
                             <option value="">Tous les statuts</option>
                             <option value="En cours">En cours</option>
                             <option value="Terminé">Terminé</option>
@@ -176,116 +192,142 @@
                             <option value="Re-lecture">Re-lecture</option>
                         </select>
                         
-                        <select id="sortBy" class="filter-select" onchange="applyFilters()">
-                            <option value="dateDesc">Plus récents</option>
-                            <option value="dateAsc">Plus anciens</option>
-                            <option value="titleAsc">Titre A-Z</option>
-                            <option value="titleDesc">Titre Z-A</option>
-                            <option value="ratingDesc">Note haute</option>
-                            <option value="ratingAsc">Note basse</option>
+                        <select id="filterGenre" class="filter-select">
+                            <option value="">Tous les genres</option>
                         </select>
                         
-                        <button onclick="resetFilters()" class="btn-secondary">
-                            <i class="fas fa-redo"></i> Reset
-                        </button>
+                        <select id="sortBy" class="filter-select">
+                            <option value="date-desc">Plus récent</option>
+                            <option value="date-asc">Plus ancien</option>
+                            <option value="title-asc">Titre A-Z</option>
+                            <option value="title-desc">Titre Z-A</option>
+                            <option value="rating-desc">Note haute</option>
+                            <option value="rating-asc">Note basse</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- Grid Items -->
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="stat-content">
+                            <p class="stat-label">Total</p>
+                            <p class="stat-value" id="statTotal">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                            <i class="fas fa-book-reader"></i>
+                        </div>
+                        <div class="stat-content">
+                            <p class="stat-label">En cours</p>
+                            <p class="stat-value" id="statInProgress">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-secondary">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <p class="stat-label">Terminés</p>
+                            <p class="stat-value" id="statCompleted">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                            <i class="fas fa-bookmark"></i>
+                        </div>
+                        <div class="stat-content">
+                            <p class="stat-label">À lire</p>
+                            <p class="stat-value" id="statToRead">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Grid -->
                 <div id="itemsGrid" class="items-grid">
-                    <!-- Items seront insérés ici par JS -->
+                    <!-- Items will be dynamically inserted here -->
                 </div>
 
                 <!-- Empty State -->
                 <div id="emptyState" class="empty-state hidden">
-                    <i class="fas fa-book-open text-6xl text-primary mb-4"></i>
-                    <h3 class="text-2xl font-bold mb-2">Aucun titre dans ta collection</h3>
-                    <p class="text-secondary mb-6">Commence à construire ton univers manga !</p>
-                    <button onclick="openAddModal()" class="btn-primary">
-                        <i class="fas fa-plus"></i> Ajouter ton premier titre
+                    <i class="fas fa-book-open text-6xl mb-4 opacity-50"></i>
+                    <h3 class="text-2xl font-bold mb-2">Aucun titre dans votre collection</h3>
+                    <p class="text-text-secondary mb-6">Commencez à construire votre bibliothèque personnelle !</p>
+                    <button class="btn-primary" onclick="document.getElementById('addBtn').click()">
+                        <i class="fas fa-plus mr-2"></i>Ajouter votre premier titre
                     </button>
                 </div>
-            </section>
+            </div>
 
-            <!-- Section Stats -->
-            <section id="statsSection" class="section">
-                <h2 class="text-3xl font-bold mb-8">Statistiques</h2>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <i class="fas fa-book stat-icon text-primary"></i>
-                        <div>
-                            <p class="stat-value" id="statTotal">0</p>
-                            <p class="stat-label">Total Collection</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <i class="fas fa-book-reader stat-icon text-success"></i>
-                        <div>
-                            <p class="stat-value" id="statReading">0</p>
-                            <p class="stat-label">En cours</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <i class="fas fa-check-circle stat-icon text-primary"></i>
-                        <div>
-                            <p class="stat-value" id="statCompleted">0</p>
-                            <p class="stat-label">Terminés</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <i class="fas fa-clock stat-icon text-warning"></i>
-                        <div>
-                            <p class="stat-value" id="statToRead">0</p>
-                            <p class="stat-label">À lire</p>
-                        </div>
-                    </div>
+            <!-- Stats Page -->
+            <div id="statsPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">📊 Statistiques Détaillées</h2>
+                <div class="glass-card p-6 rounded-2xl">
+                    <p class="text-center text-text-secondary">Statistiques avancées à venir...</p>
                 </div>
+            </div>
 
-                <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="stat-card">
-                        <h3 class="text-xl font-bold mb-4">Par Type</h3>
-                        <div id="typeStats" class="space-y-2"></div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <h3 class="text-xl font-bold mb-4">Top 5 Notes</h3>
-                        <div id="topRated" class="space-y-2"></div>
-                    </div>
+            <!-- Other Pages (simplified for now) -->
+            <div id="wishlistPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">❤️ Liste de Souhaits</h2>
+                <div class="glass-card p-6 rounded-2xl">
+                    <p class="text-center text-text-secondary">Fonctionnalité à venir...</p>
                 </div>
-            </section>
-        </div>
-    </main>
+            </div>
 
-    <!-- Modal ADD/EDIT -->
+            <div id="exportPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">📥 Exporter vos données</h2>
+                <div class="glass-card p-6 rounded-2xl">
+                    <button id="exportBtn" class="btn-primary">
+                        <i class="fas fa-download mr-2"></i>Exporter en JSON
+                    </button>
+                </div>
+            </div>
+
+            <div id="importPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">📤 Importer vos données</h2>
+                <div class="glass-card p-6 rounded-2xl">
+                    <input type="file" id="importFile" accept=".json" class="hidden">
+                    <button id="importBtn" class="btn-primary">
+                        <i class="fas fa-upload mr-2"></i>Choisir un fichier JSON
+                    </button>
+                </div>
+            </div>
+
+            <div id="settingsPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">⚙️ Paramètres</h2>
+                <div class="glass-card p-6 rounded-2xl">
+                    <p class="text-center text-text-secondary">Paramètres à venir...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
     <div id="itemModal" class="modal">
-        <div class="modal-content modal-form">
+        <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle" class="text-2xl font-bold">Ajouter un titre</h3>
-                <button onclick="closeModal()" class="text-white hover:text-danger text-2xl">
+                <h2 id="modalTitle" class="text-2xl font-bold">Ajouter un titre</h2>
+                <button class="modal-close" onclick="closeModal('itemModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
-            <form id="itemForm" class="space-y-4">
+            <form id="itemForm" class="modal-body">
                 <input type="hidden" id="itemId">
                 
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-book"></i> Titre *
-                    </label>
-                    <input type="text" id="itemTitle" required class="form-input">
-                </div>
-                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group md:col-span-2">
+                        <label>Titre *</label>
+                        <input type="text" id="itemTitle" class="input-field" required>
+                    </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-tag"></i> Type *
-                        </label>
-                        <select id="itemType" required class="form-input">
+                        <label>Type *</label>
+                        <select id="itemType" class="input-field" required>
                             <option value="">Sélectionner...</option>
                             <option value="Manga">Manga</option>
                             <option value="Manwha">Manwha</option>
@@ -298,10 +340,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            <i class="fas fa-tasks"></i> Statut *
-                        </label>
-                        <select id="itemStatus" required class="form-input">
+                        <label>Statut *</label>
+                        <select id="itemStatus" class="input-field" required>
                             <option value="">Sélectionner...</option>
                             <option value="En cours">En cours</option>
                             <option value="Terminé">Terminé</option>
@@ -311,111 +351,97 @@
                             <option value="Re-lecture">Re-lecture</option>
                         </select>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-star"></i> Note
-                    </label>
-                    <div class="rating-input" id="ratingInput">
-                        <i class="far fa-star" data-rating="1"></i>
-                        <i class="far fa-star" data-rating="2"></i>
-                        <i class="far fa-star" data-rating="3"></i>
-                        <i class="far fa-star" data-rating="4"></i>
-                        <i class="far fa-star" data-rating="5"></i>
+                    
+                    <div class="form-group">
+                        <label>Note</label>
+                        <div class="rating-input" id="ratingInput">
+                            <i class="fas fa-star" data-rating="1"></i>
+                            <i class="fas fa-star" data-rating="2"></i>
+                            <i class="fas fa-star" data-rating="3"></i>
+                            <i class="fas fa-star" data-rating="4"></i>
+                            <i class="fas fa-star" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="itemRating" value="0">
                     </div>
-                    <input type="hidden" id="itemRating" value="0">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-list"></i> Genres (séparés par virgule)
-                    </label>
-                    <input type="text" id="itemGenres" placeholder="Action, Aventure, Fantasy" class="form-input">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-link"></i> Lien
-                    </label>
-                    <input type="url" id="itemLink" placeholder="https://..." class="form-input">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-image"></i> Image (URL ou Upload)
-                    </label>
-                    <div class="flex gap-2">
-                        <input type="url" id="itemImageUrl" placeholder="URL de l'image" class="form-input flex-1">
-                        <input type="file" id="itemImageFile" accept="image/*" class="hidden">
-                        <button type="button" onclick="document.getElementById('itemImageFile').click()" class="btn-secondary">
-                            <i class="fas fa-upload"></i>
-                        </button>
+                    
+                    <div class="form-group">
+                        <label>Chapitres lus</label>
+                        <input type="number" id="itemChapters" class="input-field" min="0">
                     </div>
-                    <div id="imagePreview" class="image-preview mt-2 hidden">
-                        <img id="previewImg" src="" alt="Preview">
+                    
+                    <div class="form-group md:col-span-2">
+                        <label>Genres (séparés par des virgules)</label>
+                        <input type="text" id="itemGenres" class="input-field" placeholder="Action, Aventure, Fantasy">
+                    </div>
+                    
+                    <div class="form-group md:col-span-2">
+                        <label>Lien</label>
+                        <input type="url" id="itemLink" class="input-field" placeholder="https://...">
+                    </div>
+                    
+                    <div class="form-group md:col-span-2">
+                        <label>Image (URL ou Upload)</label>
+                        <input type="url" id="itemImageUrl" class="input-field mb-2" placeholder="https://...">
+                        <input type="file" id="itemImageFile" class="input-field" accept="image/*">
+                        <div id="imagePreview" class="mt-3 hidden">
+                            <img src="" alt="Preview" class="w-32 h-48 object-cover rounded-lg">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group md:col-span-2">
+                        <label>Notes personnelles</label>
+                        <textarea id="itemNotes" class="input-field" rows="4"></textarea>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-list-ol"></i> Chapitres lus
-                    </label>
-                    <input type="number" id="itemChapters" min="0" placeholder="0" class="form-input">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fas fa-sticky-note"></i> Notes
-                    </label>
-                    <textarea id="itemNotes" rows="3" placeholder="Tes notes personnelles..." class="form-input"></textarea>
-                </div>
-                
-                <div class="flex gap-3">
+                <div class="flex gap-3 mt-6">
                     <button type="submit" class="btn-primary flex-1">
-                        <i class="fas fa-save"></i> Enregistrer
+                        <i class="fas fa-save mr-2"></i>Enregistrer
                     </button>
-                    <button type="button" onclick="closeModal()" class="btn-secondary">
-                        <i class="fas fa-times"></i> Annuler
+                    <button type="button" class="btn-secondary flex-1" onclick="closeModal('itemModal')">
+                        <i class="fas fa-times mr-2"></i>Annuler
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal VIEW -->
+    <!-- View Modal -->
     <div id="viewModal" class="modal">
-        <div class="modal-content modal-view">
+        <div class="modal-content max-w-3xl">
             <div class="modal-header">
-                <h3 id="viewTitle" class="text-2xl font-bold">Détails</h3>
-                <button onclick="closeViewModal()" class="text-white hover:text-danger text-2xl">
+                <h2 id="viewTitle" class="text-2xl font-bold"></h2>
+                <button class="modal-close" onclick="closeModal('viewModal')">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
-            <div id="viewContent" class="space-y-4">
-                <!-- Contenu inséré par JS -->
+            <div id="viewContent" class="modal-body">
+                <!-- Content will be dynamically inserted -->
             </div>
         </div>
     </div>
 
     <!-- Toast Notifications -->
-    <div id="toastContainer" class="toast-container"></div>
+    <div id="toastContainer" class="fixed top-20 right-4 z-50 space-y-2"></div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container mx-auto px-4">
-            <p class="text-center text-secondary">
-                Made with <i class="fas fa-heart text-danger"></i> by Karlito | 
-                <a href="https://ko-fi.com/karlito" target="_blank" class="text-primary hover:text-secondary">
-                    <i class="fas fa-coffee"></i> Ko-fi
-                </a>
-            </p>
-        </div>
-    </footer>
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+    </div>
 
     <!-- Scripts -->
     <script src="logic.js"></script>
     <script src="app.js"></script>
+    
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('✅ Service Worker enregistré'))
+                    .catch(err => console.log('❌ Erreur SW:', err));
+            });
+        }
+    </script>
 </body>
 </html>
