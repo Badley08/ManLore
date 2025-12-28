@@ -1,351 +1,323 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- SEO Meta Tags -->
-    <title>ManLore - Your Visual Codex</title>
-    <meta name="description" content="ManLore - Manage your Manga, Manhwa, Manhua, Webtoons collection">
-    <meta name="theme-color" content="#0a0a0a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Icons -->
-    <link rel="icon" type="image/png" href="manlore.png">
-    <link rel="apple-touch-icon" href="manlore.png">
+    <meta name="theme-color" content="#6c5ce7">
+    <meta name="description" content="ManLore - Ton Univers de collection de BD">
+    <title>ManLore - Ton Codex Visuel</title>
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Tailwind CSS CDN -->
+    <link rel="icon" type="image/png" href="manlore.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://npmcdn.com/parse@3.5.1/dist/parse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'neon-blue': '#3a86ff',
-                        'neon-purple': '#8338ec',
-                        'neon-pink': '#ff006e',
-                        'neon-cyan': '#06ffa5',
-                    },
-                    fontFamily: {
-                        orbitron: ['Orbitron', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Parse SDK -->
-    <script type="text/javascript" src="https://unpkg.com/parse/dist/parse.min.js"></script>
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="app.css">
 </head>
-<body>
+<body class="bg-gradient-to-br from-primary-dark to-accent-dark min-h-screen">
+    
+    <!-- Overlay Sidebar -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl font-bold gradient-text">Menu</h2>
+            <button onclick="toggleSidebar()" class="text-white text-2xl hover:text-primary transition">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <nav class="space-y-4">
+            <a href="#" onclick="showSection('collection')" class="nav-link active">
+                <i class="fas fa-book"></i>
+                <span>Ma Collection</span>
+            </a>
+            <a href="#" onclick="showSection('stats')" class="nav-link">
+                <i class="fas fa-chart-pie"></i>
+                <span>Statistiques</span>
+            </a>
+            <a href="#" onclick="exportData()" class="nav-link">
+                <i class="fas fa-download"></i>
+                <span>Export JSON</span>
+            </a>
+            <a href="#" onclick="document.getElementById('importFile').click()" class="nav-link">
+                <i class="fas fa-upload"></i>
+                <span>Import JSON</span>
+            </a>
+            <a href="#" onclick="syncNow()" class="nav-link">
+                <i class="fas fa-sync"></i>
+                <span>Synchroniser</span>
+            </a>
+            <a href="#" onclick="logout()" class="nav-link text-danger">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Déconnexion</span>
+            </a>
+        </nav>
+        
+        <div class="mt-auto pt-8">
+            <p class="text-xs text-secondary opacity-70">Version 1.0.7</p>
+            <p class="text-xs text-secondary opacity-70" id="userInfo"></p>
+        </div>
+    </aside>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="modal-overlay">
-        <div class="modal-content auth-modal">
+    <!-- Input caché pour import -->
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="hamburger-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="logo">ManLore</h1>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div id="offlineIndicator" class="offline-indicator">
+                    <i class="fas fa-wifi"></i>
+                    <span>En ligne</span>
+                </div>
+                <button onclick="openAddModal()" class="btn-primary">
+                    <i class="fas fa-plus"></i>
+                    <span class="hidden sm:inline">Ajouter</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Auth Section -->
+    <div id="authSection" class="auth-section">
+        <div class="auth-container">
             <div class="auth-header">
-                <img src="manlore.png" alt="ManLore" class="auth-logo">
-                <h1 class="auth-title">ManLore</h1>
-                <p class="auth-subtitle">Your Visual Codex</p>
+                <h1 class="logo text-5xl mb-2">ManLore</h1>
+                <p class="text-secondary text-lg">Ton Univers de collection de BD</p>
             </div>
-            
-            <!-- Auth Tabs -->
-            <div class="auth-tabs">
-                <button onclick="showLogin()" id="loginTab" class="auth-tab active">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
-                <button onclick="showSignup()" id="signupTab" class="auth-tab">
-                    <i class="fas fa-user-plus"></i> Sign Up
-                </button>
-            </div>
-            
+
             <!-- Login Form -->
             <form id="loginForm" class="auth-form">
+                <h2 class="text-2xl font-bold mb-6 text-center">Connexion</h2>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="loginUsername" required>
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="loginEmail" required class="form-input">
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword" required>
+                    <label><i class="fas fa-lock"></i> Mot de passe</label>
+                    <input type="password" id="loginPassword" required class="form-input">
                 </div>
                 <button type="submit" class="btn-primary w-full">
-                    <i class="fas fa-sign-in-alt"></i> Login
+                    <i class="fas fa-sign-in-alt"></i> Se connecter
                 </button>
+                <p class="text-center mt-4 text-secondary">
+                    Pas de compte ? 
+                    <a href="#" onclick="showSignup()" class="text-primary hover:text-secondary">S'inscrire</a>
+                </p>
             </form>
-            
+
             <!-- Signup Form -->
             <form id="signupForm" class="auth-form hidden">
+                <h2 class="text-2xl font-bold mb-6 text-center">Inscription</h2>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="signupUsername" required>
+                    <label><i class="fas fa-user"></i> Nom d'utilisateur</label>
+                    <input type="text" id="signupUsername" required class="form-input">
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="signupEmail" required>
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="signupEmail" required class="form-input">
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="signupPassword" required>
+                    <label><i class="fas fa-lock"></i> Mot de passe</label>
+                    <input type="password" id="signupPassword" required class="form-input" minlength="6">
                 </div>
                 <button type="submit" class="btn-primary w-full">
-                    <i class="fas fa-user-plus"></i> Create Account
+                    <i class="fas fa-user-plus"></i> Créer un compte
                 </button>
+                <p class="text-center mt-4 text-secondary">
+                    Déjà un compte ? 
+                    <a href="#" onclick="showLogin()" class="text-primary hover:text-secondary">Se connecter</a>
+                </p>
             </form>
-            
-            <div id="authError" class="error-message hidden"></div>
         </div>
     </div>
 
-    <!-- Main App -->
-    <div id="mainApp" class="hidden">
-        <!-- Header -->
-        <header class="header">
-            <div class="container flex items-center justify-between h-[70px] gap-4">
-                <button id="menuBtn" class="menu-btn lg:hidden">
-                    <i class="fas fa-bars"></i>
-                </button>
-                
-                <div class="header-brand">
-                    <img src="manlore.png" alt="Logo" class="header-logo">
-                    <div class="header-text">
-                        <h1>ManLore</h1>
-                        <p>Your Visual Codex</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    <button id="searchBtn" class="icon-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <button id="userMenuBtn" class="user-btn">
-                        <i class="fas fa-user-circle"></i>
-                        <span id="usernameDisplay"></span>
-                    </button>
-                </div>
-            </div>
+    <!-- Main Content -->
+    <main id="mainContent" class="main-content hidden">
+        <div class="container mx-auto px-4 py-8">
             
-            <!-- Search Bar -->
-            <div id="searchBar" class="search-bar hidden">
-                <div class="container">
-                    <input type="text" id="searchInput" placeholder="Search titles, genres, notes...">
+            <!-- Section Collection -->
+            <section id="collectionSection" class="section active">
+                <!-- Filtres et Recherche -->
+                <div class="filters-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="Rechercher un titre, genre, notes..." class="search-input">
+                    </div>
+                    
+                    <div class="filters-grid">
+                        <select id="filterType" class="filter-select" onchange="applyFilters()">
+                            <option value="">Tous les types</option>
+                            <option value="Manga">Manga</option>
+                            <option value="Manwha">Manwha</option>
+                            <option value="Manhua">Manhua</option>
+                            <option value="Webtoon">Webtoon</option>
+                            <option value="Light Novel">Light Novel</option>
+                            <option value="WebNovel">WebNovel</option>
+                            <option value="Webcomic">Webcomic</option>
+                        </select>
+                        
+                        <select id="filterStatus" class="filter-select" onchange="applyFilters()">
+                            <option value="">Tous les statuts</option>
+                            <option value="En cours">En cours</option>
+                            <option value="Terminé">Terminé</option>
+                            <option value="À lire">À lire</option>
+                            <option value="Abandonné">Abandonné</option>
+                            <option value="En pause">En pause</option>
+                            <option value="Re-lecture">Re-lecture</option>
+                        </select>
+                        
+                        <select id="sortBy" class="filter-select" onchange="applyFilters()">
+                            <option value="dateDesc">Plus récents</option>
+                            <option value="dateAsc">Plus anciens</option>
+                            <option value="titleAsc">Titre A-Z</option>
+                            <option value="titleDesc">Titre Z-A</option>
+                            <option value="ratingDesc">Note haute</option>
+                            <option value="ratingAsc">Note basse</option>
+                        </select>
+                        
+                        <button onclick="resetFilters()" class="btn-secondary">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </header>
 
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-content">
-                <div class="sidebar-header">
-                    <h2>Menu</h2>
-                    <button id="closeSidebar" class="close-btn lg:hidden">
-                        <i class="fas fa-times"></i>
-                    </button>
+                <!-- Grid Items -->
+                <div id="itemsGrid" class="items-grid">
+                    <!-- Items seront insérés ici par JS -->
                 </div>
-                
-                <nav class="sidebar-nav">
-                    <a href="#" onclick="navigateHome()" class="nav-item">
-                        <i class="fas fa-home"></i>
-                        <span>Home</span>
-                    </a>
-                    <a href="#" onclick="showStats()" class="nav-item">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Statistics</span>
-                    </a>
-                    <a href="#" onclick="openAddModal()" class="nav-item nav-item-primary">
-                        <i class="fas fa-plus"></i>
-                        <span>Add Title</span>
-                    </a>
-                    
-                    <div class="nav-divider"></div>
-                    
-                    <a href="#" onclick="exportData()" class="nav-item">
-                        <i class="fas fa-download"></i>
-                        <span>Export Data</span>
-                    </a>
-                    <a href="#" onclick="importData()" class="nav-item">
-                        <i class="fas fa-upload"></i>
-                        <span>Import Data</span>
-                    </a>
-                    <a href="#" onclick="syncNow()" class="nav-item">
-                        <i class="fas fa-sync"></i>
-                        <span>Sync Now</span>
-                    </a>
-                    
-                    <div class="nav-divider"></div>
-                    
-                    <a href="#" onclick="logout()" class="nav-item nav-item-danger">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </a>
-                </nav>
-                
-                <div class="sidebar-footer">
-                    <p class="version">
-                        <i class="fas fa-info-circle"></i>
-                        Version <span>1.0.6</span>
-                    </p>
-                    <div id="syncStatus" class="sync-status"></div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content min-h-screen py-8">
-            <div class="container">
-                <!-- Stats -->
-                <section id="statsSection" class="stats-section">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-book"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span id="totalCount" class="stat-number">0</span>
-                            <span class="stat-label">Total</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-book-open"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span id="readingCount" class="stat-number">0</span>
-                            <span class="stat-label">Reading</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span id="completedCount" class="stat-number">0</span>
-                            <span class="stat-label">Completed</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="stat-info">
-                            <span id="planCount" class="stat-number">0</span>
-                            <span class="stat-label">Plan to Read</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Filters -->
-                <section class="filters-section">
-                    <div class="filter-group">
-                        <label>Type</label>
-                        <select id="filterType">
-                            <option value="all">All</option>
-                            <option value="manga">Manga</option>
-                            <option value="manhwa">Manhwa</option>
-                            <option value="manhua">Manhua</option>
-                            <option value="webtoon">Webtoon</option>
-                            <option value="light-novel">Light Novel</option>
-                            <option value="webnovel">WebNovel</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Status</label>
-                        <select id="filterStatus">
-                            <option value="all">All</option>
-                            <option value="reading">Reading</option>
-                            <option value="completed">Completed</option>
-                            <option value="plan-to-read">Plan to Read</option>
-                            <option value="dropped">Dropped</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Genre</label>
-                        <select id="filterGenre">
-                            <option value="all">All</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Sort By</label>
-                        <select id="sortBy">
-                            <option value="date-desc">Date (Newest)</option>
-                            <option value="date-asc">Date (Oldest)</option>
-                            <option value="title-asc">Title (A-Z)</option>
-                            <option value="title-desc">Title (Z-A)</option>
-                            <option value="rating-desc">Rating (High)</option>
-                            <option value="rating-asc">Rating (Low)</option>
-                        </select>
-                    </div>
-                </section>
-
-                <!-- Items Grid -->
-                <section id="itemsGrid" class="items-grid"></section>
 
                 <!-- Empty State -->
-                <section id="emptyState" class="empty-state hidden">
-                    <i class="fas fa-book-open"></i>
-                    <h3>No titles yet</h3>
-                    <p>Start building your collection</p>
+                <div id="emptyState" class="empty-state hidden">
+                    <i class="fas fa-book-open text-6xl text-primary mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-2">Aucun titre dans ta collection</h3>
+                    <p class="text-secondary mb-6">Commence à construire ton univers manga !</p>
                     <button onclick="openAddModal()" class="btn-primary">
-                        <i class="fas fa-plus"></i> Add Your First Title
+                        <i class="fas fa-plus"></i> Ajouter ton premier titre
                     </button>
-                </section>
-            </div>
-        </main>
-    </div>
+                </div>
+            </section>
 
-    <!-- Add/Edit Modal -->
-    <div id="itemModal" class="modal-overlay hidden">
-        <div class="modal-content item-modal">
+            <!-- Section Stats -->
+            <section id="statsSection" class="section">
+                <h2 class="text-3xl font-bold mb-8">Statistiques</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-book stat-icon text-primary"></i>
+                        <div>
+                            <p class="stat-value" id="statTotal">0</p>
+                            <p class="stat-label">Total Collection</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-book-reader stat-icon text-success"></i>
+                        <div>
+                            <p class="stat-value" id="statReading">0</p>
+                            <p class="stat-label">En cours</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-check-circle stat-icon text-primary"></i>
+                        <div>
+                            <p class="stat-value" id="statCompleted">0</p>
+                            <p class="stat-label">Terminés</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-clock stat-icon text-warning"></i>
+                        <div>
+                            <p class="stat-value" id="statToRead">0</p>
+                            <p class="stat-label">À lire</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="stat-card">
+                        <h3 class="text-xl font-bold mb-4">Par Type</h3>
+                        <div id="typeStats" class="space-y-2"></div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h3 class="text-xl font-bold mb-4">Top 5 Notes</h3>
+                        <div id="topRated" class="space-y-2"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal ADD/EDIT -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content modal-form">
             <div class="modal-header">
-                <h2 id="modalTitle">Add Title</h2>
-                <button onclick="closeItemModal()" class="close-btn">
+                <h3 id="modalTitle" class="text-2xl font-bold">Ajouter un titre</h3>
+                <button onclick="closeModal()" class="text-white hover:text-danger text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <form id="itemForm" class="item-form">
+            <form id="itemForm" class="space-y-4">
                 <input type="hidden" id="itemId">
                 
-                <div class="form-group full-width">
-                    <label>Title</label>
-                    <input type="text" id="itemTitle" required>
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-book"></i> Titre *
+                    </label>
+                    <input type="text" id="itemTitle" required class="form-input">
                 </div>
                 
-                <div class="form-row">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="form-group">
-                        <label>Type</label>
-                        <select id="itemType" required>
-                            <option value="manga">Manga</option>
-                            <option value="manhwa">Manhwa</option>
-                            <option value="manhua">Manhua</option>
-                            <option value="webtoon">Webtoon</option>
-                            <option value="light-novel">Light Novel</option>
-                            <option value="webnovel">WebNovel</option>
+                        <label class="form-label">
+                            <i class="fas fa-tag"></i> Type *
+                        </label>
+                        <select id="itemType" required class="form-input">
+                            <option value="">Sélectionner...</option>
+                            <option value="Manga">Manga</option>
+                            <option value="Manwha">Manwha</option>
+                            <option value="Manhua">Manhua</option>
+                            <option value="Webtoon">Webtoon</option>
+                            <option value="Light Novel">Light Novel</option>
+                            <option value="WebNovel">WebNovel</option>
+                            <option value="Webcomic">Webcomic</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
-                        <label>Status</label>
-                        <select id="itemStatus" required>
-                            <option value="reading">Reading</option>
-                            <option value="completed">Completed</option>
-                            <option value="plan-to-read">Plan to Read</option>
-                            <option value="dropped">Dropped</option>
+                        <label class="form-label">
+                            <i class="fas fa-tasks"></i> Statut *
+                        </label>
+                        <select id="itemStatus" required class="form-input">
+                            <option value="">Sélectionner...</option>
+                            <option value="En cours">En cours</option>
+                            <option value="Terminé">Terminé</option>
+                            <option value="À lire">À lire</option>
+                            <option value="Abandonné">Abandonné</option>
+                            <option value="En pause">En pause</option>
+                            <option value="Re-lecture">Re-lecture</option>
                         </select>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label>Rating</label>
-                    <div id="ratingStars" class="rating-stars">
+                    <label class="form-label">
+                        <i class="fas fa-star"></i> Note
+                    </label>
+                    <div class="rating-input" id="ratingInput">
                         <i class="far fa-star" data-rating="1"></i>
                         <i class="far fa-star" data-rating="2"></i>
                         <i class="far fa-star" data-rating="3"></i>
@@ -356,65 +328,91 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Genres (comma separated)</label>
-                    <input type="text" id="itemGenres" placeholder="Action, Adventure, Fantasy">
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Chapters Read</label>
-                        <input type="number" id="itemChapters" min="0" value="0">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Link</label>
-                        <input type="url" id="itemLink" placeholder="https://...">
-                    </div>
+                    <label class="form-label">
+                        <i class="fas fa-list"></i> Genres (séparés par virgule)
+                    </label>
+                    <input type="text" id="itemGenres" placeholder="Action, Aventure, Fantasy" class="form-input">
                 </div>
                 
                 <div class="form-group">
-                    <label>Image URL</label>
-                    <input type="url" id="itemImage" placeholder="https://...">
-                    <div id="imagePreview" class="image-preview hidden">
+                    <label class="form-label">
+                        <i class="fas fa-link"></i> Lien
+                    </label>
+                    <input type="url" id="itemLink" placeholder="https://..." class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-image"></i> Image (URL ou Upload)
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="url" id="itemImageUrl" placeholder="URL de l'image" class="form-input flex-1">
+                        <input type="file" id="itemImageFile" accept="image/*" class="hidden">
+                        <button type="button" onclick="document.getElementById('itemImageFile').click()" class="btn-secondary">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                    </div>
+                    <div id="imagePreview" class="image-preview mt-2 hidden">
                         <img id="previewImg" src="" alt="Preview">
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label>Notes</label>
-                    <textarea id="itemNotes" rows="4"></textarea>
+                    <label class="form-label">
+                        <i class="fas fa-list-ol"></i> Chapitres lus
+                    </label>
+                    <input type="number" id="itemChapters" min="0" placeholder="0" class="form-input">
                 </div>
                 
-                <div class="form-actions">
-                    <button type="button" onclick="closeItemModal()" class="btn-secondary">
-                        Cancel
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-sticky-note"></i> Notes
+                    </label>
+                    <textarea id="itemNotes" rows="3" placeholder="Tes notes personnelles..." class="form-input"></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">
+                        <i class="fas fa-save"></i> Enregistrer
                     </button>
-                    <button type="submit" class="btn-primary">
-                        Save
+                    <button type="button" onclick="closeModal()" class="btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- View Modal -->
-    <div id="viewModal" class="modal-overlay hidden">
-        <div class="modal-content view-modal">
+    <!-- Modal VIEW -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content modal-view">
             <div class="modal-header">
-                <h2 id="viewTitle"></h2>
-                <button onclick="closeViewModal()" class="close-btn">
+                <h3 id="viewTitle" class="text-2xl font-bold">Détails</h3>
+                <button onclick="closeViewModal()" class="text-white hover:text-danger text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div id="viewContent" class="view-content"></div>
+            
+            <div id="viewContent" class="space-y-4">
+                <!-- Contenu inséré par JS -->
+            </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast hidden">
-        <i id="toastIcon"></i>
-        <p id="toastMessage"></p>
-    </div>
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container mx-auto px-4">
+            <p class="text-center text-secondary">
+                Made with <i class="fas fa-heart text-danger"></i> by Karlito | 
+                <a href="https://ko-fi.com/karlito" target="_blank" class="text-primary hover:text-secondary">
+                    <i class="fas fa-coffee"></i> Ko-fi
+                </a>
+            </p>
+        </div>
+    </footer>
 
     <!-- Scripts -->
     <script src="logic.js"></script>
