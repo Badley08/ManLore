@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags -->
+    <title>ManLore - Your Visual Codex</title>
+    <meta name="description" content="ManLore - Manage your Manga, Manhwa, Manhua, Webtoons collection">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="manlore.png">
+    <link rel="apple-touch-icon" href="manlore.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Parse SDK -->
+    <script type="text/javascript" src="https://unpkg.com/parse/dist/parse.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-content auth-modal">
+            <div class="auth-header">
+                <img src="manlore.png" alt="ManLore" class="auth-logo">
+                <h1 class="auth-title">ManLore</h1>
+                <p class="auth-subtitle">Your Visual Codex</p>
+            </div>
+            
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <button onclick="showLogin()" id="loginTab" class="auth-tab active">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button onclick="showSignup()" id="signupTab" class="auth-tab">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form hidden">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="signupUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
+            
+            <div id="authError" class="error-message hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <button id="menuBtn" class="menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="header-brand">
+                    <img src="manlore.png" alt="Logo" class="header-logo">
+                    <div class="header-text">
+                        <h1>ManLore</h1>
+                        <p>Your Visual Codex</p>
+                    </div>
+                </div>
+                
+                <div class="header-actions">
+                    <button id="searchBtn" class="icon-btn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button id="userMenuBtn" class="user-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="usernameDisplay"></span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div id="searchBar" class="search-bar hidden">
+                <div class="container">
+                    <input type="text" id="searchInput" placeholder="Search titles, genres, notes...">
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-header">
+                    <h2>Menu</h2>
+                    <button id="closeSidebar" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <a href="#" onclick="navigateHome()" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="#" onclick="showStats()" class="nav-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Statistics</span>
+                    </a>
+                    <a href="#" onclick="openAddModal()" class="nav-item nav-item-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>Add Title</span>
+                    </a>
+                    
+                    <div class="nav-divider"></div>
+                    
+                    <a href="#" onclick="exportData()" class="nav-item">
+                        <i class="fas fa-download"></i>
+                        <span>Export Data</span>
+                    </a>
+                    <a href="#" onclick="importData()" class="nav-item">
+                        <i class="fas fa-upload"></i>
+                        <span>Import Data</span>
+                    </a>
+                    <a href="#" onclick="syncNow()" class="nav-item">
+                        <i class="fas fa-sync"></i>
+                        <span>Sync Now</span>
+                    </a>
+                    
+                    <div class="nav-divider"></div>
+                    
+                    <a href="#" onclick="logout()" class="nav-item nav-item-danger">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <p class="version">
+                        <i class="fas fa-info-circle"></i>
+                        Version <span>1.0.2</span>
+                    </p>
+                    <div id="syncStatus" class="sync-status"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Stats -->
+                <section id="statsSection" class="stats-section">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span id="totalCount" class="stat-number">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span id="readingCount" class="stat-number">0</span>
+                            <span class="stat-label">Reading</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span id="completedCount" class="stat-number">0</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span id="planCount" class="stat-number">0</span>
+                            <span class="stat-label">Plan to Read</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Filters -->
+                <section class="filters-section">
+                    <div class="filter-group">
+                        <label>Type</label>
+                        <select id="filterType">
+                            <option value="all">All</option>
+                            <option value="manga">Manga</option>
+                            <option value="manhwa">Manhwa</option>
+                            <option value="manhua">Manhua</option>
+                            <option value="webtoon">Webtoon</option>
+                            <option value="light-novel">Light Novel</option>
+                            <option value="webnovel">WebNovel</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="filterStatus">
+                            <option value="all">All</option>
+                            <option value="reading">Reading</option>
+                            <option value="completed">Completed</option>
+                            <option value="plan-to-read">Plan to Read</option>
+                            <option value="dropped">Dropped</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Genre</label>
+                        <select id="filterGenre">
+                            <option value="all">All</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Sort By</label>
+                        <select id="sortBy">
+                            <option value="date-desc">Date (Newest)</option>
+                            <option value="date-asc">Date (Oldest)</option>
+                            <option value="title-asc">Title (A-Z)</option>
+                            <option value="title-desc">Title (Z-A)</option>
+                            <option value="rating-desc">Rating (High)</option>
+                            <option value="rating-asc">Rating (Low)</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Items Grid -->
+                <section id="itemsGrid" class="items-grid"></section>
+
+                <!-- Empty State -->
+                <section id="emptyState" class="empty-state hidden">
+                    <i class="fas fa-book-open"></i>
+                    <h3>No titles yet</h3>
+                    <p>Start building your collection</p>
+                    <button onclick="openAddModal()" class="btn-primary">
+                        <i class="fas fa-plus"></i> Add Your First Title
+                    </button>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="itemModal" class="modal-overlay hidden">
+        <div class="modal-content item-modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Title</h2>
+                <button onclick="closeItemModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="itemForm" class="item-form">
+                <input type="hidden" id="itemId">
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Title</label>
+                        <input type="text" id="itemTitle" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="itemType" required>
+                            <option value="manga">Manga</option>
+                            <option value="manhwa">Manhwa</option>
+                            <option value="manhua">Manhua</option>
+                            <option value="webtoon">Webtoon</option>
+                            <option value="light-novel">Light Novel</option>
+                            <option value="webnovel">WebNovel</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="itemStatus" required>
+                            <option value="reading">Reading</option>
+                            <option value="completed">Completed</option>
+                            <option value="plan-to-read">Plan to Read</option>
+                            <option value="dropped">Dropped</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Rating</label>
+                    <div id="ratingStars" class="rating-stars">
+                        <i class="far fa-star" data-rating="1"></i>
+                        <i class="far fa-star" data-rating="2"></i>
+                        <i class="far fa-star" data-rating="3"></i>
+                        <i class="far fa-star" data-rating="4"></i>
+                        <i class="far fa-star" data-rating="5"></i>
+                    </div>
+                    <input type="hidden" id="itemRating" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label>Genres (comma separated)</label>
+                    <input type="text" id="itemGenres" placeholder="Action, Adventure, Fantasy">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Chapters Read</label>
+                        <input type="number" id="itemChapters" min="0" value="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Link</label>
+                        <input type="url" id="itemLink" placeholder="https://...">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="url" id="itemImage" placeholder="https://...">
+                    <div id="imagePreview" class="image-preview hidden">
+                        <img id="previewImg" src="" alt="Preview">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="itemNotes" rows="4"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" onclick="closeItemModal()" class="btn-secondary">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal-overlay hidden">
+        <div class="modal-content view-modal">
+            <div class="modal-header">
+                <h2 id="viewTitle"></h2>
+                <button onclick="closeViewModal()" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="viewContent" class="view-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <i id="toastIcon"></i>
+        <p id="toastMessage"></p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="logic.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
