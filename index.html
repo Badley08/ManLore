@@ -5,322 +5,515 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- SEO Meta Tags -->
-    <title>ManLore - Ton Codex Visuel, Ton Lore Personnel</title>
-    <meta name="description" content="ManLore - Gérez votre collection de Manga, Manwha, Manhua, Webtoons, Light Novels et WebNovels. Votre bibliothèque personnelle de lecture avec système de notation et organisation par catégories.">
-    <meta name="keywords" content="ManLore, manga, manwha, manhua, webtoon, light novel, webnovel, webcomics, tracker, bibliothèque manga, gestionnaire manga, liste lecture">
-    <meta name="author" content="ManLore">
-    <meta name="robots" content="index, follow">
-    
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="ManLore - Ton Codex Visuel">
-    <meta property="og:description" content="Gérez votre collection de Manga, Manwha, Manhua, Webtoons et plus encore">
-    <meta property="og:type" content="website">
-    <meta property="og:image" content="manlore.png">
-    
-    <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="ManLore - Ton Codex Visuel">
-    <meta name="twitter:description" content="Ton lore personnel pour Manga, Manwha, Manhua et Webtoons">
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#1a1a2e">
+    <title>ManLore - Your Visual Codex</title>
+    <meta name="description" content="ManLore - Manage your Manga, Manwha, Manhua, Webtoons collection">
+    <meta name="theme-color" content="#0a0a0a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ManLore">
     
-    <!-- Favicon -->
+    <!-- Icons -->
     <link rel="icon" type="image/png" href="manlore.png">
     <link rel="apple-touch-icon" href="manlore.png">
-    
-    <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
     
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Parse SDK -->
+    <script type="text/javascript" src="https://unpkg.com/parse/dist/parse.min.js"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neon: {
+                            pink: '#ff006e',
+                            blue: '#3a86ff',
+                            purple: '#8338ec',
+                            cyan: '#06ffa5',
+                        }
+                    },
+                    animation: {
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px #3a86ff, 0 0 10px #3a86ff, 0 0 15px #3a86ff' },
+                            '100%': { boxShadow: '0 0 10px #8338ec, 0 0 20px #8338ec, 0 0 30px #8338ec' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #0a0a0a 100%);
+            background-attachment: fixed;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-strong {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px #3a86ff, 0 0 20px #3a86ff, 0 0 30px #3a86ff;
+        }
+        
+        .neon-border {
+            box-shadow: 0 0 10px #8338ec, 0 0 20px #8338ec, 0 0 30px #8338ec;
+        }
+        
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(131, 56, 236, 0.5), 0 0 30px rgba(58, 134, 255, 0.3);
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #8338ec, #3a86ff);
+            border-radius: 4px;
+        }
+        
+        .star-rating {
+            color: #ffd700;
+            text-shadow: 0 0 5px #ffd700;
+        }
+        
+        @keyframes pulse-neon {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse-neon {
+            animation: pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <button class="hamburger-menu" id="hamburgerMenu" aria-label="Menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <div class="logo-container">
-                <img src="manlore.png" alt="ManLore Logo" class="logo">
-                <h1 class="site-title">ManLore</h1>
+<body class="min-h-screen text-white">
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-80">
+        <div class="glass-strong rounded-2xl max-w-md w-full p-8 neon-border">
+            <div class="text-center mb-8">
+                <img src="manlore.png" alt="ManLore" class="w-24 h-24 mx-auto mb-4 rounded-2xl neon-glow">
+                <h1 class="text-3xl font-bold neon-text mb-2">ManLore</h1>
+                <p class="text-gray-400">Your Visual Codex</p>
             </div>
-            <p class="tagline">Ton Codex Visuel, Ton Lore Personnel</p>
-        </div>
-    </header>
-
-    <!-- Sidebar Menu -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="manlore.png" alt="ManLore Logo" class="sidebar-logo">
-            <h2>ManLore</h2>
-            <button class="sidebar-close" id="sidebarClose">&times;</button>
-        </div>
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a href="#" id="menuHome">
-                        <span class="menu-icon">🏠</span>
-                        <span>Accueil</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" id="menuStats">
-                        <span class="menu-icon">📊</span>
-                        <span>Statistiques</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" id="menuExport">
-                        <span class="menu-icon">💾</span>
-                        <span>Exporter les données</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" id="menuImport">
-                        <span class="menu-icon">📥</span>
-                        <span>Importer les données</span>
-                    </a>
-                </li>
-                <li class="menu-divider"></li>
-                <li>
-                    <a href="#" id="menuUpdate">
-                        <span class="menu-icon">🔄</span>
-                        <span>Mettre à jour</span>
-                    </a>
-                </li>
-                <li class="menu-info">
-                    <span class="menu-icon">ℹ️</span>
-                    <span>Version <strong id="appVersion">1.0.0</strong></span>
-                </li>
-            </ul>
-        </nav>
-    </div>
-
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Add Button -->
-            <button class="btn-add" id="openAddModal">
-                <span class="btn-icon">+</span>
-                Ajouter un titre
-            </button>
-
-            <!-- Filters -->
-            <div class="filters">
-                <div class="filter-group">
-                    <label for="filterType">Type:</label>
-                    <select id="filterType" class="filter-select">
-                        <option value="all">Tous</option>
-                        <option value="manga">Manga</option>
-                        <option value="manwha">Manwha</option>
-                        <option value="manhua">Manhua</option>
-                        <option value="webtoon">Webtoon</option>
-                        <option value="light-novel">Light Novel</option>
-                        <option value="webnovel">WebNovel</option>
-                        <option value="webcomic">Webcomic</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="filterStatus">Statut:</label>
-                    <select id="filterStatus" class="filter-select">
-                        <option value="all">Tous</option>
-                        <option value="reading">En cours</option>
-                        <option value="completed">Terminé</option>
-                        <option value="plan-to-read">À lire</option>
-                        <option value="dropped">Abandonné</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="filterGenre">Genre:</label>
-                    <select id="filterGenre" class="filter-select">
-                        <option value="all">Tous</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="sortBy">Trier par:</label>
-                    <select id="sortBy" class="filter-select">
-                        <option value="date-desc">Date (récent)</option>
-                        <option value="date-asc">Date (ancien)</option>
-                        <option value="title-asc">Titre (A-Z)</option>
-                        <option value="title-desc">Titre (Z-A)</option>
-                        <option value="rating-desc">Note (haute)</option>
-                        <option value="rating-asc">Note (basse)</option>
-                    </select>
-                </div>
-
-                <button class="btn-filter" id="searchToggle">
-                    🔍 Rechercher
+            
+            <!-- Auth Tabs -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="showLogin()" id="loginTab" class="flex-1 py-3 rounded-lg glass font-semibold transition-all">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+                <button onclick="showSignup()" id="signupTab" class="flex-1 py-3 rounded-lg glass font-semibold transition-all">
+                    <i class="fas fa-user-plus mr-2"></i>Sign Up
                 </button>
             </div>
-
-            <!-- Search Bar -->
-            <div class="search-container" id="searchContainer" style="display: none;">
-                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher un titre...">
-            </div>
-
-            <!-- Stats -->
-            <div class="stats" id="stats">
-                <div class="stat-card">
-                    <div class="stat-number">0</div>
-                    <div class="stat-label">Total</div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-neon-cyan">Username</label>
+                    <input type="text" id="loginUsername" required 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">0</div>
-                    <div class="stat-label">En cours</div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-neon-cyan">Password</label>
+                    <input type="password" id="loginPassword" required 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">0</div>
-                    <div class="stat-label">Terminés</div>
+                <button type="submit" class="w-full py-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple font-bold hover:neon-glow transition-all">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form id="signupForm" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-neon-cyan">Username</label>
+                    <input type="text" id="signupUsername" required 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">0</div>
-                    <div class="stat-label">À lire</div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-neon-cyan">Email</label>
+                    <input type="email" id="signupEmail" required 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
                 </div>
-            </div>
-
-            <!-- Items Grid -->
-            <div class="items-grid" id="itemsGrid">
-                <!-- Items will be dynamically inserted here -->
-            </div>
-
-            <!-- Empty State -->
-            <div class="empty-state" id="emptyState">
-                <div class="empty-icon">📚</div>
-                <h2>Aucun titre ajouté</h2>
-                <p>Commencez à construire votre collection en ajoutant votre premier titre</p>
-            </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-neon-cyan">Password</label>
+                    <input type="password" id="signupPassword" required 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-lg bg-gradient-to-r from-neon-purple to-neon-pink font-bold hover:neon-glow transition-all">
+                    <i class="fas fa-user-plus mr-2"></i>Create Account
+                </button>
+            </form>
+            
+            <div id="authError" class="mt-4 p-3 rounded-lg bg-red-500 bg-opacity-20 border border-red-500 text-red-300 text-sm hidden"></div>
         </div>
-    </main>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="glass-strong sticky top-0 z-40 border-b border-neon-purple">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <button id="menuBtn" class="lg:hidden p-2 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    
+                    <div class="flex items-center gap-4">
+                        <img src="manlore.png" alt="Logo" class="w-12 h-12 rounded-lg neon-glow">
+                        <div>
+                            <h1 class="text-2xl font-bold neon-text">ManLore</h1>
+                            <p class="text-xs text-gray-400">Your Visual Codex</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <button id="searchBtn" class="p-2 rounded-lg glass hover:neon-glow transition-all">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <button id="userMenuBtn" class="flex items-center gap-2 p-2 rounded-lg glass hover:neon-glow transition-all">
+                            <i class="fas fa-user-circle text-xl"></i>
+                            <span id="usernameDisplay" class="hidden lg:inline text-sm"></span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div id="searchBar" class="mt-4 hidden">
+                    <input type="text" id="searchInput" placeholder="Search titles, genres, notes..." 
+                           class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 glass-strong border-r border-neon-purple transform -translate-x-full lg:translate-x-0 transition-transform duration-300 overflow-y-auto custom-scrollbar">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-bold neon-text">Menu</h2>
+                    <button id="closeSidebar" class="lg:hidden p-2 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <nav class="space-y-2">
+                    <a href="#" onclick="navigateHome()" class="flex items-center gap-3 p-3 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="#" onclick="showStats()" class="flex items-center gap-3 p-3 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Statistics</span>
+                    </a>
+                    <a href="#" onclick="openAddModal()" class="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple hover:neon-glow transition-all">
+                        <i class="fas fa-plus"></i>
+                        <span>Add Title</span>
+                    </a>
+                    
+                    <div class="border-t border-gray-700 my-4"></div>
+                    
+                    <a href="#" onclick="exportData()" class="flex items-center gap-3 p-3 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-download"></i>
+                        <span>Export Data</span>
+                    </a>
+                    <a href="#" onclick="importData()" class="flex items-center gap-3 p-3 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-upload"></i>
+                        <span>Import Data</span>
+                    </a>
+                    <a href="#" onclick="syncNow()" class="flex items-center gap-3 p-3 rounded-lg glass hover:neon-glow transition-all">
+                        <i class="fas fa-sync"></i>
+                        <span>Sync Now</span>
+                    </a>
+                    
+                    <div class="border-t border-gray-700 my-4"></div>
+                    
+                    <a href="#" onclick="logout()" class="flex items-center gap-3 p-3 rounded-lg glass hover:bg-red-500 hover:bg-opacity-20 transition-all">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </nav>
+                
+                <div class="mt-8 p-4 rounded-lg glass">
+                    <p class="text-xs text-gray-400 flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        Version <span class="text-neon-cyan font-semibold">1.0.2</span>
+                    </p>
+                    <div id="syncStatus" class="mt-2 text-xs"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="lg:ml-64 min-h-screen">
+            <div class="container mx-auto px-4 py-8">
+                <!-- Stats -->
+                <div id="statsSection" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="glass rounded-xl p-6 hover:neon-glow transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-book text-3xl text-neon-cyan"></i>
+                            <span id="totalCount" class="text-3xl font-bold neon-text">0</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Total</p>
+                    </div>
+                    <div class="glass rounded-xl p-6 hover:neon-glow transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-book-open text-3xl text-neon-blue"></i>
+                            <span id="readingCount" class="text-3xl font-bold neon-text">0</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Reading</p>
+                    </div>
+                    <div class="glass rounded-xl p-6 hover:neon-glow transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-check-circle text-3xl text-neon-purple"></i>
+                            <span id="completedCount" class="text-3xl font-bold neon-text">0</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Completed</p>
+                    </div>
+                    <div class="glass rounded-xl p-6 hover:neon-glow transition-all">
+                        <div class="flex items-center justify-between mb-2">
+                            <i class="fas fa-clock text-3xl text-neon-pink"></i>
+                            <span id="planCount" class="text-3xl font-bold neon-text">0</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Plan to Read</p>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="glass rounded-xl p-6 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-neon-cyan">Type</label>
+                            <select id="filterType" class="w-full px-4 py-2 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                                <option value="all">All</option>
+                                <option value="manga">Manga</option>
+                                <option value="manhwa">Manhwa</option>
+                                <option value="manhua">Manhua</option>
+                                <option value="webtoon">Webtoon</option>
+                                <option value="light-novel">Light Novel</option>
+                                <option value="webnovel">WebNovel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-neon-cyan">Status</label>
+                            <select id="filterStatus" class="w-full px-4 py-2 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                                <option value="all">All</option>
+                                <option value="reading">Reading</option>
+                                <option value="completed">Completed</option>
+                                <option value="plan-to-read">Plan to Read</option>
+                                <option value="dropped">Dropped</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-neon-cyan">Genre</label>
+                            <select id="filterGenre" class="w-full px-4 py-2 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-neon-cyan">Sort By</label>
+                            <select id="sortBy" class="w-full px-4 py-2 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                                <option value="date-desc">Date (Newest)</option>
+                                <option value="date-asc">Date (Oldest)</option>
+                                <option value="title-asc">Title (A-Z)</option>
+                                <option value="title-desc">Title (Z-A)</option>
+                                <option value="rating-desc">Rating (High)</option>
+                                <option value="rating-asc">Rating (Low)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Grid -->
+                <div id="itemsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-20 hidden">
+                    <i class="fas fa-book-open text-6xl text-gray-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-2">No titles yet</h3>
+                    <p class="text-gray-400 mb-6">Start building your collection</p>
+                    <button onclick="openAddModal()" class="px-6 py-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple font-bold hover:neon-glow transition-all">
+                        <i class="fas fa-plus mr-2"></i>Add Your First Title
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
 
     <!-- Add/Edit Modal -->
-    <div class="modal" id="addModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Ajouter un titre</h2>
-                <button class="modal-close" id="closeModal">&times;</button>
+    <div id="itemModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-80 overflow-y-auto">
+        <div class="glass-strong rounded-2xl max-w-2xl w-full p-8 my-8 neon-border">
+            <div class="flex items-center justify-between mb-6">
+                <h2 id="modalTitle" class="text-2xl font-bold neon-text">Add Title</h2>
+                <button onclick="closeItemModal()" class="p-2 rounded-lg glass hover:neon-glow transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <form id="addForm" class="modal-form">
+            
+            <form id="itemForm" class="space-y-4">
                 <input type="hidden" id="itemId">
-
-                <div class="form-group">
-                    <label for="itemTitle">Titre *</label>
-                    <input type="text" id="itemTitle" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemType">Type *</label>
-                    <select id="itemType" required>
-                        <option value="manga">Manga</option>
-                        <option value="manwha">Manwha</option>
-                        <option value="manhua">Manhua</option>
-                        <option value="webtoon">Webtoon</option>
-                        <option value="light-novel">Light Novel</option>
-                        <option value="webnovel">WebNovel</option>
-                        <option value="webcomic">Webcomic</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemStatus">Statut *</label>
-                    <select id="itemStatus" required>
-                        <option value="reading">En cours</option>
-                        <option value="completed">Terminé</option>
-                        <option value="plan-to-read">À lire</option>
-                        <option value="dropped">Abandonné</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemRating">Note</label>
-                    <div class="rating-input" id="ratingInput">
-                        <span class="star" data-rating="1">☆</span>
-                        <span class="star" data-rating="2">☆</span>
-                        <span class="star" data-rating="3">☆</span>
-                        <span class="star" data-rating="4">☆</span>
-                        <span class="star" data-rating="5">☆</span>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Title</label>
+                        <input type="text" id="itemTitle" required 
+                               class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
                     </div>
-                    <input type="hidden" id="itemRating" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemGenres">Genres (séparés par des virgules)</label>
-                    <input type="text" id="itemGenres" placeholder="Action, Aventure, Fantasy">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemLink">Lien</label>
-                    <input type="url" id="itemLink" placeholder="https://...">
-                    <div class="link-preview" id="linkPreview" style="display: none;">
-                        <img id="linkPreviewImage" src="" alt="Preview">
-                        <div id="linkPreviewTitle"></div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Type</label>
+                        <select id="itemType" required 
+                                class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                            <option value="manga">Manga</option>
+                            <option value="manhwa">Manhwa</option>
+                            <option value="manhua">Manhua</option>
+                            <option value="webtoon">Webtoon</option>
+                            <option value="light-novel">Light Novel</option>
+                            <option value="webnovel">WebNovel</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Status</label>
+                        <select id="itemStatus" required 
+                                class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                            <option value="reading">Reading</option>
+                            <option value="completed">Completed</option>
+                            <option value="plan-to-read">Plan to Read</option>
+                            <option value="dropped">Dropped</option>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Rating</label>
+                        <div id="ratingStars" class="flex gap-2 text-3xl">
+                            <i class="far fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-rating="1"></i>
+                            <i class="far fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-rating="2"></i>
+                            <i class="far fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-rating="3"></i>
+                            <i class="far fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-rating="4"></i>
+                            <i class="far fa-star cursor-pointer hover:text-yellow-400 transition-colors" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="itemRating" value="0">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Genres (comma separated)</label>
+                        <input type="text" id="itemGenres" placeholder="Action, Adventure, Fantasy" 
+                               class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Chapters Read</label>
+                        <input type="number" id="itemChapters" min="0" value="0" 
+                               class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Link</label>
+                        <input type="url" id="itemLink" placeholder="https://..." 
+                               class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Image URL</label>
+                        <input type="url" id="itemImage" placeholder="https://..." 
+                               class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all">
+                        <div id="imagePreview" class="mt-4 hidden">
+                            <img id="previewImg" src="" alt="Preview" class="w-full max-h-64 object-cover rounded-lg">
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2 text-neon-cyan">Notes</label>
+                        <textarea id="itemNotes" rows="4" 
+                                  class="w-full px-4 py-3 rounded-lg glass border border-neon-blue focus:border-neon-purple focus:outline-none transition-all"></textarea>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="itemImage">Image (URL ou Upload)</label>
-                    <input type="url" id="itemImage" placeholder="https://...">
-                    <input type="file" id="itemImageFile" accept="image/*" style="margin-top: 10px;">
-                    <div class="image-preview" id="imagePreview" style="display: none;">
-                        <img id="imagePreviewImg" src="" alt="Preview">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="itemChapters">Chapitres lus</label>
-                    <input type="number" id="itemChapters" min="0" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label for="itemNotes">Notes personnelles</label>
-                    <textarea id="itemNotes" rows="4"></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
-                    <button type="submit" class="btn-primary">Enregistrer</button>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="closeItemModal()" 
+                            class="flex-1 py-3 rounded-lg glass hover:neon-glow transition-all">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 py-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple font-bold hover:neon-glow transition-all">
+                        Save
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- View Modal -->
-    <div class="modal" id="viewModal">
-        <div class="modal-content modal-view">
-            <div class="modal-header">
-                <h2 id="viewTitle"></h2>
-                <button class="modal-close" id="closeViewModal">&times;</button>
+    <div id="viewModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black bg-opacity-80 overflow-y-auto">
+        <div class="glass-strong rounded-2xl max-w-3xl w-full p-8 my-8 neon-border">
+            <div class="flex items-center justify-between mb-6">
+                <h2 id="viewTitle" class="text-2xl font-bold neon-text"></h2>
+                <button onclick="closeViewModal()" class="p-2 rounded-lg glass hover:neon-glow transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body" id="viewContent">
-                <!-- Content will be dynamically inserted -->
+            <div id="viewContent" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div class="glass-strong rounded-lg p-4 neon-border min-w-[300px]">
+            <div class="flex items-center gap-3">
+                <i id="toastIcon" class="text-xl"></i>
+                <p id="toastMessage" class="flex-1"></p>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 ManLore - Ton Codex Visuel</p>
-            <p class="offline-indicator" id="offlineIndicator" style="display: none;">
-                 <a href='https://ko-fi.com/Y8Y31I5HND' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
-                📡 Mode Hors Ligne
-            </p>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
     <script src="script.js"></script>
 </body>
 </html>
