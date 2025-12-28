@@ -1,738 +1,775 @@
-// app.js - UI and Application Logic
-// Global UI Variables
-let currentEditId = null;
-let allGenres = new Set();
+/* ============================================
+   MANLORE - APP.JS
+   Logique de l'application
+   ============================================ */
 
-// Initialize App
+// Variables globales
+let allItems = [];
+let filteredItems = [];
+let currentEditingId = null;
+
+// ============================================
+// INITIALISATION
+// ============================================
+
 document.addEventListener('DOMContentLoaded', async () => {
-    initSyncQueue();
-    checkUserSession();
-    setupEventListeners();
-    setupOnlineOfflineListeners();
-    registerServiceWorker();
-});
-
-// Check User Session
-async function checkUserSession() {
+    console.log('🎬 Démarrage ManLore...');
+    
+    // Vérifier si utilisateur connecté
     const user = getCurrentUser();
     
-    if (!user) {
-        showAuthModal();
+    if (user) {
+        showApp(user);
+        await loadItems();
     } else {
-        document.getElementById('usernameDisplay').textContent = user.get('username');
-        hideAuthModal();
-        showMainApp();
-        await loadAllData();
+        showAuth();
     }
+    
+    // Initialiser les event listeners
+    initializeEventListeners();
+});
+
+/**
+ * Afficher l'écran d'authentification
+ */
+function showAuth() {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('appContainer').classList.add('hidden');
 }
 
-// Load All Data
-async function loadAllData() {
-    try {
-        const online = getOnlineStatus();
-        
-        if (online) {
-            const items = await loadFromCloud();
-            updateGenresFromItems(items);
-        } else {
-            const items = loadFromLocalStorage();
-            updateGenresFromItems(items);
-        }
-        
-        updateGenreFilter();
-        renderItems();
-        updateStats();
-        updateSyncStatusUI();
-    } catch (error) {
-        console.error('Error loading data:', error);
-        const items = loadFromLocalStorage();
-        updateGenresFromItems(items);
-        updateGenreFilter();
-        renderItems();
-        updateStats();
-    }
+/**
+ * Afficher l'application principale
+ */
+function showApp(user) {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appContainer').classList.remove('hidden');
+    document.getElementById('currentUsername').textContent = user.get('username');
 }
 
-// Update Genres Set
-function updateGenresFromItems(items) {
-    allGenres.clear();
-    items.forEach(item => {
-        if (item.genres) {
-            item.genres.forEach(genre => allGenres.add(genre));
-        }
-    });
-}
+// ============================================
+// EVENT LISTENERS
+// ============================================
 
-// Show/Hide Auth Modal
-function showAuthModal() {
-    document.getElementById('authModal').classList.remove('hidden');
-    document.getElementById('authModal').classList.add('flex');
-}
-
-function hideAuthModal() {
-    document.getElementById('authModal').classList.add('hidden');
-    document.getElementById('authModal').classList.remove('flex');
-}
-
-function showMainApp() {
-    document.getElementById('mainApp').classList.remove('hidden');
-}
-
-// Auth Tab Functions
-window.showLogin = function() {
-    document.getElementById('loginForm').classList.remove('hidden');
-    document.getElementById('signupForm').classList.add('hidden');
-    document.getElementById('loginTab').classList.add('bg-gradient-to-r', 'from-neon-blue', 'to-neon-purple');
-    document.getElementById('signupTab').classList.remove('bg-gradient-to-r', 'from-neon-blue', 'to-neon-purple');
-}
-
-window.showSignup = function() {
-    document.getElementById('signupForm').classList.remove('hidden');
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('signupTab').classList.add('bg-gradient-to-r', 'from-neon-blue', 'to-neon-purple');
-    document.getElementById('loginTab').classList.remove('bg-gradient-to-r', 'from-neon-blue', 'to-neon-purple');
-}
-
-// Setup Event Listeners
-function setupEventListeners() {
+function initializeEventListeners() {
     // Auth Forms
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('signupForm').addEventListener('submit', handleSignup);
+    document.getElementById('showSignup').addEventListener('click', toggleAuthForms);
+    document.getElementById('showLogin').addEventListener('click', toggleAuthForms);
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
     
-    // Menu
-    document.getElementById('menuBtn').addEventListener('click', toggleSidebar);
-    document.getElementById('closeSidebar').addEventListener('click', toggleSidebar);
-    document.getElementById('searchBtn').addEventListener('click', toggleSearch);
+    // Navigation
+    document.getElementById('menuToggle')?.addEventListener('click', toggleSidebar);
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', handleNavigation);
+    });
     
-    // Filters
+    // Items
+    document.getElementById('addBtn').addEventListener('click', () => openItemModal());
+    document.getElementById('itemForm').addEventListener('submit', handleItemSubmit);
+    
+    // Filters & Search
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
     document.getElementById('filterType').addEventListener('change', applyFilters);
     document.getElementById('filterStatus').addEventListener('change', applyFilters);
     document.getElementById('filterGenre').addEventListener('change', applyFilters);
     document.getElementById('sortBy').addEventListener('change', applyFilters);
-    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
     
-    // Item Form
-    document.getElementById('itemForm').addEventListener('submit', handleItemSubmit);
-    document.getElementById('itemImage').addEventListener('input', handleImagePreview);
-    
-    // Rating Stars
-    document.querySelectorAll('#ratingStars i').forEach(star => {
+    // Rating Input
+    document.querySelectorAll('#ratingInput i').forEach(star => {
         star.addEventListener('click', handleRatingClick);
         star.addEventListener('mouseenter', handleRatingHover);
     });
-    document.getElementById('ratingStars').addEventListener('mouseleave', resetRatingHover);
+    document.getElementById('ratingInput').addEventListener('mouseleave', resetRatingHover);
+    
+    // Image Previews
+    document.getElementById('itemImageUrl').addEventListener('input', debounce(updateImagePreview, 500));
+    document.getElementById('itemImageFile').addEventListener('change', handleImageUpload);
+    
+    // Export/Import
+    document.getElementById('exportBtn')?.addEventListener('click', exportData);
+    document.getElementById('importBtn')?.addEventListener('click', () => {
+        document.getElementById('importFile').click();
+    });
+    document.getElementById('importFile')?.addEventListener('change', importData);
+    
+    // Close modals on outside click
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
 }
 
-// Handle Login
+// ============================================
+// AUTHENTIFICATION
+// ============================================
+
 async function handleLogin(e) {
     e.preventDefault();
-    const username = document.getElementById('loginUsername').value.trim();
+    showLoading(true);
+    
+    const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
     
-    const result = await loginUser(username, password);
+    const result = await logIn(username, password);
+    
+    showLoading(false);
     
     if (result.success) {
-        showToast('Login successful!', 'success');
-        document.getElementById('usernameDisplay').textContent = result.user.get('username');
-        hideAuthModal();
-        showMainApp();
-        await loadAllData();
+        showToast('Connexion réussie !', 'success');
+        showApp(result.user);
+        await loadItems();
     } else {
-        showAuthError(result.error);
+        showToast('Erreur: ' + result.error, 'error');
     }
 }
 
-// Handle Signup
 async function handleSignup(e) {
     e.preventDefault();
-    const username = document.getElementById('signupUsername').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
+    showLoading(true);
+    
+    const username = document.getElementById('signupUsername').value;
+    const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
     
-    const result = await signupUser(username, email, password);
+    const result = await signUp(username, email, password);
+    
+    showLoading(false);
     
     if (result.success) {
-        showToast('Account created successfully!', 'success');
-        document.getElementById('usernameDisplay').textContent = result.user.get('username');
-        hideAuthModal();
-        showMainApp();
-        await loadAllData();
+        showToast('Compte créé avec succès !', 'success');
+        showApp(result.user);
     } else {
-        showAuthError(result.error);
+        showToast('Erreur: ' + result.error, 'error');
     }
 }
 
-// Show Auth Error
-function showAuthError(message) {
-    const errorDiv = document.getElementById('authError');
-    errorDiv.textContent = message;
-    errorDiv.classList.remove('hidden');
-    setTimeout(() => errorDiv.classList.add('hidden'), 3000);
-}
-
-// Logout
-window.logout = async function() {
-    if (confirm('Are you sure you want to logout?')) {
-        await logoutUser();
-        location.reload();
-    }
-}
-
-// Handle Item Submit
-async function handleItemSubmit(e) {
+async function handleLogout(e) {
     e.preventDefault();
     
-    const itemData = {
-        title: document.getElementById('itemTitle').value.trim(),
-        type: document.getElementById('itemType').value,
-        status: document.getElementById('itemStatus').value,
-        rating: parseInt(document.getElementById('itemRating').value),
-        genres: document.getElementById('itemGenres').value.split(',').map(g => g.trim()).filter(g => g),
-        chapters: parseInt(document.getElementById('itemChapters').value) || 0,
-        link: document.getElementById('itemLink').value.trim(),
-        image: document.getElementById('itemImage').value.trim(),
-        notes: document.getElementById('itemNotes').value.trim()
-    };
-    
-    itemData.genres.forEach(genre => allGenres.add(genre));
-    
-    let result;
-    if (currentEditId) {
-        result = await updateItem(currentEditId, itemData);
+    if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+        showLoading(true);
+        const result = await logOut();
+        showLoading(false);
+        
         if (result.success) {
-            showToast('Item updated successfully!', 'success');
-        }
-    } else {
-        result = await createItem(itemData);
-        if (result.success) {
-            showToast('Item added successfully!', 'success');
+            allItems = [];
+            filteredItems = [];
+            showToast('Déconnexion réussie', 'success');
+            showAuth();
+            stopAutoSync();
         }
     }
-    
-    if (!result.success) {
-        showToast('Error: ' + result.error, 'error');
-        return;
-    }
-    
-    if (result.offline) {
-        showToast('Saved offline. Will sync when online.', 'warning');
-    }
-    
-    closeItemModal();
-    updateGenreFilter();
-    renderItems();
-    updateStats();
-    updateSyncStatusUI();
 }
 
-// Open Add Modal
-window.openAddModal = function() {
-    currentEditId = null;
-    document.getElementById('modalTitle').textContent = 'Add Title';
-    document.getElementById('itemForm').reset();
-    document.getElementById('itemRating').value = '0';
-    resetRating();
-    document.getElementById('imagePreview').classList.add('hidden');
-    document.getElementById('itemModal').classList.remove('hidden');
-    document.getElementById('itemModal').classList.add('flex');
+function toggleAuthForms(e) {
+    e.preventDefault();
+    document.getElementById('loginForm').classList.toggle('hidden');
+    document.getElementById('signupForm').classList.toggle('hidden');
 }
 
-// Open Edit Modal
-window.openEditModal = function(id) {
-    const item = getItemById(id);
-    if (!item) return;
-    
-    currentEditId = id;
-    document.getElementById('modalTitle').textContent = 'Edit Title';
-    document.getElementById('itemTitle').value = item.title;
-    document.getElementById('itemType').value = item.type;
-    document.getElementById('itemStatus').value = item.status;
-    document.getElementById('itemRating').value = item.rating;
-    document.getElementById('itemGenres').value = (item.genres || []).join(', ');
-    document.getElementById('itemChapters').value = item.chapters || 0;
-    document.getElementById('itemLink').value = item.link || '';
-    document.getElementById('itemImage').value = item.image || '';
-    document.getElementById('itemNotes').value = item.notes || '';
-    
-    setRating(item.rating);
-    
-    if (item.image) {
-        document.getElementById('previewImg').src = item.image;
-        document.getElementById('imagePreview').classList.remove('hidden');
-    }
-    
-    document.getElementById('itemModal').classList.remove('hidden');
-    document.getElementById('itemModal').classList.add('flex');
+// ============================================
+// NAVIGATION
+// ============================================
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('active');
 }
 
-// Close Item Modal
-window.closeItemModal = function() {
-    document.getElementById('itemModal').classList.add('hidden');
-    document.getElementById('itemModal').classList.remove('flex');
-    currentEditId = null;
+function handleNavigation(e) {
+    e.preventDefault();
+    
+    // Update active state
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    e.currentTarget.classList.add('active');
+    
+    // Show corresponding page
+    const page = e.currentTarget.dataset.page;
+    if (page) {
+        document.querySelectorAll('.page').forEach(p => {
+            p.classList.remove('active');
+        });
+        document.getElementById(page + 'Page').classList.add('active');
+    }
+    
+    // Close sidebar on mobile
+    if (window.innerWidth < 1024) {
+        document.getElementById('sidebar').classList.remove('active');
+    }
 }
 
-// View Item
-window.viewItem = function(id) {
-    const item = getItemById(id);
-    if (!item) return;
-    
-    document.getElementById('viewTitle').textContent = item.title;
-    
-    const statusColors = {
-        'reading': 'text-neon-blue',
-        'completed': 'text-neon-purple',
-        'plan-to-read': 'text-neon-pink',
-        'dropped': 'text-red-500'
-    };
-    
-    const statusLabels = {
-        'reading': 'Reading',
-        'completed': 'Completed',
-        'plan-to-read': 'Plan to Read',
-        'dropped': 'Dropped'
-    };
-    
-    let content = '';
-    
-    if (item.image) {
-        content += `<img src="${item.image}" alt="${escapeHtml(item.title)}" class="w-full max-h-96 object-cover rounded-lg mb-6">`;
-    }
-    
-    content += `
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <p class="text-sm text-gray-400 mb-1">Type</p>
-                <p class="font-semibold text-neon-cyan">${item.type.toUpperCase()}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-400 mb-1">Status</p>
-                <p class="font-semibold ${statusColors[item.status]}">${statusLabels[item.status]}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-400 mb-1">Rating</p>
-                <p class="star-rating">${'★'.repeat(item.rating)}${'☆'.repeat(5-item.rating)}</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-400 mb-1">Chapters</p>
-                <p class="font-semibold">${item.chapters || 0}</p>
-            </div>
-        </div>
-    `;
-    
-    if (item.genres && item.genres.length > 0) {
-        content += `
-            <div class="mt-4">
-                <p class="text-sm text-gray-400 mb-2">Genres</p>
-                <div class="flex flex-wrap gap-2">
-                    ${item.genres.map(g => `<span class="px-3 py-1 rounded-full glass text-sm">${escapeHtml(g)}</span>`).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    if (item.link) {
-        content += `
-            <div class="mt-4">
-                <a href="${escapeHtml(item.link)}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple hover:neon-glow transition-all">
-                    <i class="fas fa-external-link-alt"></i>
-                    Open Link
-                </a>
-            </div>
-        `;
-    }
-    
-    if (item.notes) {
-        content += `
-            <div class="mt-4">
-                <p class="text-sm text-gray-400 mb-2">Notes</p>
-                <p class="glass p-4 rounded-lg">${escapeHtml(item.notes)}</p>
-            </div>
-        `;
-    }
-    
-    content += `
-        <div class="flex gap-3 mt-6">
-            <button onclick="closeViewModal(); openEditModal('${item.id}')" class="flex-1 py-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-purple hover:neon-glow transition-all">
-                <i class="fas fa-edit mr-2"></i>Edit
-            </button>
-            <button onclick="handleDeleteItem('${item.id}')" class="flex-1 py-3 rounded-lg bg-red-500 bg-opacity-20 hover:bg-opacity-40 transition-all">
-                <i class="fas fa-trash mr-2"></i>Delete
-            </button>
-        </div>
-    `;
-    
-    document.getElementById('viewContent').innerHTML = content;
-    document.getElementById('viewModal').classList.remove('hidden');
-    document.getElementById('viewModal').classList.add('flex');
-}
+// ============================================
+// GESTION DES ITEMS
+// ============================================
 
-// Close View Modal
-window.closeViewModal = function() {
-    document.getElementById('viewModal').classList.add('hidden');
-    document.getElementById('viewModal').classList.remove('flex');
-}
-
-// Delete Item
-window.handleDeleteItem = async function(id) {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+async function loadItems() {
+    showLoading(true);
     
-    const result = await deleteItem(id);
+    const result = await fetchAllItems();
     
     if (result.success) {
-        showToast('Item deleted successfully!', 'success');
-        closeViewModal();
-        renderItems();
+        allItems = result.items.map(item => parseItemToObject(item));
+        filteredItems = [...allItems];
+        
+        updateGenreFilter();
+        applyFilters();
         updateStats();
-        updateSyncStatusUI();
+        
+        if (result.offline) {
+            showToast('Chargement depuis le cache local', 'info');
+        }
     } else {
-        showToast('Error deleting item: ' + result.error, 'error');
+        showToast('Erreur de chargement: ' + result.error, 'error');
     }
-}
-
-// Rating Functions
-function handleRatingClick(e) {
-    const rating = parseInt(e.target.dataset.rating);
-    document.getElementById('itemRating').value = rating;
-    setRating(rating);
-}
-
-function handleRatingHover(e) {
-    const rating = parseInt(e.target.dataset.rating);
-    const stars = document.querySelectorAll('#ratingStars i');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.remove('far');
-            star.classList.add('fas', 'text-yellow-400');
-        } else {
-            star.classList.remove('fas', 'text-yellow-400');
-            star.classList.add('far');
-        }
-    });
-}
-
-function resetRatingHover() {
-    const rating = parseInt(document.getElementById('itemRating').value);
-    setRating(rating);
-}
-
-function setRating(rating) {
-    const stars = document.querySelectorAll('#ratingStars i');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.remove('far');
-            star.classList.add('fas', 'text-yellow-400');
-        } else {
-            star.classList.remove('fas', 'text-yellow-400');
-            star.classList.add('far');
-        }
-    });
-}
-
-function resetRating() {
-    setRating(0);
-}
-
-// Image Preview
-function handleImagePreview() {
-    const url = document.getElementById('itemImage').value.trim();
-    const preview = document.getElementById('imagePreview');
-    const img = document.getElementById('previewImg');
     
-    if (url) {
-        img.src = url;
-        preview.classList.remove('hidden');
-        img.onerror = () => preview.classList.add('hidden');
-    } else {
-        preview.classList.add('hidden');
-    }
+    showLoading(false);
 }
 
-// Render Items
 function renderItems() {
-    const filtered = getFilteredItems();
     const grid = document.getElementById('itemsGrid');
-    const empty = document.getElementById('emptyState');
+    const emptyState = document.getElementById('emptyState');
     
-    if (filtered.length === 0) {
+    if (filteredItems.length === 0) {
         grid.innerHTML = '';
-        empty.classList.remove('hidden');
+        emptyState.classList.remove('hidden');
         return;
     }
     
-    empty.classList.add('hidden');
+    emptyState.classList.add('hidden');
     
-    const statusColors = {
-        'reading': 'bg-blue-500',
-        'completed': 'bg-purple-500',
-        'plan-to-read': 'bg-pink-500',
-        'dropped': 'bg-red-500'
-    };
-    
-    grid.innerHTML = filtered.map(item => `
-        <div class="glass rounded-xl overflow-hidden hover:neon-glow transition-all cursor-pointer group" onclick="viewItem('${item.id}')">
-            ${item.image 
-                ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" class="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300">` 
-                : `<div class="w-full h-64 bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
-                     <i class="fas fa-book text-6xl opacity-30"></i>
-                   </div>`
-            }
-            <div class="p-4">
-                <h3 class="text-lg font-bold mb-2 truncate">${escapeHtml(item.title)}</h3>
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs px-2 py-1 rounded-full ${statusColors[item.status]} bg-opacity-20 border border-current">${item.status.replace('-', ' ')}</span>
-                    <span class="text-xs text-neon-cyan">${item.type.toUpperCase()}</span>
+    grid.innerHTML = filteredItems.map(item => `
+        <div class="item-card" onclick="viewItem('${item.id}')">
+            <div class="item-image">
+                ${item.image || item.imageUrl 
+                    ? `<img src="${item.image || item.imageUrl}" alt="${item.title}">`
+                    : `<div class="item-image-placeholder"><i class="fas fa-book"></i></div>`
+                }
+                <span class="item-type-badge">${item.type}</span>
+            </div>
+            <div class="item-content">
+                <h3 class="item-title">${escapeHtml(item.title)}</h3>
+                
+                <div class="item-meta">
+                    <span class="item-status ${getStatusClass(item.status)}">${item.status}</span>
                 </div>
-                ${item.rating > 0 ? `<div class="star-rating text-sm mb-2">${'★'.repeat(item.rating)}${'☆'.repeat(5-item.rating)}</div>` : ''}
+                
+                <div class="item-rating">
+                    ${renderStars(item.rating)}
+                </div>
+                
                 ${item.genres && item.genres.length > 0 ? `
-                    <div class="flex flex-wrap gap-1 mt-2">
-                        ${item.genres.slice(0, 3).map(g => `<span class="text-xs px-2 py-1 rounded-full glass">${escapeHtml(g)}</span>`).join('')}
-                        ${item.genres.length > 3 ? `<span class="text-xs px-2 py-1 rounded-full glass">+${item.genres.length - 3}</span>` : ''}
+                    <div class="item-genres">
+                        ${item.genres.slice(0, 3).map(genre => 
+                            `<span class="genre-tag">${escapeHtml(genre)}</span>`
+                        ).join('')}
+                        ${item.genres.length > 3 ? `<span class="genre-tag">+${item.genres.length - 3}</span>` : ''}
                     </div>
                 ` : ''}
+                
+                <div class="item-footer">
+                    <span class="item-chapters">
+                        <i class="fas fa-bookmark mr-1"></i>
+                        ${item.chapters || 0} ch.
+                    </span>
+                    <div class="item-actions">
+                        <button class="item-action-btn" onclick="event.stopPropagation(); editItem('${item.id}')" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="item-action-btn delete" onclick="event.stopPropagation(); confirmDelete('${item.id}')" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `).join('');
 }
 
-// Get Filtered Items
-function getFilteredItems() {
-    let filtered = [...getAllItems()];
+function viewItem(itemId) {
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
     
-    const type = document.getElementById('filterType').value;
-    if (type !== 'all') {
-        filtered = filtered.filter(i => i.type === type);
-    }
+    const content = document.getElementById('viewContent');
+    document.getElementById('viewTitle').textContent = item.title;
     
-    const status = document.getElementById('filterStatus').value;
-    if (status !== 'all') {
-        filtered = filtered.filter(i => i.status === status);
-    }
+    content.innerHTML = `
+        <div class="view-modal-content">
+            <div class="view-image-section">
+                ${item.image || item.imageUrl 
+                    ? `<img src="${item.image || item.imageUrl}" alt="${item.title}">`
+                    : `<div class="view-image-placeholder"><i class="fas fa-book"></i></div>`
+                }
+            </div>
+            
+            <div class="view-info-section">
+                <div class="view-info-group">
+                    <div class="view-info-label">Type</div>
+                    <div class="view-info-value">${item.type}</div>
+                </div>
+                
+                <div class="view-info-group">
+                    <div class="view-info-label">Statut</div>
+                    <div class="view-info-value">
+                        <span class="item-status ${getStatusClass(item.status)}">${item.status}</span>
+                    </div>
+                </div>
+                
+                <div class="view-info-group">
+                    <div class="view-info-label">Note</div>
+                    <div class="view-rating-large">
+                        ${renderStars(item.rating, true)}
+                    </div>
+                </div>
+                
+                ${item.chapters ? `
+                    <div class="view-info-group">
+                        <div class="view-info-label">Chapitres lus</div>
+                        <div class="view-info-value">${item.chapters}</div>
+                    </div>
+                ` : ''}
+                
+                ${item.genres && item.genres.length > 0 ? `
+                    <div class="view-info-group">
+                        <div class="view-info-label">Genres</div>
+                        <div class="item-genres">
+                            ${item.genres.map(genre => 
+                                `<span class="genre-tag">${escapeHtml(genre)}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${item.link ? `
+                    <div class="view-info-group">
+                        <div class="view-info-label">Lien</div>
+                        <a href="${item.link}" target="_blank" class="view-link">
+                            <i class="fas fa-external-link-alt"></i>
+                            Ouvrir le lien
+                        </a>
+                    </div>
+                ` : ''}
+                
+                ${item.notes ? `
+                    <div class="view-info-group">
+                        <div class="view-info-label">Notes</div>
+                        <div class="view-notes">${escapeHtml(item.notes)}</div>
+                    </div>
+                ` : ''}
+                
+                <div class="view-actions">
+                    <button class="btn-edit" onclick="closeModal('viewModal'); editItem('${item.id}')">
+                        <i class="fas fa-edit"></i> Modifier
+                    </button>
+                    <button class="btn-delete" onclick="confirmDelete('${item.id}')">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
     
-    const genre = document.getElementById('filterGenre').value;
-    if (genre !== 'all') {
-        filtered = filtered.filter(i => i.genres && i.genres.includes(genre));
-    }
-    
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    if (search) {
-        filtered = filtered.filter(i => 
-            i.title.toLowerCase().includes(search) ||
-            (i.genres && i.genres.some(g => g.toLowerCase().includes(search))) ||
-            (i.notes && i.notes.toLowerCase().includes(search))
-        );
-    }
-    
-    const sort = document.getElementById('sortBy').value;
-    filtered.sort((a, b) => {
-        switch(sort) {
-            case 'date-desc': return new Date(b.createdAt) - new Date(a.createdAt);
-            case 'date-asc': return new Date(a.createdAt) - new Date(b.createdAt);
-            case 'title-asc': return a.title.localeCompare(b.title);
-            case 'title-desc': return b.title.localeCompare(a.title);
-            case 'rating-desc': return (b.rating || 0) - (a.rating || 0);
-            case 'rating-asc': return (a.rating || 0) - (b.rating || 0);
-            default: return 0;
-        }
-    });
-    
-    return filtered;
+    openModal('viewModal');
 }
 
-// Apply Filters
+function openItemModal(itemId = null) {
+    currentEditingId = itemId;
+    const modal = document.getElementById('itemModal');
+    const form = document.getElementById('itemForm');
+    const title = document.getElementById('modalTitle');
+    
+    form.reset();
+    document.getElementById('itemId').value = '';
+    document.getElementById('itemRating').value = '0';
+    updateRatingDisplay(0);
+    hideImagePreview();
+    
+    if (itemId) {
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+            title.textContent = 'Modifier le titre';
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemTitle').value = item.title;
+            document.getElementById('itemType').value = item.type;
+            document.getElementById('itemStatus').value = item.status;
+            document.getElementById('itemRating').value = item.rating || 0;
+            updateRatingDisplay(item.rating || 0);
+            document.getElementById('itemChapters').value = item.chapters || '';
+            document.getElementById('itemGenres').value = item.genres ? item.genres.join(', ') : '';
+            document.getElementById('itemLink').value = item.link || '';
+            document.getElementById('itemImageUrl').value = item.imageUrl || '';
+            document.getElementById('itemNotes').value = item.notes || '';
+            
+            if (item.image || item.imageUrl) {
+                showImagePreview(item.image || item.imageUrl);
+            }
+        }
+    } else {
+        title.textContent = 'Ajouter un titre';
+    }
+    
+    openModal('itemModal');
+}
+
+async function handleItemSubmit(e) {
+    e.preventDefault();
+    showLoading(true);
+    
+    const itemId = document.getElementById('itemId').value;
+    const genresText = document.getElementById('itemGenres').value;
+    
+    const itemData = {
+        title: document.getElementById('itemTitle').value,
+        type: document.getElementById('itemType').value,
+        status: document.getElementById('itemStatus').value,
+        rating: parseInt(document.getElementById('itemRating').value) || 0,
+        chapters: parseInt(document.getElementById('itemChapters').value) || 0,
+        genres: genresText ? genresText.split(',').map(g => g.trim()).filter(g => g) : [],
+        link: document.getElementById('itemLink').value,
+        imageUrl: document.getElementById('itemImageUrl').value,
+        image: document.getElementById('itemImageUrl').value, // Utiliser imageUrl comme image
+        notes: document.getElementById('itemNotes').value
+    };
+    
+    let result;
+    if (itemId) {
+        result = await updateItem(itemId, itemData);
+    } else {
+        result = await createItem(itemData);
+    }
+    
+    showLoading(false);
+    
+    if (result.success) {
+        showToast(itemId ? 'Titre modifié !' : 'Titre ajouté !', 'success');
+        closeModal('itemModal');
+        await loadItems();
+    } else {
+        showToast('Erreur: ' + result.error, 'error');
+    }
+}
+
+function editItem(itemId) {
+    openItemModal(itemId);
+}
+
+async function confirmDelete(itemId) {
+    if (confirm('Voulez-vous vraiment supprimer ce titre ?')) {
+        showLoading(true);
+        const result = await deleteItem(itemId);
+        showLoading(false);
+        
+        if (result.success) {
+            showToast('Titre supprimé', 'success');
+            closeModal('viewModal');
+            await loadItems();
+        } else {
+            showToast('Erreur: ' + result.error, 'error');
+        }
+    }
+}
+
+// ============================================
+// FILTRES & RECHERCHE
+// ============================================
+
 function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const typeFilter = document.getElementById('filterType').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    const genreFilter = document.getElementById('filterGenre').value;
+    const sortBy = document.getElementById('sortBy').value;
+    
+    filteredItems = allItems.filter(item => {
+        const matchesSearch = !searchTerm || 
+            item.title.toLowerCase().includes(searchTerm) ||
+            (item.notes && item.notes.toLowerCase().includes(searchTerm)) ||
+            (item.genres && item.genres.some(g => g.toLowerCase().includes(searchTerm)));
+        
+        const matchesType = !typeFilter || item.type === typeFilter;
+        const matchesStatus = !statusFilter || item.status === statusFilter;
+        const matchesGenre = !genreFilter || (item.genres && item.genres.includes(genreFilter));
+        
+        return matchesSearch && matchesType && matchesStatus && matchesGenre;
+    });
+    
+    // Tri
+    switch (sortBy) {
+        case 'date-desc':
+            filteredItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            break;
+        case 'date-asc':
+            filteredItems.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            break;
+        case 'title-asc':
+            filteredItems.sort((a, b) => a.title.localeCompare(b.title));
+            break;
+        case 'title-desc':
+            filteredItems.sort((a, b) => b.title.localeCompare(a.title));
+            break;
+        case 'rating-desc':
+            filteredItems.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            break;
+        case 'rating-asc':
+            filteredItems.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+            break;
+    }
+    
     renderItems();
 }
 
-// Update Stats
-function updateStats() {
-    const stats = getStats();
-    document.getElementById('totalCount').textContent = stats.total;
-    document.getElementById('readingCount').textContent = stats.reading;
-    document.getElementById('completedCount').textContent = stats.completed;
-    document.getElementById('planCount').textContent = stats.planToRead;
-}
-
-// Update Genre Filter
 function updateGenreFilter() {
-    const select = document.getElementById('filterGenre');
-    const current = select.value;
+    const genreFilter = document.getElementById('filterGenre');
+    const allGenres = new Set();
     
-    select.innerHTML = '<option value="all">All</option>';
-    [...allGenres].sort().forEach(genre => {
+    allItems.forEach(item => {
+        if (item.genres) {
+            item.genres.forEach(genre => allGenres.add(genre));
+        }
+    });
+    
+    const sortedGenres = Array.from(allGenres).sort();
+    
+    // Garder l'option "Tous les genres"
+    genreFilter.innerHTML = '<option value="">Tous les genres</option>';
+    sortedGenres.forEach(genre => {
         const option = document.createElement('option');
         option.value = genre;
         option.textContent = genre;
-        select.appendChild(option);
+        genreFilter.appendChild(option);
     });
-    
-    if (allGenres.has(current)) {
-        select.value = current;
-    }
 }
 
-// Toggle Sidebar
-function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('-translate-x-full');
+// ============================================
+// STATISTIQUES
+// ============================================
+
+function updateStats() {
+    document.getElementById('statTotal').textContent = allItems.length;
+    document.getElementById('statInProgress').textContent = 
+        allItems.filter(i => i.status === 'En cours').length;
+    document.getElementById('statCompleted').textContent = 
+        allItems.filter(i => i.status === 'Terminé').length;
+    document.getElementById('statToRead').textContent = 
+        allItems.filter(i => i.status === 'À lire').length;
 }
 
-// Toggle Search
-function toggleSearch() {
-    const searchBar = document.getElementById('searchBar');
-    searchBar.classList.toggle('hidden');
-    if (!searchBar.classList.contains('hidden')) {
-        document.getElementById('searchInput').focus();
-    }
+// ============================================
+// RATING
+// ============================================
+
+function handleRatingClick(e) {
+    const rating = parseInt(e.target.dataset.rating);
+    document.getElementById('itemRating').value = rating;
+    updateRatingDisplay(rating);
 }
 
-// Export Data
-window.exportData = function() {
-    const items = getAllItems();
-    const data = JSON.stringify(items, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `manlore-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Data exported successfully!', 'success');
+function handleRatingHover(e) {
+    const rating = parseInt(e.target.dataset.rating);
+    updateRatingDisplay(rating, true);
 }
 
-// Import Data
-window.importData = function() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            
-            if (!Array.isArray(data)) {
-                throw new Error('Invalid file format');
-            }
-            
-            if (confirm(`Import ${data.length} items? This will replace your current data.`)) {
-                // This would need to be implemented in logic.js
-                showToast('Import feature coming soon!', 'info');
-            }
-        } catch (error) {
-            showToast('Error importing data: ' + error.message, 'error');
+function resetRatingHover() {
+    const currentRating = parseInt(document.getElementById('itemRating').value) || 0;
+    updateRatingDisplay(currentRating);
+}
+
+function updateRatingDisplay(rating, isHover = false) {
+    document.querySelectorAll('#ratingInput i').forEach((star, index) => {
+        if (index < rating) {
+            star.classList.remove('far');
+            star.classList.add('fas', 'active');
+        } else {
+            star.classList.remove('fas', 'active');
+            star.classList.add('far');
         }
-    };
-    
-    input.click();
+    });
 }
 
-// Sync Now
-window.syncNow = async function() {
-    if (!getOnlineStatus()) {
-        showToast('Cannot sync while offline', 'error');
+function renderStars(rating, large = false) {
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+            html += '<i class="fas fa-star"></i>';
+        } else {
+            html += '<i class="far fa-star"></i>';
+        }
+    }
+    return html;
+}
+
+// ============================================
+// IMAGES
+// ============================================
+
+function updateImagePreview() {
+    const url = document.getElementById('itemImageUrl').value;
+    if (url) {
+        showImagePreview(url);
+    } else {
+        hideImagePreview();
+    }
+}
+
+async function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image trop grande (max 5MB)', 'error');
         return;
     }
     
-    showToast('Syncing...', 'info');
-    const result = await syncNow();
-    
-    if (result.success) {
-        await loadAllData();
-        showToast('Sync complete!', 'success');
-    } else {
-        showToast('Sync failed: ' + result.error, 'error');
-    }
-}
-
-// Online/Offline Listeners
-function setupOnlineOfflineListeners() {
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-}
-
-function handleOnline() {
-    updateOnlineStatus(true);
-    showToast('Back online!', 'success');
-    updateSyncStatusUI();
-}
-
-function handleOffline() {
-    updateOnlineStatus(false);
-    showToast('You are offline', 'warning');
-    updateSyncStatusUI();
-}
-
-// Update Sync Status UI
-function updateSyncStatusUI() {
-    const status = document.getElementById('syncStatus');
-    const online = getOnlineStatus();
-    const queueLength = getSyncQueueLength();
-    
-    const icon = online ? 'fa-check-circle text-green-400' : 'fa-exclamation-circle text-yellow-400';
-    const message = online 
-        ? (queueLength > 0 ? `Syncing ${queueLength} items...` : 'Synced') 
-        : `Offline (${queueLength} pending)`;
-    
-    status.innerHTML = `<i class="fas ${icon} mr-1"></i>${message}`;
-}
-
-// Navigation Functions
-window.navigateHome = function() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-window.showStats = function() {
-    document.getElementById('statsSection').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Show Toast
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    const icon = document.getElementById('toastIcon');
-    const msg = document.getElementById('toastMessage');
-    
-    const icons = {
-        success: 'fas fa-check-circle text-green-400',
-        error: 'fas fa-exclamation-circle text-red-400',
-        warning: 'fas fa-exclamation-triangle text-yellow-400',
-        info: 'fas fa-info-circle text-blue-400'
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const base64 = event.target.result;
+        document.getElementById('itemImageUrl').value = base64;
+        showImagePreview(base64);
     };
-    
-    icon.className = icons[type] || icons.info;
-    msg.textContent = message;
-    
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    reader.readAsDataURL(file);
 }
 
-// Service Worker
-function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker registered:', reg))
-            .catch(err => console.error('Service Worker error:', err));
+function showImagePreview(url) {
+    const preview = document.getElementById('imagePreview');
+    const img = preview.querySelector('img');
+    img.src = url;
+    preview.classList.remove('hidden');
+}
+
+function hideImagePreview() {
+    const preview = document.getElementById('imagePreview');
+    preview.classList.add('hidden');
+}
+
+// ============================================
+// EXPORT/IMPORT
+// ============================================
+
+async function exportData() {
+    try {
+        const data = {
+            version: '1.0.7',
+            exportDate: new Date().toISOString(),
+            username: currentUser ? currentUser.get('username') : 'unknown',
+            items: allItems
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `manlore-export-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Export réussi !', 'success');
+    } catch (error) {
+        showToast('Erreur d\'export: ' + error.message, 'error');
     }
 }
 
-// Utility Functions
+async function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        if (!data.items || !Array.isArray(data.items)) {
+            throw new Error('Format invalide');
+        }
+        
+        if (confirm(`Importer ${data.items.length} titres ?`)) {
+            showLoading(true);
+            
+            for (const item of data.items) {
+                await createItem(item);
+            }
+            
+            await loadItems();
+            showLoading(false);
+            showToast('Import réussi !', 'success');
+        }
+    } catch (error) {
+        showLoading(false);
+        showToast('Erreur d\'import: ' + error.message, 'error');
+    }
+    
+    e.target.value = '';
+}
+
+// ============================================
+// UTILITAIRES
+// ============================================
+
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function showLoading(show) {
+    const spinner = document.getElementById('loadingSpinner');
+    if (show) {
+        spinner.classList.remove('hidden');
+    } else {
+        spinner.classList.add('hidden');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    }[type] || 'fa-info-circle';
+    
+    toast.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
         clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
+        timeout = setTimeout(later, wait);
     };
 }
 
 function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return String(text).replace(/[&<>"']/g, m => map[m]);
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
+
+function getStatusClass(status) {
+    return status.toLowerCase().replace(/\s+/g, '-').replace(/é/g, 'e').replace(/à/g, 'a');
+}
+
+console.log('✅ ManLore chargé et prêt !');
