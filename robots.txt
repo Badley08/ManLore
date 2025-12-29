@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://badley08.github.io/ManLore/sitemap.xml
