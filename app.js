@@ -13,7 +13,10 @@ let currentEditingId = null;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🎬 Démarrage ManLore...');
+    console.log('[App] Starting ManLore v2.0.1...');
+    
+    // Load theme
+    loadTheme();
     
     // Vérifier si utilisateur connecté
     const user = getCurrentUser();
@@ -21,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (user) {
         showApp(user);
         await loadItems();
+        loadUserSettings();
     } else {
         showAuth();
     }
@@ -92,6 +96,16 @@ function initializeEventListeners() {
         document.getElementById('importFile').click();
     });
     document.getElementById('importFile')?.addEventListener('change', importData);
+    
+    // Settings
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', handleThemeChange);
+    });
+    document.getElementById('clearCacheBtn')?.addEventListener('click', clearCache);
+    document.getElementById('syncNowBtn')?.addEventListener('click', syncNow);
+    document.getElementById('deleteAllDataBtn')?.addEventListener('click', deleteAllData);
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', deleteAccount);
+    document.getElementById('changePasswordBtn')?.addEventListener('click', changePassword);
     
     // Close modals on outside click
     document.querySelectorAll('.modal').forEach(modal => {
@@ -195,6 +209,17 @@ function handleNavigation(e) {
             p.classList.remove('active');
         });
         document.getElementById(page + 'Page').classList.add('active');
+        
+        // Load stats if navigating to stats page
+        if (page === 'stats') {
+            analytics.update(allItems);
+            analytics.renderStatsPage();
+        }
+        
+        // Load settings if navigating to settings page
+        if (page === 'settings') {
+            loadUserSettings();
+        }
     }
     
     // Close sidebar on mobile
@@ -556,6 +581,9 @@ function updateStats() {
         allItems.filter(i => i.status === 'Terminé').length;
     document.getElementById('statToRead').textContent = 
         allItems.filter(i => i.status === 'À lire').length;
+    
+    // Update analytics
+    analytics.update(allItems);
 }
 
 // ============================================
@@ -772,4 +800,130 @@ function getStatusClass(status) {
     return status.toLowerCase().replace(/\s+/g, '-').replace(/é/g, 'e').replace(/à/g, 'a');
 }
 
-console.log('✅ ManLore chargé et prêt !');
+// Theme Management
+function loadTheme() {
+    const savedTheme = localStorage.getItem('manlore_theme') || 'dark-total';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    console.log('[Theme] Loaded theme:', savedTheme);
+}
+
+function handleThemeChange(e) {
+    const theme = e.currentTarget.dataset.theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('manlore_theme', theme);
+    
+    // Update active state
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    e.currentTarget.classList.add('active');
+    
+    showToast('Thème changé avec succès', 'success');
+    console.log('[Theme] Changed to:', theme);
+}
+
+// Settings Management
+function loadUserSettings() {
+    const user = getCurrentUser();
+    if (!user) return;
+    
+    document.getElementById('settingsUsername').value = user.get('username');
+    document.getElementById('settingsEmail').value = user.get('email');
+    
+    // Update active theme button
+    const currentTheme = localStorage.getItem('manlore_theme') || 'dark-total';
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === currentTheme) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+function clearCache() {
+    if (confirm('Voulez-vous vraiment vider le cache local ? Vos données dans le cloud seront conservées.')) {
+        localStorage.removeItem('manlore_items');
+        showToast('Cache vidé avec succès', 'success');
+        console.log('[Settings] Cache cleared');
+    }
+}
+
+async function syncNow() {
+    showLoading(true);
+    showToast('Synchronisation en cours...', 'info');
+    
+    await processSyncQueue();
+    await loadItems();
+    
+    showLoading(false);
+    showToast('Synchronisation terminée', 'success');
+    console.log('[Settings] Manual sync completed');
+}
+
+async function deleteAllData() {
+    const confirmation = prompt('ATTENTION: Cette action est irréversible. Tapez "SUPPRIMER" pour confirmer:');
+    
+    if (confirmation === 'SUPPRIMER') {
+        showLoading(true);
+        
+        try {
+            // Delete all items
+            for (const item of allItems) {
+                await deleteItem(item.id);
+            }
+            
+            await loadItems();
+            showLoading(false);
+            showToast('Toutes les données ont été supprimées', 'success');
+            console.log('[Settings] All data deleted');
+        } catch (error) {
+            showLoading(false);
+            showToast('Erreur lors de la suppression: ' + error.message, 'error');
+            console.error('[Settings] Error deleting data:', error);
+        }
+    }
+}
+
+async function deleteAccount() {
+    const confirmation = prompt('ATTENTION: Vous allez supprimer votre compte et TOUTES vos données. Tapez "SUPPRIMER MON COMPTE" pour confirmer:');
+    
+    if (confirmation === 'SUPPRIMER MON COMPTE') {
+        showLoading(true);
+        
+        try {
+            const user = getCurrentUser();
+            if (user) {
+                // Delete all items first
+                for (const item of allItems) {
+                    await deleteItem(item.id);
+                }
+                
+                // Delete user account
+                await user.destroy();
+                
+                // Clear local storage
+                localStorage.clear();
+                
+                showLoading(false);
+                showToast('Compte supprimé. Au revoir.', 'success');
+                
+                setTimeout(() => {
+                    showAuth();
+                }, 2000);
+                
+                console.log('[Settings] Account deleted');
+            }
+        } catch (error) {
+            showLoading(false);
+            showToast('Erreur: ' + error.message, 'error');
+            console.error('[Settings] Error deleting account:', error);
+        }
+    }
+}
+
+function changePassword() {
+    showToast('Fonctionnalité à venir', 'info');
+    console.log('[Settings] Change password clicked');
+}
+
+console.log('[App] ManLore loaded and ready!');

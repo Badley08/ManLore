@@ -1,6 +1,6 @@
 /* ============================================
    MANLORE - LOGIC.JS
-   Back4App Parse SDK Integration
+   Back4App Parse SDK Integration v2.0.1
    ============================================ */
 
 // Configuration Parse SDK
@@ -32,9 +32,10 @@ async function signUp(username, email, password) {
         
         await user.signUp();
         currentUser = user;
+        console.log('[Auth] User signed up successfully');
         return { success: true, user };
     } catch (error) {
-        console.error('❌ Erreur inscription:', error);
+        console.error('[Auth] Signup error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -62,9 +63,10 @@ async function logIn(usernameOrEmail, password) {
         }
         
         currentUser = user;
+        console.log('[Auth] User logged in successfully');
         return { success: true, user };
     } catch (error) {
-        console.error('❌ Erreur connexion:', error);
+        console.error('[Auth] Login error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -76,9 +78,10 @@ async function logOut() {
     try {
         await Parse.User.logOut();
         currentUser = null;
+        console.log('[Auth] User logged out');
         return { success: true };
     } catch (error) {
-        console.error('❌ Erreur déconnexion:', error);
+        console.error('[Auth] Logout error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -131,7 +134,7 @@ async function createItem(itemData) {
         
         return { success: true, item: savedItem };
     } catch (error) {
-        console.error('❌ Erreur création item:', error);
+        console.error('[CRUD] Create item error:', error);
         
         // Si offline, ajouter à la queue
         if (!isOnline) {
@@ -170,7 +173,7 @@ async function fetchAllItems() {
         
         return { success: true, items: results };
     } catch (error) {
-        console.error('❌ Erreur récupération items:', error);
+        console.error('[CRUD] Fetch items error:', error);
         
         // Fallback sur localStorage
         const localItems = loadFromLocalStorage();
@@ -218,7 +221,7 @@ async function updateItem(itemId, updates) {
         
         return { success: true, item: savedItem };
     } catch (error) {
-        console.error('❌ Erreur mise à jour item:', error);
+        console.error('[CRUD] Update item error:', error);
         
         // Si offline, ajouter à la queue
         if (!isOnline) {
@@ -257,7 +260,7 @@ async function deleteItem(itemId) {
         
         return { success: true };
     } catch (error) {
-        console.error('❌ Erreur suppression item:', error);
+        console.error('[CRUD] Delete item error:', error);
         
         // Si offline, ajouter à la queue
         if (!isOnline) {
@@ -293,7 +296,7 @@ function saveToLocalStorage(item) {
         
         localStorage.setItem('manlore_items', JSON.stringify(items));
     } catch (error) {
-        console.error('❌ Erreur sauvegarde localStorage:', error);
+        console.error('[Storage] Save to localStorage error:', error);
     }
 }
 
@@ -305,7 +308,7 @@ function loadFromLocalStorage() {
         const data = localStorage.getItem('manlore_items');
         return data ? JSON.parse(data) : [];
     } catch (error) {
-        console.error('❌ Erreur chargement localStorage:', error);
+        console.error('[Storage] Load from localStorage error:', error);
         return [];
     }
 }
@@ -323,7 +326,7 @@ function updateInLocalStorage(itemId, updates) {
             localStorage.setItem('manlore_items', JSON.stringify(items));
         }
     } catch (error) {
-        console.error('❌ Erreur mise à jour localStorage:', error);
+        console.error('[Storage] Update in localStorage error:', error);
     }
 }
 
@@ -336,7 +339,7 @@ function removeFromLocalStorage(itemId) {
         const filtered = items.filter(i => i.id !== itemId);
         localStorage.setItem('manlore_items', JSON.stringify(filtered));
     } catch (error) {
-        console.error('❌ Erreur suppression localStorage:', error);
+        console.error('[Storage] Remove from localStorage error:', error);
     }
 }
 
@@ -384,7 +387,7 @@ function loadSyncQueue() {
         const data = localStorage.getItem('manlore_sync_queue');
         syncQueue = data ? JSON.parse(data) : [];
     } catch (error) {
-        console.error('❌ Erreur chargement queue sync:', error);
+        console.error('[Sync] Load queue error:', error);
         syncQueue = [];
     }
 }
@@ -395,7 +398,7 @@ function loadSyncQueue() {
 async function processSyncQueue() {
     if (!isOnline || syncQueue.length === 0) return;
     
-    console.log('🔄 Traitement de la queue de sync...', syncQueue.length, 'opérations');
+    console.log('[Sync] Processing queue...', syncQueue.length, 'operations');
     
     const processedQueue = [];
     
@@ -413,7 +416,7 @@ async function processSyncQueue() {
                     break;
             }
         } catch (error) {
-            console.error('❌ Erreur traitement sync:', error);
+            console.error('[Sync] Process task error:', error);
             processedQueue.push(task); // Garder en queue si échec
         }
     }
@@ -422,7 +425,7 @@ async function processSyncQueue() {
     localStorage.setItem('manlore_sync_queue', JSON.stringify(syncQueue));
     
     if (syncQueue.length === 0) {
-        console.log('✅ Synchronisation terminée');
+        console.log('[Sync] Synchronization completed');
     }
 }
 
@@ -481,12 +484,12 @@ function updateOnlineStatus(online) {
 
 // Écouter les changements de statut réseau
 window.addEventListener('online', () => {
-    console.log('🌐 Connexion rétablie');
+    console.log('[Network] Connection restored');
     updateOnlineStatus(true);
 });
 
 window.addEventListener('offline', () => {
-    console.log('📴 Connexion perdue');
+    console.log('[Network] Connection lost');
     updateOnlineStatus(false);
 });
 
@@ -498,7 +501,7 @@ window.addEventListener('offline', () => {
  * Initialiser la logique Back4App
  */
 function initializeBackend() {
-    console.log('🚀 Initialisation Backend...');
+    console.log('[Backend] Initializing...');
     
     // Charger la queue de sync
     loadSyncQueue();
@@ -509,14 +512,14 @@ function initializeBackend() {
     // Vérifier l'utilisateur connecté
     const user = getCurrentUser();
     if (user) {
-        console.log('✅ Utilisateur connecté:', user.get('username'));
+        console.log('[Backend] User connected:', user.get('username'));
         currentUser = user;
         
         // Démarrer l'auto-sync
         startAutoSync();
     }
     
-    console.log('✅ Backend initialisé');
+    console.log('[Backend] Initialized successfully');
 }
 
 // Initialiser au chargement
