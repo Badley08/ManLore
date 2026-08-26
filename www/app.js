@@ -1173,4 +1173,29 @@ function spinRoulette() {
     }, 80);
 }
 
+// ============ OPEN EXTERNAL LINK (SYSTEM BROWSER) ============
+function openExternalLink(url) {
+    if (!url) return;
+    try {
+        if (window.Capacitor?.Plugins?.Browser) {
+            window.Capacitor.Plugins.Browser.open({ url });
+            return;
+        }
+        if (window.cordova?.InAppBrowser) {
+            window.cordova.InAppBrowser.open(url, '_system');
+            return;
+        }
+    } catch (e) {}
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+window.openExternalLink = openExternalLink;
+
 console.log('[App v5.0.1] Module loaded');
+
