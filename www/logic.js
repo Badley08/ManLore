@@ -92,21 +92,9 @@ async function logIn(usernameOrEmail, password) {
         const cleanInput = usernameOrEmail.trim();
         let user;
 
-        // Connexion avec timeout de sécurité pour éviter tout blocage d'écran
+        // Connexion directe avec timeout de sécurité
         const loginPromise = (async () => {
-            try {
-                return await Parse.User.logIn(cleanInput, password);
-            } catch (e) {
-                if (cleanInput.includes('@')) {
-                    const query = new Parse.Query(Parse.User);
-                    query.equalTo('email', cleanInput.toLowerCase());
-                    const userByEmail = await query.first();
-                    if (userByEmail) {
-                        return await Parse.User.logIn(userByEmail.get('username'), password);
-                    }
-                }
-                throw e;
-            }
+            return await Parse.User.logIn(cleanInput, password);
         })();
 
         user = await Promise.race([

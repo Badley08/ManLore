@@ -1,11 +1,11 @@
 {
-  "id": "/",
+  "id": "./",
   "name": "ManLore - Ton Codex Visuel, Ton Lore Personnel",
   "short_name": "ManLore",
   "description": "Gère et explore ton univers de collection : Manga, Manhwa, Manhua, Webtoons, Comics, Graphic Novels et plus. Suis tes lectures, découvre des stats et construis ton lore personnel.",
   "version": "5.0.1",
-  "start_url": "/?source=pwa",
-  "scope": "/",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "portrait-primary",
@@ -17,56 +17,68 @@
 
   "icons": [
     {
-      "src": "../icons/icon-48.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-48.png",
+      "type": "image/png",
       "sizes": "48x48",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-72.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-72.png",
+      "type": "image/png",
       "sizes": "72x72",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-96.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-96.png",
+      "type": "image/png",
       "sizes": "96x96",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-128.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-128.png",
+      "type": "image/png",
       "sizes": "128x128",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-192.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-144.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "manlore-logo-192.png",
+      "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-192-maskable.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-192.png",
+      "type": "image/png",
       "sizes": "192x192",
       "purpose": "maskable"
     },
     {
-      "src": "../icons/icon-256.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-256.png",
+      "type": "image/png",
       "sizes": "256x256",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-512.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-384.png",
+      "type": "image/png",
+      "sizes": "384x384",
+      "purpose": "any"
+    },
+    {
+      "src": "manlore-logo-512.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "../icons/icon-512-maskable.webp",
-      "type": "image/webp",
+      "src": "manlore-logo-512.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
     }
@@ -77,11 +89,11 @@
       "name": "Ajouter un titre",
       "short_name": "Ajouter",
       "description": "Ajouter un nouveau titre à votre collection",
-      "url": "/?action=add&source=shortcut",
+      "url": "./?action=add&source=shortcut",
       "icons": [
         {
-          "src": "../icons/icon-96.webp",
-          "type": "image/webp",
+          "src": "manlore-logo-96.png",
+          "type": "image/png",
           "sizes": "96x96"
         }
       ]
@@ -90,24 +102,11 @@
       "name": "Ma Collection",
       "short_name": "Collection",
       "description": "Voir votre collection complète",
-      "url": "/?page=home&source=shortcut",
+      "url": "./?page=home&source=shortcut",
       "icons": [
         {
-          "src": "../icons/icon-96.webp",
-          "type": "image/webp",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "En cours",
-      "short_name": "En cours",
-      "description": "Voir vos lectures en cours",
-      "url": "/?filter=en-cours&source=shortcut",
-      "icons": [
-        {
-          "src": "../icons/icon-96.webp",
-          "type": "image/webp",
+          "src": "manlore-logo-96.png",
+          "type": "image/png",
           "sizes": "96x96"
         }
       ]
@@ -116,85 +115,29 @@
       "name": "Statistiques",
       "short_name": "Stats",
       "description": "Voir vos statistiques de lecture",
-      "url": "/?page=stats&source=shortcut",
+      "url": "./?page=stats&source=shortcut",
       "icons": [
         {
-          "src": "../icons/icon-96.webp",
-          "type": "image/webp",
+          "src": "manlore-logo-96.png",
+          "type": "image/png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Liste de souhaits",
+      "short_name": "Wishlist",
+      "description": "Voir votre liste d'envies",
+      "url": "./?page=wishlist&source=shortcut",
+      "icons": [
+        {
+          "src": "manlore-logo-96.png",
+          "type": "image/png",
           "sizes": "96x96"
         }
       ]
     }
   ],
-
-  "screenshots": [
-    {
-      "src": "../screenshots/screen-mobile-home.webp",
-      "sizes": "390x844",
-      "type": "image/webp",
-      "platform": "narrow",
-      "label": "Écran d'accueil - Ma collection ManLore"
-    },
-    {
-      "src": "../screenshots/screen-mobile-detail.webp",
-      "sizes": "390x844",
-      "type": "image/webp",
-      "platform": "narrow",
-      "label": "Détail d'un titre - Suivi de lecture"
-    },
-    {
-      "src": "../screenshots/screen-desktop-collection.webp",
-      "sizes": "1280x800",
-      "type": "image/webp",
-      "platform": "wide",
-      "label": "Vue collection complète sur desktop"
-    },
-    {
-      "src": "../screenshots/screen-desktop-stats.webp",
-      "sizes": "1280x800",
-      "type": "image/webp",
-      "platform": "wide",
-      "label": "Tableau de bord des statistiques"
-    }
-  ],
-
-  "share_target": {
-    "action": "/share",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-
-  "protocol_handlers": [
-    {
-      "protocol": "web+manlore",
-      "url": "/?protocol=%s"
-    }
-  ],
-
-  "file_handlers": [
-    {
-      "action": "/import",
-      "accept": {
-        "application/json": [".json"],
-        "text/csv": [".csv"]
-      }
-    }
-  ],
-
-  "handle_links": "preferred",
-
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
 
   "prefer_related_applications": false,
   "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
