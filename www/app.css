@@ -1427,3 +1427,42 @@
     font-weight: 700;
     margin-top: 0.15rem;
 }
+
+/* ============================================
+   WISHLIST TEAM & COMMUNITY FEATURE BADGES
+   ============================================ */
+.badge-featured-team {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.22), rgba(231, 76, 60, 0.22));
+    border: 1px solid rgba(243, 156, 18, 0.55);
+    color: #ffd32a;
+    font-size: 0.72rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    padding: 0.22rem 0.65rem;
+    border-radius: 99px;
+    letter-spacing: 0.4px;
+    box-shadow: 0 0 12px rgba(243, 156, 18, 0.25);
+}
+
+.badge-community-feature {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(52, 152, 219, 0.14);
+    border: 1px solid rgba(52, 152, 219, 0.35);
+    color: #3498db;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+}
+
+.feature-item.team-featured {
+    border-left: 4px solid #f39c12;
+    background: linear-gradient(90deg, rgba(243, 156, 18, 0.08), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 4px 20px rgba(243, 156, 18, 0.08);
+}
+

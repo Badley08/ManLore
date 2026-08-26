@@ -225,12 +225,23 @@ function handleDeleteFeature(id) {
 
 // ============ VOTE & PROPOSITIONS ============
 
+const TEAM_EMAILS = [
+    'karlluberisse1308@gmail.com',
+    'karlito2best@gmail.com'
+];
+
+function isUserTeamMember(email) {
+    if (!email) return false;
+    const clean = String(email).toLowerCase().trim();
+    return TEAM_EMAILS.includes(clean);
+}
+
 const DEFAULT_FEATURES = [
-    { id: 'f1', title: 'Synchronisation multi-appareils', description: 'Synchroniser la collection entre plusieurs téléphones', votes: 42, author: 'Équipe ManLore' },
-    { id: 'f2', title: 'Notifications de nouveaux chapitres', description: 'Être notifié quand un nouveau chapitre sort', votes: 38, author: 'Équipe ManLore' },
-    { id: 'f3', title: 'Recommandations intelligentes', description: 'Suggestions basées sur vos habitudes de lecture', votes: 31, author: 'Équipe ManLore' },
-    { id: 'f4', title: 'Widget Android', description: 'Widget pour voir vos lectures en cours depuis l\'écran d\'accueil', votes: 27, author: 'Équipe ManLore' },
-    { id: 'f5', title: 'Mode lecture intégré', description: 'Lire directement dans l\'app via les sources disponibles', votes: 19, author: 'Équipe ManLore' },
+    { id: 'f1', title: 'Synchronisation multi-appareils', description: 'Synchroniser la collection entre plusieurs téléphones', votes: 42, author: 'ManLore Team', authorEmail: 'karlluberisse1308@gmail.com', isTeamFeature: true },
+    { id: 'f2', title: 'Notifications de nouveaux chapitres', description: 'Être notifié quand un nouveau chapitre sort', votes: 38, author: 'ManLore Team', authorEmail: 'karlito2best@gmail.com', isTeamFeature: true },
+    { id: 'f3', title: 'Recommandations intelligentes', description: 'Suggestions basées sur vos habitudes de lecture', votes: 31, author: 'ManLore Team', authorEmail: 'karlluberisse1308@gmail.com', isTeamFeature: true },
+    { id: 'f4', title: 'Widget Android', description: 'Widget pour voir vos lectures en cours depuis l\'écran d\'accueil', votes: 27, author: 'ManLore Team', authorEmail: 'karlito2best@gmail.com', isTeamFeature: true },
+    { id: 'f5', title: 'Mode lecture intégré', description: 'Lire directement dans l\'app via les sources disponibles', votes: 19, author: 'ManLore Team', authorEmail: 'karlluberisse1308@gmail.com', isTeamFeature: true },
 ];
 
 async function loadFeatures() {
@@ -241,21 +252,31 @@ async function loadFeatures() {
             const FeatureRequest = Parse.Object.extend('FeatureRequests');
             const query = new Parse.Query(FeatureRequest);
             query.descending('votes');
-            query.limit(30);
+            query.limit(50);
             const results = await query.find();
             if (results && results.length > 0) {
                 return results
                     .filter(r => !deletedFeatures.includes(r.id))
-                    .map(r => ({
-                        id: r.id,
-                        title: r.get('title') || '',
-                        description: r.get('description') || '',
-                        votes: r.get('votes') || 0,
-                        author: r.get('author') || 'Communauté'
-                    }));
+                    .map(r => {
+                        const authorEmail = (r.get('authorEmail') || '').toLowerCase().trim();
+                        const rawAuthor = r.get('author') || 'Communauté';
+                        const isTeam = r.get('isTeamFeature') === true ||
+                                       isUserTeamMember(authorEmail) ||
+                                       rawAuthor.toLowerCase().includes('manlore team') ||
+                                       rawAuthor.toLowerCase().includes('équipe manlore');
+                        return {
+                            id: r.id,
+                            title: r.get('title') || '',
+                            description: r.get('description') || '',
+                            votes: r.get('votes') || 0,
+                            author: isTeam ? 'ManLore Team' : rawAuthor,
+                            authorEmail: authorEmail,
+                            isTeamFeature: isTeam
+                        };
+                    });
             }
         } catch (e) {
-            console.warn('[Features] Cloud load failed, using defaults');
+            console.warn('[Features] Cloud load failed, using defaults', e);
         }
     }
     return DEFAULT_FEATURES.filter(f => !deletedFeatures.includes(f.id));
@@ -275,19 +296,25 @@ async function renderFeatures() {
     }
 
     grid.innerHTML = features.map(f => {
-        const authorText = f.author === 'Équipe ManLore' ? (i18n.t('wishlist.features.team') || 'Équipe ManLore') : (f.author === 'Communauté' ? (i18n.t('wishlist.features.community') || 'Communauté') : f.author);
-        const byText = `Par ${authorText}`;
+        const isTeam = f.isTeamFeature || isUserTeamMember(f.authorEmail) || f.author === 'ManLore Team';
+        const badgeHTML = isTeam
+            ? `<span class="badge-featured-team"><i class="fas fa-crown"></i> Wishlist Featured By ManLore Team</span>`
+            : `<span class="badge-community-feature"><i class="fas fa-users"></i> Community Feature</span>`;
+
+        const authorDisplay = isTeam ? 'ManLore Team' : (f.author || 'Communauté');
+
         return `
-            <div class="feature-item" id="feature-${f.id}">
+            <div class="feature-item ${isTeam ? 'team-featured' : ''}" id="feature-${f.id}">
                 <button class="vote-btn ${myVotes.includes(f.id) ? 'voted' : ''}"
                     onclick="handleVote('${f.id}')" id="voteBtn-${f.id}">
                     <i class="fas fa-chevron-up"></i>
                     <span class="vote-count" id="voteCount-${f.id}">${f.votes}</span>
                 </button>
                 <div class="feature-info">
+                    <div style="margin-bottom:0.45rem">${badgeHTML}</div>
                     <p class="feature-title">${escapeHtml(f.title)}</p>
                     ${f.description ? `<p class="feature-desc">${escapeHtml(f.description)}</p>` : ''}
-                    <p class="feature-author">${escapeHtml(byText)}</p>
+                    <p class="feature-author"><i class="fas fa-user-circle"></i> Proposé par ${escapeHtml(authorDisplay)}</p>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; justify-content:space-between; height:100%">
                     <button class="btn-icon delete" title="${i18n.t('wishlist.remove') || 'Supprimer'}"
@@ -353,6 +380,10 @@ async function handleProposeFeature() {
     const desc = document.getElementById('featureDesc').value.trim();
     if (!title) return;
 
+    const userEmail = currentUser ? (currentUser.get('email') || '').toLowerCase().trim() : '';
+    const userName = currentUser ? (currentUser.get('username') || '') : 'Communauté';
+    const isTeam = isUserTeamMember(userEmail);
+
     if (navigator.onLine && typeof Parse !== 'undefined') {
         try {
             const FeatureRequest = Parse.Object.extend('FeatureRequests');
@@ -360,7 +391,16 @@ async function handleProposeFeature() {
             feature.set('title', title);
             feature.set('description', desc);
             feature.set('votes', 1);
-            feature.set('author', currentUser ? currentUser.get('username') : 'Communauté');
+            feature.set('author', isTeam ? 'ManLore Team' : userName);
+            feature.set('authorEmail', userEmail);
+            feature.set('isTeamFeature', isTeam);
+
+            // Permettre la visibilité et le vote public pour tous les utilisateurs
+            const acl = new Parse.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            feature.setACL(acl);
+
             await feature.save();
 
             const myVotes = getMyVotes();
@@ -369,6 +409,7 @@ async function handleProposeFeature() {
 
             showToast(i18n.t('toast.feature.proposed') || 'Fonctionnalité proposée !', 'success');
         } catch (e) {
+            console.error('[Feature Proposal Error]', e);
             showToast(i18n.t('toast.feature.error') || 'Erreur lors de la proposition', 'error');
         }
     } else {
