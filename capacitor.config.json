@@ -1,0 +1,28 @@
+{
+	"appId": "com.karlito.manlore",
+	"appName": "ManLore",
+	"webDir": "www",
+	"android": {},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"backgroundColor": "#1a1a2e",
+			"androidSplashResourceName": "splash",
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "dark",
+			"backgroundColor": "#000000"
+		}
+	},
+	"server": {
+		"androidScheme": "https",
+		"allowNavigation": [
+			"api.jikan.moe",
+			"parseapi.back4app.com",
+			"fonts.googleapis.com",
+			"fonts.gstatic.com",
+			"cdnjs.cloudflare.com"
+		]
+	}
+}

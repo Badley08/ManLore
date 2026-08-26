@@ -1,0 +1,60 @@
+# ==========================================
+# ManLore - .gitignore
+# ==========================================
+
+# Clés de signature privées / Keystores (CRITIQUE pour GitHub)
+*.jks
+*.keystore
+*.p12
+*.key
+*.pem
+
+# Binaires & Fichiers compilés Android / APK / DEX
+*.apk
+*.aab
+*.dex
+*.arsc
+*.class
+*.flat
+stamp-cert-sha256
+DebugProbesKt.bin
+
+# Dossiers d'extraction / Décompilation temporaires
+extracted_apk/
+decompiled_apk/
+
+# Android & Gradle (si projet natif généré)
+.gradle/
+build/
+*/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/captures/
+.externalNativeBuild/
+.cxx/
+
+# Node.js / Dépendances & Logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+dist/
+
+# Fichiers d'environnement & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE & Éditeurs
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# Fichiers système OS
+.DS_Store
+Thumbs.db
+desktop.ini
