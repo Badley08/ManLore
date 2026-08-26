@@ -178,31 +178,39 @@ window.Parse.User = {
     logOut: () => logOut(),
     signUp: (u, e, p) => signUp(u, e, p)
 };
-window.Parse.Object = {
-    extend: (className) => {
-        return function () {
-            this.className = className;
-            this._attributes = {};
-            this.set = (k, v) => { this._attributes[k] = v; };
-            this.get = (k) => this._attributes[k];
-            this.setACL = (acl) => { this._attributes.ACL = acl; };
-            this.save = async () => {
-                const res = await back4appApiCall(
-                    `/classes/${className}`,
-                    'POST',
-                    this._attributes,
-                    currentUser?.getSessionToken()
-                );
-                if (res.ok) {
-                    this.id = res.data.objectId;
-                    this.objectId = res.data.objectId;
-                    return this;
-                }
-                throw new Error(res.data?.error || 'Erreur sauvegarde objet');
-            };
+class ParseObject {
+    constructor(className = 'Items') {
+        this.className = className;
+        this._attributes = {};
+    }
+    set(k, v) { this._attributes[k] = v; }
+    get(k) { return this._attributes[k]; }
+    setACL(acl) { this._attributes.ACL = acl; }
+    increment(field, amount = 1) {
+        this._attributes[field] = (this._attributes[field] || 0) + amount;
+    }
+    async save() {
+        const res = await back4appApiCall(
+            `/classes/${this.className}`,
+            'POST',
+            this._attributes,
+            currentUser?.getSessionToken()
+        );
+        if (res.ok) {
+            this.id = res.data.objectId;
+            this.objectId = res.data.objectId;
+            return this;
+        }
+        throw new Error(res.data?.error || 'Erreur sauvegarde objet');
+    }
+    static extend(className) {
+        return class extends ParseObject {
+            constructor() {
+                super(className);
+            }
         };
-    },
-    saveAll: async (objects) => {
+    }
+    static async saveAll(objects) {
         if (!Array.isArray(objects) || objects.length === 0) return [];
         const results = [];
         for (const obj of objects) {
@@ -214,7 +222,8 @@ window.Parse.Object = {
         }
         return results;
     }
-};
+}
+window.Parse.Object = ParseObject;
 window.Parse.ACL = class {
     constructor(user) {
         this.permissions = {};
@@ -666,6 +675,30 @@ async function deleteItem(itemId) {
         return { success: true, offline: true };
     }
 }
+
+// ============ HELPER DE CONVERSION ============
+function parseItemToObject(item) {
+    if (!item) return null;
+    if (typeof item.get !== 'function') return item;
+    return {
+        id: item.id || item.objectId,
+        title: item.get('title') || '',
+        type: item.get('type') || 'manga',
+        status: item.get('status') || 'reading',
+        rating: item.get('rating') || 0,
+        genres: item.get('genres') || [],
+        link: item.get('link') || '',
+        image: item.get('image') || '',
+        imageUrl: item.get('imageUrl') || '',
+        chapters: item.get('chapters') || 0,
+        notes: item.get('notes') || '',
+        malId: item.get('malId') || '',
+        createdAt: item.createdAt ? (typeof item.createdAt.toISOString === 'function' ? item.createdAt.toISOString() : item.createdAt) : new Date().toISOString(),
+        updatedAt: item.updatedAt ? (typeof item.updatedAt.toISOString === 'function' ? item.updatedAt.toISOString() : item.updatedAt) : new Date().toISOString()
+    };
+}
+window.parseItemToObject = parseItemToObject;
+
 
 // ============================================
 // EXPORT / IMPORT UNIVERSEL MULTI-APPLICATIONS
