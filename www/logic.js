@@ -1,32 +1,21 @@
 /* ============================================
    MANLORE v5.0.1 - LOGIC.JS
-   Ultra-Resilient Native REST Client for Back4App (Server A & Server B)
-   Automatic Server A First -> Silent Failover to Server B
-   Diagnostics & Server Failover Logged to Logger
+   Clean Dedicated Server Architecture (Server A)
+   Universal Multi-App Export & Archive (com.karlitodev.manlore/exported)
+   Diagnostic Logs Storage (com.karlitodev.manlore/logs)
    Instant Stale-While-Revalidate, Row Level Security (RLS) & Offline Sync
    ============================================ */
 
 'use strict';
 
-// ============ MULTI-SERVER BACK4APP CONFIGURATION ============
-const BACK4APP_SERVERS = {
-    A: {
-        id: 'A',
-        name: 'Serveur Principal (A)',
-        appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
-        clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
-        url: 'https://parseapi.back4app.com'
-    },
-    B: {
-        id: 'B',
-        name: 'Serveur Secondaire (B)',
-        appId: 'OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu',
-        clientKey: 'WPvwJkRsmofv2u480N2f2c2wluTh5zGyBIhkc4dP',
-        url: 'https://parseapi.back4app.com'
-    }
+// ============ BACK4APP CONFIGURATION (SERVEUR OFFICIEL) ============
+const BACK4APP_CONFIG = {
+    name: 'Serveur ManLore Cloud',
+    appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
+    clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
+    url: 'https://parseapi.back4app.com'
 };
 
-let currentServerId = localStorage.getItem('manlore_active_server') || 'A';
 let currentUser = null;
 let syncQueue = [];
 let isOnline = navigator.onLine;
@@ -35,15 +24,15 @@ let isGuestMode = false;
 let storageMode = 'cloud'; // 'local' | 'cloud'
 
 // ============================================
-// NATIVE HTTP REST CLIENT AVEC FAILOVER AUTOMATIQUE
+// CLIENT REST HTTP BACK4APP ULTRA-RÉSILIENT
 // ============================================
 
-async function executeBack4AppRequest(server, endpoint, method = 'GET', data = null, sessionToken = null) {
-    const url = server.url + endpoint;
+async function back4appApiCall(endpoint, method = 'GET', data = null, sessionToken = null) {
+    const url = BACK4APP_CONFIG.url + endpoint;
     const headers = {
-        'X-Parse-Application-Id': server.appId,
-        'X-Parse-REST-API-Key': server.clientKey,
-        'X-Parse-Client-Key': server.clientKey,
+        'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
+        'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+        'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
         'X-Parse-Revocable-Session': '1',
         'Content-Type': 'application/json'
     };
@@ -80,59 +69,16 @@ async function executeBack4AppRequest(server, endpoint, method = 'GET', data = n
         return {
             ok: response.ok,
             status: response.status,
-            data: json,
-            server: server.id
+            data: json
         };
     } catch (err) {
         clearTimeout(timeoutId);
         return {
             ok: false,
             status: 0,
-            error: err.name === 'AbortError' ? 'Délai d\'attente dépassé (timeout 10s)' : err.message,
-            server: server.id
+            error: err.name === 'AbortError' ? 'Délai d\'attente dépassé (timeout 10s)' : err.message
         };
     }
-}
-
-// Appel intelligent : Serveur A en priorité -> Basculement silencieux sur Serveur B si erreur
-async function back4appApiCall(endpoint, method = 'GET', data = null, sessionToken = null, preferredServer = null) {
-    const firstServerId = preferredServer || currentServerId || 'A';
-    const secondServerId = firstServerId === 'A' ? 'B' : 'A';
-
-    const server1 = BACK4APP_SERVERS[firstServerId];
-    const server2 = BACK4APP_SERVERS[secondServerId];
-
-    // 1. Tentative sur le premier serveur
-    const res1 = await executeBack4AppRequest(server1, endpoint, method, data, sessionToken);
-
-    if (res1.ok) {
-        if (currentServerId !== firstServerId) {
-            currentServerId = firstServerId;
-            localStorage.setItem('manlore_active_server', firstServerId);
-        }
-        return res1;
-    }
-
-    // 2. Si échec (404, 400, 401, network) -> Basculement silencieux sur le second serveur
-    console.log(`[Failover] Requête échouée sur ${server1.name} (Code: ${res1.status}), basculement silencieux vers ${server2.name}...`);
-    if (window.appLogger) {
-        window.appLogger.log('server_failover', `Basculement de ${server1.id} vers ${server2.id}`, {
-            endpoint,
-            method,
-            reason: res1.data?.error || res1.error || `HTTP ${res1.status}`
-        });
-    }
-
-    const res2 = await executeBack4AppRequest(server2, endpoint, method, data, sessionToken);
-    if (res2.ok) {
-        currentServerId = secondServerId;
-        localStorage.setItem('manlore_active_server', secondServerId);
-        console.log(`[Failover] Succès sur le ${server2.name} ! Serveur actif mémorisé.`);
-        return res2;
-    }
-
-    // Si les deux échouent, on retourne la réponse d'origine
-    return res1.status !== 0 ? res1 : res2;
 }
 
 // ============================================
@@ -140,11 +86,10 @@ async function back4appApiCall(endpoint, method = 'GET', data = null, sessionTok
 // ============================================
 
 class UserSession {
-    constructor(userData, sessionToken, serverLocation = 'A') {
+    constructor(userData, sessionToken) {
         this.id = userData.objectId || userData.id;
         this.objectId = this.id;
         this.sessionToken = sessionToken || userData.sessionToken;
-        this.serverLocation = serverLocation || userData.serverLocation || currentServerId;
         this._attributes = { ...userData };
     }
 
@@ -167,8 +112,7 @@ class UserSession {
         delete updatePayload.updatedAt;
         delete updatePayload.sessionToken;
 
-        const res = await executeBack4AppRequest(
-            BACK4APP_SERVERS[this.serverLocation] || BACK4APP_SERVERS.A,
+        const res = await back4appApiCall(
             `/users/${this.objectId}`,
             'PUT',
             updatePayload,
@@ -184,8 +128,7 @@ class UserSession {
     }
 
     async fetch() {
-        const res = await executeBack4AppRequest(
-            BACK4APP_SERVERS[this.serverLocation] || BACK4APP_SERVERS.A,
+        const res = await back4appApiCall(
             `/users/${this.objectId}`,
             'GET',
             null,
@@ -209,7 +152,6 @@ function saveUserSessionToLocal(userSession) {
     localStorage.setItem('manlore_user_session', JSON.stringify({
         objectId: userSession.id,
         sessionToken: userSession.sessionToken,
-        serverLocation: userSession.serverLocation,
         attributes: userSession._attributes
     }));
 }
@@ -219,15 +161,14 @@ function loadUserSessionFromLocal() {
         const raw = localStorage.getItem('manlore_user_session');
         if (raw) {
             const parsed = JSON.parse(raw);
-            const user = new UserSession(parsed.attributes || {}, parsed.sessionToken, parsed.serverLocation);
-            return user;
+            return new UserSession(parsed.attributes || {}, parsed.sessionToken);
         }
     } catch {}
     return null;
 }
 
 // ============================================
-// COMPATIBILITÉ AVEC LE SDK PARSE GLOBAL
+// COMPATIBILITÉ SDK PARSE GLOBAL
 // ============================================
 
 window.Parse = window.Parse || {};
@@ -343,7 +284,7 @@ function generateUniqueUserToken(username) {
 }
 
 async function initializeBackend() {
-    console.log('[Backend] Initialisation v5.0.1 (Client REST Haute Résilience)...');
+    console.log('[Backend] Initialisation v5.0.1 (Serveur Cloud ManLore)...');
 
     storageMode = localStorage.getItem('manlore_storage_mode') || 'cloud';
     isGuestMode = localStorage.getItem('manlore_guest_mode') === 'true';
@@ -355,10 +296,8 @@ async function initializeBackend() {
         const savedUser = loadUserSessionFromLocal();
         if (savedUser && savedUser.sessionToken) {
             currentUser = savedUser;
-            currentServerId = savedUser.serverLocation || 'A';
             startAutoSync();
 
-            // Vérification silencieuse de validité en arrière-plan
             setTimeout(async () => {
                 try {
                     await currentUser.fetch();
@@ -366,16 +305,7 @@ async function initializeBackend() {
                         window.questManager.syncFromCloud();
                     }
                 } catch {
-                    // Si session révoquée sur ce serveur, tenter l'autre serveur
-                    const otherServer = currentServerId === 'A' ? 'B' : 'A';
-                    currentUser.serverLocation = otherServer;
-                    try {
-                        await currentUser.fetch();
-                        currentServerId = otherServer;
-                        localStorage.setItem('manlore_active_server', otherServer);
-                    } catch {
-                        console.warn('[Backend] Session expirée');
-                    }
+                    console.warn('[Backend] Session token à renouveler');
                 }
             }, 1000);
         }
@@ -383,7 +313,7 @@ async function initializeBackend() {
 }
 
 // ============================================
-// AUTHENTIFICATION HAUTE FIABILITÉ (SERVEUR A -> B)
+// AUTHENTIFICATION HAUTE FIABILITÉ
 // ============================================
 
 async function signUp(username, email, password) {
@@ -397,14 +327,12 @@ async function signUp(username, email, password) {
         email: cleanEmail,
         password: password,
         userUniqueToken: userToken,
-        serverLocation: 'A',
         exp: 0,
         rank: 'E'
     };
 
-    // Forcer Serveur A d'abord, puis basculer silencieusement sur B en cas d'erreur
-    console.log('[Auth] Inscription : Tentative prioritaire sur Serveur A...');
-    let res = await back4appApiCall('/users', 'POST', payload, null, 'A');
+    console.log('[Auth] Inscription sur le serveur Cloud...');
+    const res = await back4appApiCall('/users', 'POST', payload);
 
     if (res.ok) {
         const userData = {
@@ -412,11 +340,10 @@ async function signUp(username, email, password) {
             username: cleanUser,
             email: cleanEmail,
             userUniqueToken: userToken,
-            serverLocation: res.server || 'A',
             exp: 0,
             rank: 'E'
         };
-        currentUser = new UserSession(userData, res.data.sessionToken, res.server || 'A');
+        currentUser = new UserSession(userData, res.data.sessionToken);
         saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
@@ -428,10 +355,10 @@ async function signUp(username, email, password) {
 
         if (window.appLogger) {
             window.appLogger.trackNetwork('signUp', Date.now() - startTime, 200);
-            window.appLogger.log('auth_success', `Compte créé avec succès sur Serveur ${res.server}`, { username: cleanUser });
+            window.appLogger.log('auth_success', 'Compte créé avec succès', { username: cleanUser });
         }
 
-        return { success: true, user: currentUser, server: res.server };
+        return { success: true, user: currentUser };
     }
 
     const errMsg = res.data?.error || res.error || 'Erreur lors de l\'inscription';
@@ -445,23 +372,19 @@ async function logIn(usernameOrEmail, password) {
     const startTime = Date.now();
     const cleanInput = usernameOrEmail.trim();
 
-    console.log('[Auth] Connexion : Recherche prioritaire sur Serveur A...');
+    console.log('[Auth] Connexion au compte...');
     const endpoint = `/login?username=${encodeURIComponent(cleanInput)}&password=${encodeURIComponent(password)}`;
 
-    // Forcer Serveur A en premier -> Basculement automatique sur Serveur B si non trouvé
-    let res = await back4appApiCall(endpoint, 'GET', null, null, 'A');
+    const res = await back4appApiCall(endpoint, 'GET');
 
     if (res.ok && res.data?.sessionToken) {
-        const userData = {
-            ...res.data,
-            serverLocation: res.server || 'A'
-        };
+        const userData = { ...res.data };
 
         if (!userData.userUniqueToken) {
             userData.userUniqueToken = generateUniqueUserToken(userData.username);
         }
 
-        currentUser = new UserSession(userData, res.data.sessionToken, res.server || 'A');
+        currentUser = new UserSession(userData, res.data.sessionToken);
         saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
@@ -475,13 +398,13 @@ async function logIn(usernameOrEmail, password) {
 
         if (window.appLogger) {
             window.appLogger.trackNetwork('logIn', Date.now() - startTime, 200);
-            window.appLogger.log('auth_success', `Connexion réussie sur Serveur ${res.server}`, { username: userData.username });
+            window.appLogger.log('auth_success', 'Connexion réussie', { username: userData.username });
         }
 
-        return { success: true, user: currentUser, server: res.server };
+        return { success: true, user: currentUser };
     }
 
-    const errMsg = res.data?.error || res.error || 'Identifiants invalides (compte non trouvé)';
+    const errMsg = res.data?.error || res.error || 'Identifiants invalides';
     if (window.appLogger) {
         window.appLogger.log('auth_error', `Échec de connexion : ${errMsg}`, { input: cleanInput });
     }
@@ -491,13 +414,7 @@ async function logIn(usernameOrEmail, password) {
 async function logOut() {
     try {
         if (currentUser && currentUser.sessionToken) {
-            executeBack4AppRequest(
-                BACK4APP_SERVERS[currentUser.serverLocation] || BACK4APP_SERVERS.A,
-                '/logout',
-                'POST',
-                {},
-                currentUser.sessionToken
-            ).catch(() => {});
+            back4appApiCall('/logout', 'POST', {}, currentUser.sessionToken).catch(() => {});
         }
         currentUser = null;
         isGuestMode = false;
@@ -574,7 +491,7 @@ async function fetchFromCloud() {
         params.set('limit', '2000');
 
         const endpoint = `/classes/Items?${params.toString()}`;
-        const res = await back4appApiCall(endpoint, 'GET', null, currentUser.getSessionToken(), currentUser.serverLocation);
+        const res = await back4appApiCall(endpoint, 'GET', null, currentUser.getSessionToken());
 
         if (res.ok && res.data?.results) {
             const parsedItems = res.data.results.map(r => ({
@@ -658,7 +575,7 @@ async function createItemCloud(itemData) {
             }
         };
 
-        const res = await back4appApiCall('/classes/Items', 'POST', payload, currentUser.getSessionToken(), currentUser.serverLocation);
+        const res = await back4appApiCall('/classes/Items', 'POST', payload, currentUser.getSessionToken());
 
         if (res.ok) {
             const plain = {
@@ -709,8 +626,7 @@ async function updateItem(itemId, updates) {
             `/classes/Items/${itemId}`,
             'PUT',
             updates,
-            currentUser?.getSessionToken(),
-            currentUser?.serverLocation
+            currentUser?.getSessionToken()
         );
         return { success: res.ok };
     } catch (error) {
@@ -741,14 +657,131 @@ async function deleteItem(itemId) {
             `/classes/Items/${itemId}`,
             'DELETE',
             null,
-            currentUser?.getSessionToken(),
-            currentUser?.serverLocation
+            currentUser?.getSessionToken()
         );
         return { success: res.ok };
     } catch (error) {
         console.error('[CRUD] Delete cloud error:', error);
         addToSyncQueue('delete', { id: itemId });
         return { success: true, offline: true };
+    }
+}
+
+// ============================================
+// EXPORT / IMPORT UNIVERSEL MULTI-APPLICATIONS
+// (WhatsApp, Telegram, Google Drive, ZArchiver, etc.)
+// Sauvegarde locale archivée dans : com.karlitodev.manlore/exported
+// ============================================
+
+async function exportData(items, filename) {
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        const finalFilename = filename || `manlore_export_${date}.json`;
+
+        // 1. Structure de sauvegarde complète et enrichie
+        const exportPayload = {
+            app: 'ManLore',
+            version: '5.0.1',
+            package: 'com.karlitodev.manlore',
+            exportedAt: new Date().toISOString(),
+            itemsCount: items ? items.length : 0,
+            progression: window.questManager?.data || null,
+            items: items || []
+        };
+
+        const jsonString = JSON.stringify(exportPayload, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+
+        // 2. Archivage automatique dans com.karlitodev.manlore/exported
+        const EXPORT_STORAGE_KEY = 'com.karlitodev.manlore/exported';
+        let archiveList = [];
+        try {
+            const rawArchive = localStorage.getItem(EXPORT_STORAGE_KEY);
+            if (rawArchive) archiveList = JSON.parse(rawArchive);
+        } catch {}
+
+        archiveList.unshift({
+            filename: finalFilename,
+            timestamp: new Date().toISOString(),
+            itemsCount: exportPayload.itemsCount,
+            data: exportPayload
+        });
+
+        // Conserver les 15 dernières sauvegardes locales
+        if (archiveList.length > 15) archiveList = archiveList.slice(0, 15);
+        localStorage.setItem(EXPORT_STORAGE_KEY, JSON.stringify(archiveList));
+        console.log(`[Export] Copie archivée avec succès dans : ${EXPORT_STORAGE_KEY}`);
+
+        // 3. Partage universel natif (Web Share API pour WhatsApp, Drive, Telegram, ZArchiver, etc.)
+        let sharedViaSheet = false;
+        try {
+            const file = new File([blob], finalFilename, { type: 'application/json' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Sauvegarde ManLore',
+                    text: `Exportation de votre collection ManLore (${exportPayload.itemsCount} titres)`,
+                    files: [file]
+                });
+                sharedViaSheet = true;
+            }
+        } catch (shareErr) {
+            console.log('[Export] Note partage direct:', shareErr.message);
+        }
+
+        // 4. Téléchargement direct (Fallback pour navigateurs de bureau & Webviews)
+        if (!sharedViaSheet) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalFilename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        if (window.appLogger) {
+            window.appLogger.log('data_export', 'Exportation des données réussie', {
+                filename: finalFilename,
+                itemsCount: exportPayload.itemsCount,
+                archiveKey: EXPORT_STORAGE_KEY
+            });
+        }
+
+        return {
+            success: true,
+            filename: finalFilename,
+            archiveLocation: 'com.karlitodev.manlore/exported',
+            sharedViaSheet
+        };
+    } catch (e) {
+        console.error('[Export Error]', e);
+        return { success: false, error: e.message };
+    }
+}
+
+async function importDataFromFile(file) {
+    try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+
+        let items = [];
+        if (Array.isArray(parsed)) {
+            items = parsed;
+        } else if (parsed && Array.isArray(parsed.items)) {
+            items = parsed.items;
+            if (parsed.progression && window.questManager) {
+                // Restauration facultative de la progression si présente
+                window.questManager.data.exp = Math.max(window.questManager.data.exp || 0, parsed.progression.exp || 0);
+                window.questManager.saveProgression(true);
+            }
+        } else {
+            return { success: false, count: 0, error: 'Format invalide' };
+        }
+
+        return { success: true, count: items.length, items };
+    } catch (e) {
+        return { success: false, count: 0, error: e.message };
     }
 }
 
@@ -855,4 +888,4 @@ function updateOnlineStatus(online) {
 window.addEventListener('online', () => updateOnlineStatus(true));
 window.addEventListener('offline', () => updateOnlineStatus(false));
 
-console.log('[Logic v5.0.1] Resilient REST Client & Dual-Server Router loaded');
+console.log('[Logic v5.0.1] Dedicated Cloud Engine & Universal Exporter loaded');

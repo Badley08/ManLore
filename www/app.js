@@ -668,11 +668,21 @@ async function handleExport() {
             let filename = val.trim() || defaultName;
             if (!filename.endsWith('.json')) filename += '.json';
             
-            showLoading(true, '...');
+            showLoading(true, 'Préparation de l\'export...');
             const result = await exportData(allItems, filename);
             showLoading(false);
-            if (result.success) showToast(i18n.t('toast.export.success'), 'success');
-            else showToast('Erreur export', 'error');
+            if (result.success) {
+                showToast(`✓ Export réussi ! Copie archivée dans com.karlitodev.manlore/exported`, 'success');
+                if (!result.sharedViaSheet) {
+                    showAlertDialog(
+                        'Sauvegarde Réussie',
+                        `Vos données ont été téléchargées (${filename}).<br><br>📁 Une copie de sauvegarde a été automatiquement archivée dans :<br><strong>com.karlitodev.manlore/exported</strong>`,
+                        'OK'
+                    );
+                }
+            } else {
+                showToast('Erreur lors de l\'exportation', 'error');
+            }
         }
     );
 }

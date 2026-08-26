@@ -7,8 +7,9 @@
 
 class AppLogger {
     constructor() {
-        this.storageKey = 'manlore_diagnostic_logs';
-        this.maxLocalLogs = 100;
+        this.storageKey = 'com.karlitodev.manlore/logs';
+        this.legacyKey = 'manlore_diagnostic_logs';
+        this.maxLocalLogs = 200;
         this.syncIntervalMs = 7 * 24 * 60 * 60 * 1000; // 7 jours
         this.lastSyncKey = 'manlore_last_log_sync';
         this.buffer = this.loadLocalLogs();
@@ -16,7 +17,7 @@ class AppLogger {
 
     loadLocalLogs() {
         try {
-            const raw = localStorage.getItem(this.storageKey);
+            const raw = localStorage.getItem(this.storageKey) || localStorage.getItem(this.legacyKey);
             return raw ? JSON.parse(raw) : [];
         } catch {
             return [];
@@ -138,11 +139,42 @@ class AppLogger {
             console.warn('[Logger] Synchronisation Back4App différée :', error);
         }
     }
+
+    async exportLogs() {
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `manlore_logs_${date}.json`;
+        const content = JSON.stringify(this.buffer, null, 2);
+        const blob = new Blob([content], { type: 'application/json' });
+
+        try {
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
+                const file = new File([blob], filename, { type: 'application/json' });
+                await navigator.share({
+                    title: 'ManLore Logs',
+                    text: 'Journaux de diagnostic ManLore',
+                    files: [file]
+                });
+                return { success: true, shared: true };
+            }
+        } catch (e) {
+            console.warn('[Logger] Share note:', e);
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return { success: true, downloaded: true };
+    }
 }
 
 window.appLogger = new AppLogger();
 
 // Synchronisation uniquement quand en ligne ET connecté (évite les 403 au démarrage)
 window.addEventListener('online', () => window.appLogger?.syncLogsToBack4App());
-// Délai plus long pour laisser le temps à l'auth de s'initialiser
 setTimeout(() => window.appLogger?.syncLogsToBack4App(), 15000);
+
