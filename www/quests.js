@@ -1,6 +1,7 @@
 /* ============================================
    MANLORE v5.0.1 - QUESTS.JS
    Multi-period Quest System (Daily, Weekly, Monthly, Annual, Rank)
+   Interactive Quest Claiming & Real-Time XP Progression
    Multi-language Support (FR, EN, ES) & Rank Overview Modal
    ============================================ */
 
@@ -21,6 +22,8 @@ const QUEST_I18N = {
         noQuests: 'Aucune quête disponible',
         yourRank: 'VOTRE RANG',
         expRequired: 'EXP requis',
+        claimBtn: 'Réclamer',
+        claimed: 'Réclamé',
         missingExp: 'Il vous manque <strong>{exp} EXP</strong> pour atteindre le rang <strong>{title}</strong>.',
         maxRankCongrats: 'Félicitations ! Vous avez atteint le rang suprême du ManLore !',
         guideTitle: "Comment gagner plus d'XP ?",
@@ -52,6 +55,8 @@ const QUEST_I18N = {
         noQuests: 'No quests available',
         yourRank: 'YOUR RANK',
         expRequired: 'EXP required',
+        claimBtn: 'Claim',
+        claimed: 'Claimed',
         missingExp: 'You need <strong>{exp} EXP</strong> to reach <strong>{title}</strong> rank.',
         maxRankCongrats: 'Congratulations! You have reached the supreme rank of ManLore!',
         guideTitle: 'How to earn more XP?',
@@ -83,6 +88,8 @@ const QUEST_I18N = {
         noQuests: 'Sin misiones disponibles',
         yourRank: 'TU RANGO',
         expRequired: 'EXP requerido',
+        claimBtn: 'Reclamar',
+        claimed: 'Reclamado',
         missingExp: 'Te faltan <strong>{exp} EXP</strong> para alcanzar el rango <strong>{title}</strong>.',
         maxRankCongrats: '¡Felicidades! ¡Has alcanzado el rango supremo de ManLore!',
         guideTitle: '¿Cómo ganar más XP?',
@@ -117,7 +124,11 @@ class QuestManager {
     loadProgression() {
         try {
             const raw = localStorage.getItem(QUESTS_STORAGE_KEY);
-            if (raw) return JSON.parse(raw);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (!parsed.claimedQuests) parsed.claimedQuests = {};
+                return parsed;
+            }
         } catch {}
 
         return {
@@ -145,7 +156,7 @@ class QuestManager {
             actionsToday: new Set(),
             actionsWeek: new Set(),
             actionsMonth: new Set(),
-            completedQuests: {},
+            claimedQuests: {},
             lastDailyDate: new Date().toISOString().split('T')[0],
             lastWeekNumber: this.getWeekNumber(new Date()),
             lastMonth: new Date().getMonth(),
@@ -169,7 +180,8 @@ class QuestManager {
                 actionsMonth: Array.from(this.data.actionsMonth || []),
                 activeDaysThisWeek: Array.from(this.data.activeDaysThisWeek || []),
                 activeDaysThisMonth: Array.from(this.data.activeDaysThisMonth || []),
-                activeDaysThisYear: Array.from(this.data.activeDaysThisYear || [])
+                activeDaysThisYear: Array.from(this.data.activeDaysThisYear || []),
+                claimedQuests: this.data.claimedQuests || {}
             };
             localStorage.setItem(QUESTS_STORAGE_KEY, JSON.stringify(serializable));
         } catch (e) {
@@ -198,6 +210,7 @@ class QuestManager {
         if (Array.isArray(this.data.activeDaysThisWeek)) this.data.activeDaysThisWeek = new Set(this.data.activeDaysThisWeek);
         if (Array.isArray(this.data.activeDaysThisMonth)) this.data.activeDaysThisMonth = new Set(this.data.activeDaysThisMonth);
         if (Array.isArray(this.data.activeDaysThisYear)) this.data.activeDaysThisYear = new Set(this.data.activeDaysThisYear);
+        if (!this.data.claimedQuests) this.data.claimedQuests = {};
 
         if (this.data.lastDailyDate !== today) {
             this.data.lastDailyDate = today;
@@ -257,6 +270,7 @@ class QuestManager {
                 this.data.activeMinutesMonth = (this.data.activeMinutesMonth || 0) + 1;
                 this.data.activeMinutesYear = (this.data.activeMinutesYear || 0) + 1;
                 this.saveProgression();
+                if (typeof renderQuestUI === 'function') renderQuestUI();
             }
         }, 60000);
     }
@@ -322,7 +336,7 @@ class QuestManager {
 
         const expInCurrentRank = currentExp - currentRank.xp_required;
         const totalExpForRank = nextRank ? (nextRank.xp_required - currentRank.xp_required) : 1000;
-        const percent = nextRank ? Math.min(100, Math.round((expInCurrentRank / totalExpForRank) * 100)) : 100;
+        const percent = nextRank ? Math.min(100, Math.max(0, Math.round((expInCurrentRank / totalExpForRank) * 100))) : 100;
         const remainingExp = nextRank ? Math.max(0, nextRank.xp_required - currentExp) : 0;
 
         return {
@@ -360,6 +374,57 @@ class QuestManager {
         }
 
         if (typeof renderQuestUI === 'function') renderQuestUI();
+    }
+
+    getClaimKey(questId, period) {
+        if (period === 'daily') return `${questId}_${this.data.lastDailyDate}`;
+        if (period === 'weekly') return `${questId}_W${this.data.lastWeekNumber}_${this.data.lastYear}`;
+        if (period === 'monthly') return `${questId}_M${this.data.lastMonth}_${this.data.lastYear}`;
+        if (period === 'annual') return `${questId}_Y${this.data.lastYear}`;
+        return questId;
+    }
+
+    claimQuest(questId, period) {
+        this.checkResets();
+        const claimKey = this.getClaimKey(questId, period);
+        if (this.data.claimedQuests[claimKey]) {
+            if (window.showToast) window.showToast('Quête déjà réclamée !', 'info');
+            return;
+        }
+
+        const quests = this.questData?.quests?.[period] || [];
+        const quest = quests.find(q => q.id === questId);
+        if (!quest) return;
+
+        const progress = this.calculateQuestProgress(quest, period);
+        if (!progress.completed) {
+            if (window.showToast) window.showToast('Objectif non atteint', 'warning');
+            return;
+        }
+
+        this.data.claimedQuests[claimKey] = true;
+        this.addExp(quest.xp || 50, quest.title);
+        this.saveProgression();
+    }
+
+    // Synchronisation des stats de collection pour booster le démarrage
+    syncCollectionStats(items) {
+        if (!Array.isArray(items)) return;
+        const total = items.length;
+        if (total > (this.data.titlesAddedYear || 0)) {
+            this.data.titlesAddedYear = total;
+            this.data.titlesAddedMonth = Math.max(this.data.titlesAddedMonth || 0, total);
+            this.data.titlesAddedWeek = Math.max(this.data.titlesAddedWeek || 0, Math.min(total, 25));
+            this.data.titlesAddedToday = Math.max(this.data.titlesAddedToday || 0, Math.min(total, 5));
+        }
+
+        items.forEach(i => {
+            const idStr = String(i.id || i.objectId || i.title);
+            if (!this.data.titlesViewedYear.includes(idStr)) this.data.titlesViewedYear.push(idStr);
+            if (!this.data.titlesViewedMonth.includes(idStr)) this.data.titlesViewedMonth.push(idStr);
+        });
+
+        this.saveProgression();
     }
 
     onTitleAdded() {
@@ -432,11 +497,15 @@ class QuestManager {
         const rawList = this.questData.quests[tabKey] || [];
         return rawList.map(q => {
             const progress = this.calculateQuestProgress(q, tabKey);
+            const claimKey = this.getClaimKey(q.id, tabKey);
+            const claimed = Boolean(this.data.claimedQuests?.[claimKey]);
+
             return {
                 ...q,
                 current: progress.current,
                 targetValue: progress.target,
                 completed: progress.completed,
+                claimed: claimed,
                 percent: Math.min(100, Math.round((progress.current / progress.target) * 100))
             };
         });
@@ -480,6 +549,17 @@ class QuestManager {
             case 'unique_actions':
                 current = period === 'daily' ? (this.data.actionsToday?.size || 0) :
                           period === 'weekly' ? (this.data.actionsWeek?.size || 0) : (this.data.actionsMonth?.size || 0);
+                break;
+            case 'compound':
+                const conds = t.conditions || [];
+                let allMet = true;
+                conds.forEach(c => {
+                    if (c.includes('title_add') && this.data.titlesAddedToday < 1) allMet = false;
+                    if (c.includes('title_edit') && this.data.titlesEditedToday < 1) allMet = false;
+                    if (c.includes('title_view') && this.data.titlesViewedToday.length < 1) allMet = false;
+                });
+                current = allMet ? 1 : 0;
+                target = 1;
                 break;
             case 'rank':
                 const currentRankInfo = this.getCurrentRankInfo();
@@ -532,7 +612,7 @@ function renderQuestUI() {
                 </div>
                 <div class="quest-bar-labels">
                     <span>${rankInfo.expInCurrentRank} / ${rankInfo.totalExpForRank} EXP ${qm.getText('towards')} [${rankInfo.nextRankTitle}]</span>
-                    <span style="font-weight:700;">${rankInfo.percent}%</span>
+                    <span style="font-weight:700; color:#00f2fe">${rankInfo.percent}%</span>
                 </div>
             </div>
 
@@ -553,26 +633,45 @@ function renderQuestUI() {
             </div>
 
             <div class="quest-list">
-                ${quests.length === 0 ? `<p class="text-xs text-muted" style="padding:1rem;text-align:center">${qm.getText('noQuests')}</p>` : quests.map(q => `
-                    <div class="quest-item-box ${q.completed ? 'completed' : ''}">
-                        <div class="quest-icon-bubble ${q.completed ? 'done' : ''}">
-                            <i class="fas ${q.completed ? 'fa-check' : 'fa-scroll'}"></i>
-                        </div>
-                        <div class="quest-info-content">
-                            <div class="quest-name">${escapeHtml(q.title)} <span class="quest-reward">+${q.xp} EXP</span></div>
-                            <div class="quest-sub">${escapeHtml(q.description)}</div>
-                            <div class="quest-mini-bar-track">
-                                <div class="quest-mini-bar-fill" style="width:${q.percent}%; background:${q.completed ? '#2ecc71' : 'var(--color-primary)'}"></div>
+                ${quests.length === 0 ? `<p class="text-xs text-muted" style="padding:1rem;text-align:center">${qm.getText('noQuests')}</p>` : quests.map(q => {
+                    const canClaim = q.completed && !q.claimed;
+                    const isClaimed = q.claimed;
+
+                    return `
+                        <div class="quest-item-box ${isClaimed ? 'claimed' : canClaim ? 'can-claim' : ''}">
+                            <div class="quest-icon-bubble ${isClaimed ? 'done' : canClaim ? 'ready' : ''}">
+                                <i class="fas ${isClaimed ? 'fa-check-double' : canClaim ? 'fa-gift' : 'fa-scroll'}"></i>
+                            </div>
+                            <div class="quest-info-content">
+                                <div class="quest-name">${escapeHtml(q.title)} <span class="quest-reward">+${q.xp} EXP</span></div>
+                                <div class="quest-sub">${escapeHtml(q.description)}</div>
+                                <div class="quest-mini-bar-track">
+                                    <div class="quest-mini-bar-fill" style="width:${q.percent}%; background:${isClaimed ? '#2ecc71' : canClaim ? '#ffd32a' : 'var(--color-primary)'}"></div>
+                                </div>
+                            </div>
+                            <div class="quest-action-slot">
+                                ${canClaim ? `
+                                    <button class="btn-claim-quest" onclick="claimQuest('${q.id}', '${activeTab}')">
+                                        <i class="fas fa-bolt"></i> ${qm.getText('claimBtn')}
+                                    </button>
+                                ` : isClaimed ? `
+                                    <span class="quest-badge-claimed"><i class="fas fa-check"></i> ${qm.getText('claimed')}</span>
+                                ` : `
+                                    <div class="quest-status-count">${q.current} / ${q.targetValue}</div>
+                                `}
                             </div>
                         </div>
-                        <div class="quest-status-count">
-                            ${q.current} / ${q.targetValue}
-                        </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
         </div>
     `;
+}
+
+function claimQuest(questId, period) {
+    if (window.questManager) {
+        window.questManager.claimQuest(questId, period);
+    }
 }
 
 function switchQuestTab(tabKey) {
@@ -632,7 +731,6 @@ function openRankOverviewModal() {
         }
     }
 
-    // Localize modal static titles
     const statusBoxHeader = modal.querySelector('.rank-modal-status-box p');
     if (statusBoxHeader) statusBoxHeader.textContent = qm.getText('statusTitle');
 

@@ -1466,3 +1466,73 @@
     box-shadow: 0 4px 20px rgba(243, 156, 18, 0.08);
 }
 
+/* ============================================
+   QUEST CLAIMING & ACTION SLOTS
+   ============================================ */
+.quest-item-box.can-claim {
+    border-color: rgba(255, 211, 42, 0.5);
+    background: linear-gradient(90deg, rgba(255, 211, 42, 0.08), rgba(255, 255, 255, 0.02));
+    box-shadow: 0 0 15px rgba(255, 211, 42, 0.15);
+}
+
+.quest-item-box.claimed {
+    opacity: 0.85;
+    border-color: rgba(46, 204, 113, 0.3);
+}
+
+.quest-icon-bubble.ready {
+    background: rgba(255, 211, 42, 0.2);
+    color: #ffd32a;
+    animation: pulse-ready 1.5s infinite;
+}
+
+@keyframes pulse-ready {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+}
+
+.quest-action-slot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 90px;
+}
+
+.btn-claim-quest {
+    background: linear-gradient(135deg, #ffd32a, #f39c12);
+    color: #1a1a2e;
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.75rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.35);
+    white-space: nowrap;
+}
+
+.btn-claim-quest:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 18px rgba(243, 156, 18, 0.5);
+}
+
+.quest-badge-claimed {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #2ecc71;
+    font-size: 0.72rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+

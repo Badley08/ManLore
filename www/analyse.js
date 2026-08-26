@@ -36,6 +36,9 @@ function renderStats(items) {
 
     const plain = items.map(i => i instanceof Parse.Object ? parseItemToObject(i) : i);
     const stats = computeStats(plain);
+    if (window.questManager) {
+        window.questManager.syncCollectionStats(plain);
+    }
     container.innerHTML = `
         <div id="questProgressionContainer"></div>
         ${buildStatsHTML(stats, plain)}
