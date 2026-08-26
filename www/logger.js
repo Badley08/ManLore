@@ -98,6 +98,12 @@ class AppLogger {
         if (!navigator.onLine || this.buffer.length === 0) return;
         if (typeof Parse === 'undefined') return;
 
+        // Guard: only sync if user is authenticated — prevents 403 on unauthenticated batch calls
+        try {
+            const user = Parse.User.current();
+            if (!user) return;
+        } catch { return; }
+
         const lastSync = parseInt(localStorage.getItem(this.lastSyncKey) || '0', 10);
         const now = Date.now();
 
@@ -136,6 +142,7 @@ class AppLogger {
 
 window.appLogger = new AppLogger();
 
-// Synchronisation automatique au démarrage si intervalle dépassé
+// Synchronisation uniquement quand en ligne ET connecté (évite les 403 au démarrage)
 window.addEventListener('online', () => window.appLogger?.syncLogsToBack4App());
-setTimeout(() => window.appLogger?.syncLogsToBack4App(), 5000);
+// Délai plus long pour laisser le temps à l'auth de s'initialiser
+setTimeout(() => window.appLogger?.syncLogsToBack4App(), 15000);
