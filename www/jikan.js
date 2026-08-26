@@ -1,12 +1,14 @@
 /* ============================================
-   MANLORE v2.0.12 - JIKAN.JS
-   Jikan API v4 Integration + Offline Cache
+   MANLORE v5.0.1 - JIKAN.JS
+   Jikan v4 + Kitsu Multi-Search + Auto-Translate + SFW Filter + Telemetry
    ============================================ */
 
+'use strict';
+
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
-const JIKAN_CACHE_KEY = 'manlore_jikan_cache';
-const JIKAN_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
-const JIKAN_RATE_LIMIT_MS = 400;
+const JIKAN_CACHE_KEY = 'manlore_jikan_cache_v5';
+const JIKAN_CACHE_TTL = 48 * 60 * 60 * 1000; // 48h
+const JIKAN_RATE_LIMIT_MS = 350;
 
 let jikanLastRequest = 0;
 let jikanSearchTimeout = null;
@@ -14,6 +16,7 @@ let jikanSearchTimeout = null;
 class JikanAPI {
     constructor() {
         this.cache = this.loadCache();
+        this.translationCache = this.loadTranslationCache();
     }
 
     loadCache() {
@@ -31,6 +34,19 @@ class JikanAPI {
         }
     }
 
+    loadTranslationCache() {
+        try {
+            const raw = localStorage.getItem('manlore_translation_cache');
+            return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
+    }
+
+    saveTranslationCache() {
+        try {
+            localStorage.setItem('manlore_translation_cache', JSON.stringify(this.translationCache));
+        } catch (e) {}
+    }
+
     getCached(key) {
         const entry = this.cache[key];
         if (!entry) return null;
@@ -40,8 +56,8 @@ class JikanAPI {
 
     setCached(key, data) {
         const keys = Object.keys(this.cache);
-        if (keys.length > 100) {
-            keys.sort((a, b) => this.cache[a].ts - this.cache[b].ts).slice(0, 20).forEach(k => delete this.cache[k]);
+        if (keys.length > 150) {
+            keys.sort((a, b) => this.cache[a].ts - this.cache[b].ts).slice(0, 30).forEach(k => delete this.cache[k]);
         }
         this.cache[key] = { ts: Date.now(), data };
         this.saveCache();
@@ -54,19 +70,34 @@ class JikanAPI {
     }
 
     async fetchWithRetry(url, retries = 2) {
+        const startTime = Date.now();
         for (let i = 0; i <= retries; i++) {
             try {
                 await this.rateLimit();
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 8000);
+                const timer = setTimeout(() => controller.abort(), 7000);
                 const res = await fetch(url, { signal: controller.signal });
                 clearTimeout(timer);
-                if (res.status === 429) { await new Promise(r => setTimeout(r, 2000)); continue; }
+                
+                const duration = Date.now() - startTime;
+                if (window.appLogger) {
+                    window.appLogger.trackNetwork(url, duration, res.status);
+                }
+
+                if (res.status === 429) { 
+                    await new Promise(r => setTimeout(r, 1500)); 
+                    continue; 
+                }
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return await res.json();
             } catch (e) {
-                if (i === retries) throw e;
-                await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+                if (i === retries) {
+                    if (window.appLogger) {
+                        window.appLogger.log('network', 'Échec requête Jikan après retries', { url, error: e.message });
+                    }
+                    throw e;
+                }
+                await new Promise(r => setTimeout(r, 800 * (i + 1)));
             }
         }
     }
@@ -88,19 +119,69 @@ class JikanAPI {
         return map[manloreType] || '';
     }
 
+    // Filtrage strict NSFW
+    isNsfw(item) {
+        const genres = [
+            ...(item.genres || []),
+            ...(item.themes || []),
+            ...(item.demographics || []),
+            ...(item.explicit_genres || [])
+        ].map(g => (g.name || g || '').toLowerCase());
+
+        const nsfwKeywords = ['hentai', 'erotica', 'ecchi', 'adult', 'smut', '18+', 'r18'];
+        if (genres.some(g => nsfwKeywords.some(kw => g.includes(kw)))) return true;
+        if (item.rating && item.rating.toLowerCase().includes('rx')) return true;
+        if (item.ageRating && ['R18', 'adult'].includes(item.ageRating)) return true;
+        return false;
+    }
+
+    // Sélection du titre le plus pertinent pour l'utilisateur
+    extractPreferredTitle(item) {
+        const lang = (window.i18n?.currentLang || 'fr').toLowerCase();
+        
+        // Si Jikan renvoie une liste structurée de titres
+        if (Array.isArray(item.titles)) {
+            const french = item.titles.find(t => t.type === 'French');
+            if (lang.startsWith('fr') && french && french.title) return french.title;
+
+            const english = item.titles.find(t => t.type === 'English');
+            if (english && english.title) return english.title;
+
+            const def = item.titles.find(t => t.type === 'Default');
+            if (def && def.title) return def.title;
+        }
+
+        return item.title_english || item.title || item.canonicalTitle || '';
+    }
+
     normalizeResult(item) {
         const genres = [
             ...(item.genres || []), ...(item.themes || []), ...(item.demographics || [])
         ].map(g => g.name).filter(Boolean);
+
+        const allTitles = [];
+        if (item.title) allTitles.push(item.title);
+        if (item.title_english && item.title_english !== item.title) allTitles.push(item.title_english);
+        if (item.title_japanese) allTitles.push(item.title_japanese);
+        if (Array.isArray(item.title_synonyms)) allTitles.push(...item.title_synonyms);
+
+        const preferredTitle = this.extractPreferredTitle(item);
+
         return {
             malId: item.mal_id,
-            title: item.title || item.title_english || '',
+            title: preferredTitle || item.title || '',
+            originalTitle: item.title || '',
             titleEnglish: item.title_english || '',
+            allTitles: [...new Set(allTitles)],
             type: this.mapType(item.type),
             imageUrl: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
-            synopsis: (item.synopsis || '').slice(0, 600),
+            synopsis: (item.synopsis || '').replace(/\[Written by MAL Rewrite\]/g, '').trim().slice(0, 700),
             genres,
             score: item.score || 0,
+            rank: item.rank || 0,
+            popularity: item.popularity || 0,
+            members: item.members || 0,
+            year: item.published?.prop?.from?.year || null,
             chapters: item.chapters || 0,
             status: item.status || '',
             authors: (item.authors || []).map(a => a.name).join(', '),
@@ -121,17 +202,6 @@ class JikanAPI {
         return map[String(subtype).toLowerCase()] || 'Manga';
     }
 
-    mapKitsuStatus(status) {
-        const map = {
-            'current': 'En cours',
-            'finished': 'Terminé',
-            'tba': 'À lire',
-            'unreleased': 'À lire',
-            'upcoming': 'À lire'
-        };
-        return map[String(status).toLowerCase()] || 'En cours';
-    }
-
     normalizeKitsuResult(item, included = []) {
         const attrs = item.attributes || {};
         const categoryIds = (item.relationships?.categories?.data || []).map(c => c.id);
@@ -141,18 +211,25 @@ class JikanAPI {
             .filter(Boolean);
 
         const kitsuId = `kitsu-${item.id}`;
+        const title = attrs.canonicalTitle || attrs.en || attrs.en_jp || attrs.ja_jp || '';
 
         return {
             malId: kitsuId,
-            title: attrs.canonicalTitle || attrs.en || attrs.en_jp || '',
+            title: title,
+            originalTitle: attrs.ja_jp || title,
             titleEnglish: attrs.en || attrs.en_jp || '',
+            allTitles: [attrs.canonicalTitle, attrs.en, attrs.en_jp, attrs.ja_jp].filter(Boolean),
             type: this.mapKitsuSubtype(attrs.subtype),
             imageUrl: attrs.posterImage?.medium || attrs.posterImage?.small || attrs.posterImage?.original || '',
-            synopsis: (attrs.synopsis || '').slice(0, 600),
+            synopsis: (attrs.synopsis || '').trim().slice(0, 700),
             genres,
             score: attrs.averageRating ? (parseFloat(attrs.averageRating) / 10).toFixed(1) : 0,
+            rank: attrs.ratingRank || 0,
+            popularity: attrs.popularityRank || 0,
+            members: attrs.userCount || 0,
+            year: attrs.startDate ? new Date(attrs.startDate).getFullYear() : null,
             chapters: attrs.chapterCount || 0,
-            status: this.mapKitsuStatus(attrs.status),
+            status: attrs.status === 'current' ? 'En cours' : (attrs.status === 'finished' ? 'Terminé' : 'À lire'),
             authors: '',
             url: `https://kitsu.io/manga/${item.id}`,
             source: 'Kitsu'
@@ -161,10 +238,16 @@ class JikanAPI {
 
     async searchJikan(query, jikanType = '') {
         try {
-            let url = `${JIKAN_BASE}/manga?q=${encodeURIComponent(query.trim())}&limit=8&sfw=false`;
+            // sfw=true obligatoire pour conformité Play Store
+            let url = `${JIKAN_BASE}/manga?q=${encodeURIComponent(query.trim())}&limit=10&sfw=true`;
             if (jikanType) url += `&type=${jikanType}`;
             const data = await this.fetchWithRetry(url);
-            return (data.data || []).map(item => this.normalizeResult(item));
+            const rawList = data.data || [];
+            
+            // Filtre NSFW additionnel
+            return rawList
+                .filter(item => !this.isNsfw(item))
+                .map(item => this.normalizeResult(item));
         } catch (e) {
             console.error('[Jikan] Search error:', e);
             return [];
@@ -173,7 +256,7 @@ class JikanAPI {
 
     async searchKitsu(query) {
         try {
-            const url = `https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(query.trim())}&page[limit]=8&include=categories`;
+            const url = `https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(query.trim())}&page[limit]=10&include=categories`;
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 6000);
             const res = await fetch(url, { signal: controller.signal });
@@ -181,7 +264,10 @@ class JikanAPI {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const included = data.included || [];
-            return (data.data || []).map(item => this.normalizeKitsuResult(item, included));
+            
+            return (data.data || [])
+                .filter(item => !(item.attributes?.ageRating === 'R18' || item.attributes?.nsfw))
+                .map(item => this.normalizeKitsuResult(item, included));
         } catch (e) {
             console.error('[Kitsu] Search error:', e);
             return [];
@@ -190,10 +276,18 @@ class JikanAPI {
 
     async search(query, jikanType = '') {
         if (!query || query.trim().length < 2) return [];
-        const cacheKey = `s:${query.toLowerCase().trim()}:${jikanType}`;
+        const cleanQuery = query.toLowerCase().trim();
+        const cacheKey = `s:${cleanQuery}:${jikanType}`;
         const cached = this.getCached(cacheKey);
-        if (cached) return cached;
+        if (cached) {
+            if (window.appLogger && cached.length > 0) {
+                window.appLogger.trackNetwork(cacheKey, 5, 200, { cached: true });
+            }
+            return cached;
+        }
         if (!navigator.onLine) return [];
+
+        const startT = Date.now();
 
         try {
             const jikanPromise = this.searchJikan(query, jikanType);
@@ -211,23 +305,60 @@ class JikanAPI {
             for (let i = 0; i < maxLen; i++) {
                 if (i < jikanResults.length) {
                     const item = jikanResults[i];
-                    const key = item.title.toLowerCase().trim();
-                    if (!seen.has(key)) { seen.add(key); merged.push(item); }
+                    const key = (item.title || '').toLowerCase().trim();
+                    if (key && !seen.has(key)) { seen.add(key); merged.push(item); }
                 }
                 if (i < kitsuResults.length) {
                     const item = kitsuResults[i];
-                    const key = item.title.toLowerCase().trim();
-                    if (!seen.has(key)) { seen.add(key); merged.push(item); }
+                    const key = (item.title || '').toLowerCase().trim();
+                    if (key && !seen.has(key)) { seen.add(key); merged.push(item); }
                 }
             }
 
-            const finalResults = merged.slice(0, 12);
+            const finalResults = merged.slice(0, 15);
             this.setCached(cacheKey, finalResults);
+
+            // Télémétrie
+            if (window.appLogger) {
+                if (finalResults.length === 0) {
+                    window.appLogger.trackTitleSearch(query, null, Date.now() - startT);
+                } else {
+                    finalResults.forEach(r => window.appLogger.trackTitleSearch(query, r, Date.now() - startT));
+                }
+            }
+
             return finalResults;
         } catch (e) {
             console.error('[MultiSearch] Search error:', e);
             return [];
         }
+    }
+
+    // Traduction automatique des synopsis vers la langue de l'application
+    async translateSynopsis(text, targetLang = 'fr') {
+        if (!text || text.trim().length === 0) return '';
+        if (targetLang === 'en') return text;
+
+        const hash = `${targetLang}_${text.slice(0, 50)}`;
+        if (this.translationCache[hash]) return this.translationCache[hash];
+
+        try {
+            const cleanText = text.slice(0, 500);
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|${targetLang}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.responseData?.translatedText) {
+                    const translated = data.responseData.translatedText;
+                    this.translationCache[hash] = translated;
+                    this.saveTranslationCache();
+                    return translated;
+                }
+            }
+        } catch (e) {
+            console.warn('[Jikan] Translation API fallback to original text', e);
+        }
+        return text;
     }
 
     async getDetails(malId) {
@@ -258,7 +389,7 @@ class JikanAPI {
         }
     }
 
-    fillForm(result) {
+    async fillForm(result) {
         const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
         set('itemTitle', result.title);
         const typeEl = document.getElementById('itemType');
@@ -267,13 +398,24 @@ class JikanAPI {
             if (opt) typeEl.value = result.type;
         }
         if (result.genres?.length) set('itemGenres', result.genres.slice(0, 6).join(', '));
-        if (result.imageUrl) { set('itemImageUrl', result.imageUrl); if (typeof showImagePreview === 'function') showImagePreview(result.imageUrl); }
+        if (result.imageUrl) { 
+            set('itemImageUrl', result.imageUrl); 
+            if (typeof showImagePreview === 'function') showImagePreview(result.imageUrl); 
+        }
+
+        // Traduction automatique des notes / synopsis
         const notesEl = document.getElementById('itemNotes');
-        if (notesEl && !notesEl.value && result.synopsis) notesEl.value = result.synopsis;
+        if (notesEl && result.synopsis) {
+            notesEl.value = 'Traduction en cours...';
+            const userLang = window.i18n?.currentLang || 'fr';
+            const translatedNotes = await this.translateSynopsis(result.synopsis, userLang);
+            notesEl.value = translatedNotes || result.synopsis;
+        }
+
         set('itemMalId', result.malId || '');
     }
 
-    debounceSearch(query, manloreType, callback, delay = 500) {
+    debounceSearch(query, manloreType, callback, delay = 400) {
         if (jikanSearchTimeout) clearTimeout(jikanSearchTimeout);
         jikanSearchTimeout = setTimeout(async () => {
             const results = await this.search(query, this.getJikanType(manloreType));
@@ -282,5 +424,5 @@ class JikanAPI {
     }
 }
 
-const jikan = new JikanAPI();
-console.log('[Jikan] Module loaded');
+window.jikan = new JikanAPI();
+console.log('[Jikan v5.0.1] Module loaded');

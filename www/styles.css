@@ -770,25 +770,43 @@ select.input-field { cursor: pointer; }
 
 .search-input::placeholder { color: var(--text-muted); }
 
-/* Filter Select */
-.filter-select {
+/* Filter Select & All Dropdowns */
+select, .filter-select, .input-field select {
     width: 100%;
-    padding: 0.65rem 1rem;
-    background: var(--bg-input);
-    border: 1px solid var(--border-input);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
+    padding: 0.65rem 2.2rem 0.65rem 1rem;
+    background-color: var(--bg-input, #1e1e38);
+    border: 1px solid var(--border-input, rgba(108, 92, 231, 0.3));
+    border-radius: var(--radius-md, 10px);
+    color: var(--text-primary, #ffffff);
     font-family: 'Inter', sans-serif;
     font-size: 0.85rem;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--transition-fast, 0.2s ease);
     outline: none;
     appearance: none;
     -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a29bfe'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.1rem;
 }
 
-.filter-select:focus { border-color: var(--color-primary); }
-.filter-select option { background: var(--bg-secondary); color: var(--text-primary); }
+select:focus, .filter-select:focus {
+    border-color: var(--color-primary, #6c5ce7);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
+}
+
+option, optgroup {
+    background-color: #1a1a2e !important;
+    color: #f1f2f6 !important;
+    padding: 10px !important;
+    font-size: 0.9rem !important;
+}
+
+option:checked, option:hover {
+    background: #6c5ce7 !important;
+    color: #ffffff !important;
+}
 
 /* ============ RATING STARS ============ */
 .rating-input {

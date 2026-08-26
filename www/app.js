@@ -1074,29 +1074,21 @@ function setupEventListeners() {
         );
     });
 
-    // Display settings
-    document.getElementById('compactMode')?.addEventListener('change', e => {
-        localStorage.setItem('manlore_compact', e.target.checked);
-        document.body.classList.toggle('compact', e.target.checked);
-    });
-
-    document.getElementById('reducedMotion')?.addEventListener('change', e => {
-        localStorage.setItem('manlore_reduced_motion', e.target.checked);
-        document.body.style.setProperty('--transition-base', e.target.checked ? '0s' : '0.3s cubic-bezier(0.4, 0, 0.2, 1)');
-        document.body.style.setProperty('--transition-fast', e.target.checked ? '0s' : '0.15s cubic-bezier(0.4, 0, 0.2, 1)');
-    });
-
     // Close modals on backdrop click
-    ['itemModal','viewModal','passwordModal','wishlistModal','featureModal'].forEach(id => {
+    ['itemModal','viewModal','passwordModal','wishlistModal','featureModal','rouletteModal'].forEach(id => {
         document.getElementById(id)?.addEventListener('click', e => {
             if (e.target.id === id) closeModal(id);
         });
     });
 
+    // Roulette du Destin listeners
+    document.getElementById('rouletteBtn')?.addEventListener('click', openRouletteModal);
+    document.getElementById('spinRouletteBtn')?.addEventListener('click', spinRoulette);
+
     // Keyboard ESC
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            ['itemModal','viewModal','passwordModal','wishlistModal','featureModal'].forEach(closeModal);
+            ['itemModal','viewModal','passwordModal','wishlistModal','featureModal','rouletteModal'].forEach(closeModal);
             closeConfirmDialog();
             closePromptDialog();
             closeSidebar();
@@ -1108,4 +1100,74 @@ function setupEventListeners() {
     window.addEventListener('offline', () => updateJikanOfflineNotice());
 }
 
-console.log('[App] Module loaded v2.0.12');
+// ============ ROULETTE DU DESTIN (RANDOM READ) ============
+let rouletteSelectedId = null;
+
+function openRouletteModal() {
+    rouletteSelectedId = null;
+    document.getElementById('rouletteTitle').textContent = 'Prêt à lancer ?';
+    document.getElementById('rouletteSubtitle').textContent = 'Laissez le destin choisir votre prochaine lecture !';
+    document.getElementById('rouletteMeta').textContent = '';
+    document.getElementById('rouletteImage').src = 'manlore-logo.png';
+    const detailBtn = document.getElementById('openRouletteDetailBtn');
+    if (detailBtn) {
+        detailBtn.disabled = true;
+        detailBtn.onclick = null;
+    }
+    openModal('rouletteModal');
+}
+
+function spinRoulette() {
+    const pool = allItems.filter(i => i.status === 'À lire' || i.status === 'En cours');
+    const candidates = pool.length > 0 ? pool : allItems;
+
+    if (candidates.length === 0) {
+        showToast('Aucun titre disponible pour le tirage au sort', 'info');
+        return;
+    }
+
+    const spinBtn = document.getElementById('spinRouletteBtn');
+    const imgEl = document.getElementById('rouletteImage');
+    const titleEl = document.getElementById('rouletteTitle');
+    const metaEl = document.getElementById('rouletteMeta');
+    const detailBtn = document.getElementById('openRouletteDetailBtn');
+    const wrap = document.getElementById('rouletteCoverContainer');
+
+    if (spinBtn) spinBtn.disabled = true;
+    if (detailBtn) detailBtn.disabled = true;
+    if (wrap) wrap.classList.add('roulette-spinning');
+
+    let counter = 0;
+    const interval = setInterval(() => {
+        const temp = candidates[Math.floor(Math.random() * candidates.length)];
+        titleEl.textContent = temp.title;
+        if (temp.imageUrl || temp.image) imgEl.src = temp.imageUrl || temp.image;
+        counter++;
+        if (counter >= 15) {
+            clearInterval(interval);
+            if (wrap) wrap.classList.remove('roulette-spinning');
+            
+            const winner = candidates[Math.floor(Math.random() * candidates.length)];
+            rouletteSelectedId = winner.id;
+            titleEl.textContent = winner.title;
+            metaEl.textContent = `${winner.type} • ${winner.status} • ${winner.chapters || 0} chapitres`;
+            if (winner.imageUrl || winner.image) imgEl.src = winner.imageUrl || winner.image;
+
+            if (spinBtn) spinBtn.disabled = false;
+            if (detailBtn) {
+                detailBtn.disabled = false;
+                detailBtn.onclick = () => {
+                    closeModal('rouletteModal');
+                    openViewModal(winner.id);
+                };
+            }
+
+            if (window.questManager) {
+                window.questManager.addExp(10, 'Tirage au sort de lecture');
+            }
+            showToast('🎉 Destin scellé ! Bonne lecture !', 'success');
+        }
+    }, 80);
+}
+
+console.log('[App v5.0.1] Module loaded');

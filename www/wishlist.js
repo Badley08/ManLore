@@ -1,9 +1,12 @@
 /* ============================================
-   MANLORE v2.0.12 - WISHLIST.JS
-   Liste de souhaits personnelle + Vote features
+   MANLORE v5.0.1 - WISHLIST.JS
+   Liste de souhaits personnelle + Vote & Proposition de features
    ============================================ */
 
-const WISHLIST_KEY = 'manlore_wishlist';
+'use strict';
+
+const WISHLIST_KEY = 'manlore_wishlist_v5';
+const DELETED_FEATURES_KEY = 'manlore_deleted_features_v5';
 
 // ============ WISHLIST LOCALE ============
 
@@ -15,13 +18,17 @@ function loadWishlist() {
 }
 
 function saveWishlist(items) {
-    try { localStorage.setItem(WISHLIST_KEY, JSON.stringify(items)); } catch (e) { }
+    try { 
+        localStorage.setItem(WISHLIST_KEY, JSON.stringify(items)); 
+    } catch (e) {
+        console.warn('[Wishlist] Erreur sauvegarde locale', e);
+    }
 }
 
 function addToWishlist(item) {
     const items = loadWishlist();
     const newItem = {
-        id: 'wish_' + Date.now(),
+        id: 'wish_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
         title: item.title,
         type: item.type || 'Manga',
         priority: item.priority || 'moyenne',
@@ -32,18 +39,27 @@ function addToWishlist(item) {
     };
     items.unshift(newItem);
     saveWishlist(items);
+
+    if (window.questManager) {
+        window.questManager.addExp(10, 'Ajout à la Wishlist');
+    }
+
     return newItem;
 }
 
 function removeFromWishlist(id) {
-    const items = loadWishlist().filter(i => i.id !== id);
+    let items = loadWishlist();
+    items = items.filter(i => String(i.id) !== String(id));
     saveWishlist(items);
 }
 
 function updateWishlistItem(id, updates) {
     const items = loadWishlist();
-    const idx = items.findIndex(i => i.id === id);
-    if (idx !== -1) { items[idx] = { ...items[idx], ...updates }; saveWishlist(items); }
+    const idx = items.findIndex(i => String(i.id) === String(id));
+    if (idx !== -1) { 
+        items[idx] = { ...items[idx], ...updates }; 
+        saveWishlist(items); 
+    }
 }
 
 function wishlistToCollection(wishItem) {
@@ -64,7 +80,7 @@ function wishlistToCollection(wishItem) {
     return itemData;
 }
 
-// ============ RENDER WISHLIST ============
+// ============ RENDU DE LA WISHLIST ============
 
 function renderWishlist() {
     const items = loadWishlist();
@@ -74,10 +90,10 @@ function renderWishlist() {
     if (!grid) return;
 
     if (count) {
-        if (items.length === 1) {
-            count.textContent = i18n.t('wishlist.count.single');
+        if (items.length <= 1) {
+            count.textContent = i18n.t('wishlist.count.single') || `${items.length} titre souhaité`;
         } else {
-            count.textContent = i18n.t('wishlist.count.plural', { count: items.length });
+            count.textContent = i18n.t('wishlist.count.plural', { count: items.length }) || `${items.length} titres souhaités`;
         }
     }
 
@@ -118,16 +134,16 @@ function renderWishlist() {
 
 function getPriorityLabel(priority) {
     const labels = {
-        haute: i18n.t('wishlist.priority.haute'),
-        moyenne: i18n.t('wishlist.priority.moyenne'),
-        basse: i18n.t('wishlist.priority.basse')
+        haute: i18n.t('wishlist.priority.haute') || 'Haute',
+        moyenne: i18n.t('wishlist.priority.moyenne') || 'Moyenne',
+        basse: i18n.t('wishlist.priority.basse') || 'Basse'
     };
     return labels[priority] || priority;
 }
 
 async function handleAddWishToCollection(wishId) {
     const items = loadWishlist();
-    const item = items.find(i => i.id === wishId);
+    const item = items.find(i => String(i.id) === String(wishId));
     if (!item) return;
     const itemData = wishlistToCollection(item);
     const result = await createItem(itemData);
@@ -143,21 +159,249 @@ async function handleAddWishToCollection(wishId) {
 function handleRemoveWish(wishId) {
     removeFromWishlist(wishId);
     renderWishlist();
-    showToast(i18n.t('toast.wishlist.removed'), 'info');
+    showToast(i18n.t('toast.wishlist.removed') || 'Titre retiré de la wishlist', 'info');
 }
 
-// ============ WISHLIST FORM ============
+// ============ SUPPRESSION PERSISTANTE DES FONCTIONNALITÉS ============
 
-function openWishlistModal(prefill = null) {
-    document.getElementById('wishlistItemId').value = '';
-    document.getElementById('wishTitle').value = prefill?.title || '';
-    document.getElementById('wishType').value = prefill?.type || 'Manga';
-    document.getElementById('wishPriority').value = 'moyenne';
-    document.getElementById('wishImage').value = prefill?.image || '';
-    document.getElementById('wishNotes').value = '';
-    document.getElementById('wishJikanInput').value = '';
-    document.getElementById('wishJikanResults').style.display = 'none';
-    openModal('wishlistModal');
+function getDeletedFeatures() {
+    try {
+        const raw = localStorage.getItem(DELETED_FEATURES_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+}
+
+function saveDeletedFeatures(list) {
+    try {
+        localStorage.setItem(DELETED_FEATURES_KEY, JSON.stringify(list));
+    } catch (e) {}
+}
+
+async function deleteFeatureLocallyAndCloud(id) {
+    try {
+        const deleted = getDeletedFeatures();
+        if (!deleted.includes(id)) {
+            deleted.push(id);
+            saveDeletedFeatures(deleted);
+        }
+
+        // Suppression dans Back4App si possible
+        if (!isGuestMode && navigator.onLine && typeof Parse !== 'undefined') {
+            try {
+                const FeatureRequest = Parse.Object.extend('FeatureRequests');
+                const query = new Parse.Query(FeatureRequest);
+                const obj = await query.get(id);
+                if (obj) {
+                    await obj.destroy();
+                    console.log('[Features] Feature deleted from Parse cloud:', id);
+                }
+            } catch (cloudErr) {
+                console.log('[Features] Note: Local mask applied for feature:', id);
+            }
+        }
+    } catch (e) {
+        console.error('[Features] Erreur de suppression:', e);
+    }
+}
+
+function handleDeleteFeature(id) {
+    showConfirmDialog(
+        i18n.t('confirm.delete.title') || 'Supprimer',
+        'Voulez-vous supprimer définitivement cette proposition ?',
+        i18n.t('confirm.delete.yes') || 'Supprimer',
+        i18n.t('confirm.delete.no') || 'Annuler',
+        'danger',
+        async () => {
+            // Retrait immédiat du DOM pour réactivité instantanée
+            const el = document.getElementById(`feature-${id}`);
+            if (el) el.remove();
+
+            await deleteFeatureLocallyAndCloud(id);
+            await renderFeatures();
+            showToast('Proposition supprimée avec succès', 'info');
+        }
+    );
+}
+
+// ============ VOTE & PROPOSITIONS ============
+
+const DEFAULT_FEATURES = [
+    { id: 'f1', title: 'Synchronisation multi-appareils', description: 'Synchroniser la collection entre plusieurs téléphones', votes: 42, author: 'Équipe ManLore' },
+    { id: 'f2', title: 'Notifications de nouveaux chapitres', description: 'Être notifié quand un nouveau chapitre sort', votes: 38, author: 'Équipe ManLore' },
+    { id: 'f3', title: 'Recommandations intelligentes', description: 'Suggestions basées sur vos habitudes de lecture', votes: 31, author: 'Équipe ManLore' },
+    { id: 'f4', title: 'Widget Android', description: 'Widget pour voir vos lectures en cours depuis l\'écran d\'accueil', votes: 27, author: 'Équipe ManLore' },
+    { id: 'f5', title: 'Mode lecture intégré', description: 'Lire directement dans l\'app via les sources disponibles', votes: 19, author: 'Équipe ManLore' },
+];
+
+async function loadFeatures() {
+    const deletedFeatures = getDeletedFeatures();
+
+    if (!isGuestMode && navigator.onLine && typeof Parse !== 'undefined') {
+        try {
+            const FeatureRequest = Parse.Object.extend('FeatureRequests');
+            const query = new Parse.Query(FeatureRequest);
+            query.descending('votes');
+            query.limit(30);
+            const results = await query.find();
+            if (results && results.length > 0) {
+                return results
+                    .filter(r => !deletedFeatures.includes(r.id))
+                    .map(r => ({
+                        id: r.id,
+                        title: r.get('title') || '',
+                        description: r.get('description') || '',
+                        votes: r.get('votes') || 0,
+                        author: r.get('author') || 'Communauté'
+                    }));
+            }
+        } catch (e) {
+            console.warn('[Features] Cloud load failed, using defaults');
+        }
+    }
+    return DEFAULT_FEATURES.filter(f => !deletedFeatures.includes(f.id));
+}
+
+async function renderFeatures() {
+    const grid = document.getElementById('featuresGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="text-center text-muted" style="padding:2rem"><i class="fas fa-spinner fa-spin"></i></div>';
+    
+    const features = await loadFeatures();
+    const myVotes = getMyVotes();
+
+    if (features.length === 0) {
+        grid.innerHTML = `<p class="text-center text-muted" style="padding:2rem">${i18n.t('wishlist.features.empty') || 'Aucune fonctionnalité proposée'}</p>`;
+        return;
+    }
+
+    grid.innerHTML = features.map(f => {
+        const authorText = f.author === 'Équipe ManLore' ? (i18n.t('wishlist.features.team') || 'Équipe ManLore') : (f.author === 'Communauté' ? (i18n.t('wishlist.features.community') || 'Communauté') : f.author);
+        const byText = `Par ${authorText}`;
+        return `
+            <div class="feature-item" id="feature-${f.id}">
+                <button class="vote-btn ${myVotes.includes(f.id) ? 'voted' : ''}"
+                    onclick="handleVote('${f.id}')" id="voteBtn-${f.id}">
+                    <i class="fas fa-chevron-up"></i>
+                    <span class="vote-count" id="voteCount-${f.id}">${f.votes}</span>
+                </button>
+                <div class="feature-info">
+                    <p class="feature-title">${escapeHtml(f.title)}</p>
+                    ${f.description ? `<p class="feature-desc">${escapeHtml(f.description)}</p>` : ''}
+                    <p class="feature-author">${escapeHtml(byText)}</p>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; justify-content:space-between; height:100%">
+                    <button class="btn-icon delete" title="${i18n.t('wishlist.remove') || 'Supprimer'}"
+                        onclick="handleDeleteFeature('${f.id}')">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    ${myVotes.includes(f.id) ? `<span class="text-xs" style="color:var(--color-primary);font-weight:700">Voté</span>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getMyVotes() {
+    try {
+        const raw = localStorage.getItem('manlore_my_votes');
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+}
+
+function saveMyVotes(votes) {
+    localStorage.setItem('manlore_my_votes', JSON.stringify(votes));
+}
+
+async function handleVote(featureId) {
+    if (isGuestMode) {
+        showToast(i18n.t('toast.guest.feature') || 'Connectez-vous pour voter', 'warning');
+        return;
+    }
+    const myVotes = getMyVotes();
+    if (myVotes.includes(featureId)) {
+        showToast(i18n.t('wishlist.features.alreadyVoted') || 'Vous avez déjà voté pour cette idée', 'info');
+        return;
+    }
+
+    myVotes.push(featureId);
+    saveMyVotes(myVotes);
+    const btn = document.getElementById(`voteBtn-${featureId}`);
+    const countEl = document.getElementById(`voteCount-${featureId}`);
+    if (btn) btn.classList.add('voted');
+    if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
+
+    if (navigator.onLine && typeof Parse !== 'undefined') {
+        try {
+            const FeatureRequest = Parse.Object.extend('FeatureRequests');
+            const query = new Parse.Query(FeatureRequest);
+            const feature = await query.get(featureId);
+            feature.increment('votes');
+            await feature.save();
+        } catch (e) {
+            console.warn('[Vote] Cloud vote failed:', e);
+        }
+    }
+    showToast(i18n.t('toast.vote.counted') || 'Vote enregistré !', 'success');
+}
+
+async function handleProposeFeature() {
+    if (isGuestMode) { 
+        showToast(i18n.t('toast.guest.feature') || 'Connectez-vous pour proposer', 'warning'); 
+        return; 
+    }
+    const title = document.getElementById('featureTitle').value.trim();
+    const desc = document.getElementById('featureDesc').value.trim();
+    if (!title) return;
+
+    if (navigator.onLine && typeof Parse !== 'undefined') {
+        try {
+            const FeatureRequest = Parse.Object.extend('FeatureRequests');
+            const feature = new FeatureRequest();
+            feature.set('title', title);
+            feature.set('description', desc);
+            feature.set('votes', 1);
+            feature.set('author', currentUser ? currentUser.get('username') : 'Communauté');
+            await feature.save();
+
+            const myVotes = getMyVotes();
+            myVotes.push(feature.id);
+            saveMyVotes(myVotes);
+
+            showToast(i18n.t('toast.feature.proposed') || 'Fonctionnalité proposée !', 'success');
+        } catch (e) {
+            showToast(i18n.t('toast.feature.error') || 'Erreur lors de la proposition', 'error');
+        }
+    } else {
+        showToast(i18n.t('toast.offline') || 'Hors ligne', 'warning');
+    }
+    closeModal('featureModal');
+    renderFeatures();
+}
+
+function switchWishlistTab(tab) {
+    const myListSection = document.getElementById('myWishlistSection');
+    const featuresSection = document.getElementById('featuresSection');
+    const tabMyList = document.getElementById('tabMyList');
+    const tabFeatures = document.getElementById('tabFeatures');
+
+    if (tab === 'mylist') {
+        myListSection?.classList.remove('hidden');
+        featuresSection?.classList.add('hidden');
+        if (tabMyList) tabMyList.className = 'btn-primary';
+        if (tabFeatures) tabFeatures.className = 'btn-secondary';
+        renderWishlist();
+    } else {
+        myListSection?.classList.add('hidden');
+        featuresSection?.classList.remove('hidden');
+        if (tabMyList) tabMyList.className = 'btn-secondary';
+        if (tabFeatures) tabFeatures.className = 'btn-primary';
+        renderFeatures();
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -174,13 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             if (!item.title) return;
             addToWishlist(item);
-            showToast(i18n.t('toast.wishlist.added'), 'success');
+            showToast(i18n.t('toast.wishlist.added') || 'Ajouté à la wishlist', 'success');
             closeModal('wishlistModal');
             renderWishlist();
         });
     }
 
-    // Wishlist Jikan search
     const wishJikanBtn = document.getElementById('wishJikanBtn');
     const wishJikanInput = document.getElementById('wishJikanInput');
     if (wishJikanBtn && wishJikanInput) {
@@ -196,26 +439,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const addWishlistBtn = document.getElementById('addWishlistBtn');
-    if (addWishlistBtn) {
-        addWishlistBtn.addEventListener('click', () => openWishlistModal());
-    }
+    document.getElementById('addWishlistBtn')?.addEventListener('click', () => openWishlistModal());
+    document.getElementById('proposeFeatureBtn')?.addEventListener('click', () => {
+        if (isGuestMode) { showToast(i18n.t('toast.guest.feature'), 'warning'); return; }
+        openModal('featureModal');
+    });
 
-    const proposeFeatureBtn = document.getElementById('proposeFeatureBtn');
-    if (proposeFeatureBtn) {
-        proposeFeatureBtn.addEventListener('click', () => {
-            if (isGuestMode) { showToast(i18n.t('toast.guest.feature'), 'warning'); return; }
-            openModal('featureModal');
-        });
-    }
-
-    const featureForm = document.getElementById('featureForm');
-    if (featureForm) {
-        featureForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            await handleProposeFeature();
-        });
-    }
+    document.getElementById('featureForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        await handleProposeFeature();
+    });
 });
 
 function renderJikanResultsWish(results) {
@@ -248,220 +481,16 @@ function applyWishJikanResult(result) {
     document.getElementById('wishJikanResults').style.display = 'none';
 }
 
-// ============ FEATURE DELETION MASK ============
-
-function getDeletedFeatures() {
-    try {
-        const raw = localStorage.getItem('manlore_deleted_features');
-        return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+function openWishlistModal(prefill = null) {
+    document.getElementById('wishlistItemId').value = '';
+    document.getElementById('wishTitle').value = prefill?.title || '';
+    document.getElementById('wishType').value = prefill?.type || 'Manga';
+    document.getElementById('wishPriority').value = 'moyenne';
+    document.getElementById('wishImage').value = prefill?.image || '';
+    document.getElementById('wishNotes').value = '';
+    document.getElementById('wishJikanInput').value = '';
+    document.getElementById('wishJikanResults').style.display = 'none';
+    openModal('wishlistModal');
 }
 
-function deleteFeatureLocally(id) {
-    try {
-        const deleted = getDeletedFeatures();
-        if (!deleted.includes(id)) {
-            deleted.push(id);
-            localStorage.setItem('manlore_deleted_features', JSON.stringify(deleted));
-        }
-    } catch (e) { console.error('[Features] Mask error:', e); }
-}
-
-function handleDeleteFeature(id) {
-    if (typeof showConfirmDialog === 'function') {
-        showConfirmDialog(
-            i18n.t('confirm.delete.title'),
-            i18n.t('confirm.delete.feature.msg') || 'Voulez-vous masquer cette fonctionnalité ?',
-            i18n.t('confirm.delete.yes'),
-            i18n.t('confirm.delete.no'),
-            'danger',
-            () => {
-                deleteFeatureLocally(id);
-                renderFeatures();
-                showToast(i18n.t('toast.feature.hidden') || 'Fonctionnalité masquée', 'info');
-            }
-        );
-    } else {
-        deleteFeatureLocally(id);
-        renderFeatures();
-    }
-}
-
-// ============ FEATURE VOTING ============
-
-const DEFAULT_FEATURES = [
-    { id: 'f1', title: 'Synchronisation multi-appareils', description: 'Synchroniser la collection entre plusieurs téléphones', votes: 42, author: 'Équipe ManLore' },
-    { id: 'f2', title: 'Notifications de nouveaux chapitres', description: 'Être notifié quand un nouveau chapitre sort', votes: 38, author: 'Équipe ManLore' },
-    { id: 'f3', title: 'Recommandations intelligentes', description: 'Suggestions basées sur vos habitudes de lecture', votes: 31, author: 'Équipe ManLore' },
-    { id: 'f4', title: 'Widget Android', description: 'Widget pour voir vos lectures en cours depuis l\'écran d\'accueil', votes: 27, author: 'Équipe ManLore' },
-    { id: 'f5', title: 'Mode lecture intégré', description: 'Lire directement dans l\'app via les sources disponibles', votes: 19, author: 'Équipe ManLore' },
-];
-
-async function loadFeatures() {
-    // Try cloud, fallback to defaults
-    if (!isGuestMode && navigator.onLine) {
-        try {
-            const FeatureRequest = Parse.Object.extend('FeatureRequests');
-            const query = new Parse.Query(FeatureRequest);
-            query.descending('votes');
-            query.limit(20);
-            const results = await query.find();
-            if (results.length > 0) {
-                return results.map(r => ({
-                    id: r.id,
-                    title: r.get('title') || '',
-                    description: r.get('description') || '',
-                    votes: r.get('votes') || 0,
-                    author: r.get('author') || 'Communauté'
-                }));
-            }
-        } catch (e) {
-            console.warn('[Features] Cloud load failed, using defaults');
-        }
-    }
-    return DEFAULT_FEATURES;
-}
-
-async function renderFeatures() {
-    const grid = document.getElementById('featuresGrid');
-    if (!grid) return;
-    grid.innerHTML = '<div class="text-center text-muted" style="padding:2rem"><i class="fas fa-spinner fa-spin"></i></div>';
-    const features = await loadFeatures();
-    const myVotes = getMyVotes();
-    const deletedFeatures = getDeletedFeatures();
-
-    // Filter out deleted features
-    const visibleFeatures = features.filter(f => !deletedFeatures.includes(f.id));
-
-    if (visibleFeatures.length === 0) {
-        grid.innerHTML = `<p class="text-center text-muted" style="padding:2rem">${i18n.t('wishlist.features.empty')}</p>`;
-        return;
-    }
-
-    grid.innerHTML = visibleFeatures.map(f => {
-        const authorText = f.author === 'Équipe ManLore' ? i18n.t('wishlist.features.team') : (f.author === 'Communauté' ? i18n.t('wishlist.features.community') : f.author);
-        const byText = i18n.t('wishlist.features.by', { author: authorText });
-        return `
-            <div class="feature-item" id="feature-${f.id}">
-                <button class="vote-btn ${myVotes.includes(f.id) ? 'voted' : ''}"
-                    onclick="handleVote('${f.id}')" id="voteBtn-${f.id}">
-                    <i class="fas fa-chevron-up"></i>
-                    <span class="vote-count" id="voteCount-${f.id}">${f.votes}</span>
-                </button>
-                <div class="feature-info">
-                    <p class="feature-title">${escapeHtml(f.title)}</p>
-                    ${f.description ? `<p class="feature-desc">${escapeHtml(f.description)}</p>` : ''}
-                    <p class="feature-author">${escapeHtml(byText)}</p>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem; justify-content:space-between; height:100%">
-                    <button class="btn-icon delete" title="${i18n.t('wishlist.remove')}"
-                        onclick="handleDeleteFeature('${f.id}')">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                    ${myVotes.includes(f.id) ? `<span class="text-xs" style="color:var(--color-primary);font-weight:700">${i18n.t('wishlist.features.yourVote')}</span>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function getMyVotes() {
-    try {
-        const raw = localStorage.getItem('manlore_my_votes');
-        return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-}
-
-function saveMyVotes(votes) {
-    localStorage.setItem('manlore_my_votes', JSON.stringify(votes));
-}
-
-async function handleVote(featureId) {
-    if (isGuestMode) {
-        showToast(i18n.t('toast.guest.feature'), 'warning');
-        return;
-    }
-    const myVotes = getMyVotes();
-    if (myVotes.includes(featureId)) {
-        showToast(i18n.t('wishlist.features.alreadyVoted'), 'info');
-        return;
-    }
-
-    // Optimistic UI
-    myVotes.push(featureId);
-    saveMyVotes(myVotes);
-    const btn = document.getElementById(`voteBtn-${featureId}`);
-    const countEl = document.getElementById(`voteCount-${featureId}`);
-    if (btn) btn.classList.add('voted');
-    if (countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
-
-    // Cloud vote
-    if (navigator.onLine) {
-        try {
-            const FeatureRequest = Parse.Object.extend('FeatureRequests');
-            const query = new Parse.Query(FeatureRequest);
-            const feature = await query.get(featureId);
-            feature.increment('votes');
-            await feature.save();
-        } catch (e) {
-            console.warn('[Vote] Cloud vote failed:', e);
-        }
-    }
-    showToast(i18n.t('toast.vote.counted'), 'success');
-}
-
-async function handleProposeFeature() {
-    if (isGuestMode) { showToast(i18n.t('toast.guest.feature'), 'warning'); return; }
-    const title = document.getElementById('featureTitle').value.trim();
-    const desc = document.getElementById('featureDesc').value.trim();
-    if (!title) return;
-
-    if (navigator.onLine) {
-        try {
-            const FeatureRequest = Parse.Object.extend('FeatureRequests');
-            const feature = new FeatureRequest();
-            feature.set('title', title);
-            feature.set('description', desc);
-            feature.set('votes', 0);
-            feature.set('author', currentUser ? currentUser.get('username') : 'Communauté');
-            await feature.save();
-            showToast(i18n.t('toast.feature.proposed') || 'Fonctionnalité proposée !', 'success');
-        } catch (e) {
-            showToast(i18n.t('toast.feature.error') || 'Erreur lors de la proposition', 'error');
-        }
-    } else {
-        showToast(i18n.t('toast.offline'), 'warning');
-    }
-    closeModal('featureModal');
-    renderFeatures();
-}
-
-// ============ TAB SWITCHING ============
-
-function switchWishlistTab(tab) {
-    const myListSection = document.getElementById('myWishlistSection');
-    const featuresSection = document.getElementById('featuresSection');
-    const tabMyList = document.getElementById('tabMyList');
-    const tabFeatures = document.getElementById('tabFeatures');
-
-    if (tab === 'mylist') {
-        myListSection.classList.remove('hidden');
-        featuresSection.classList.add('hidden');
-        tabMyList.className = 'btn-primary';
-        tabFeatures.className = 'btn-secondary';
-        renderWishlist();
-    } else {
-        myListSection.classList.add('hidden');
-        featuresSection.classList.remove('hidden');
-        tabMyList.className = 'btn-secondary';
-        tabFeatures.className = 'btn-primary';
-        renderFeatures();
-    }
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-console.log('[Wishlist] Module loaded');
+console.log('[Wishlist v5.0.1] Module loaded');

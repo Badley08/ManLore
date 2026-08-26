@@ -1,3 +1,10 @@
+/* ============================================
+   MANLORE v5.0.1 - ANALYSE.JS
+   Analytics Avancés + Intégration Quêtes & Rangs
+   ============================================ */
+
+'use strict';
+
 function formatReadingTime(totalMinutes) {
     if (totalMinutes <= 0) return '0 ' + i18n.t('stats.time.minutes', { minutes: 0 }).replace('0', '').trim();
     const days = Math.floor(totalMinutes / (24 * 60));
@@ -16,18 +23,24 @@ function renderStats(items) {
     if (!container) return;
     if (!items || items.length === 0) {
         container.innerHTML = `
+            <div id="questProgressionContainer"></div>
             <div class="empty-state">
                 <i class="fas fa-chart-bar empty-state-icon"></i>
                 <h3 class="empty-state-title">${i18n.t('stats.empty.title')}</h3>
                 <p class="empty-state-text">${i18n.t('stats.empty.text')}</p>
             </div>
         `;
+        if (typeof renderQuestUI === 'function') renderQuestUI();
         return;
     }
 
     const plain = items.map(i => i instanceof Parse.Object ? parseItemToObject(i) : i);
     const stats = computeStats(plain);
-    container.innerHTML = buildStatsHTML(stats, plain);
+    container.innerHTML = `
+        <div id="questProgressionContainer"></div>
+        ${buildStatsHTML(stats, plain)}
+    `;
+    if (typeof renderQuestUI === 'function') renderQuestUI();
     animateBars();
 }
 
@@ -45,19 +58,15 @@ function computeStats(items) {
     let topRated = [];
 
     items.forEach(item => {
-        // Status
         const s = item.status || 'Inconnu';
         byStatus[s] = (byStatus[s] || 0) + 1;
 
-        // Type
         const t = item.type || 'Inconnu';
         byType[t] = (byType[t] || 0) + 1;
 
-        // Genres
         const genres = Array.isArray(item.genres) ? item.genres : (item.genres ? item.genres.split(',').map(g => g.trim()) : []);
         genres.forEach(g => { if (g) byGenre[g] = (byGenre[g] || 0) + 1; });
 
-        // Rating
         const r = parseInt(item.rating) || 0;
         if (r > 0) {
             byRating[r] = (byRating[r] || 0) + 1;
@@ -65,10 +74,8 @@ function computeStats(items) {
             ratedCount++;
         }
 
-        // Chapters
         totalChapters += parseInt(item.chapters) || 0;
 
-        // Monthly
         const date = item.createdAt ? new Date(item.createdAt) : null;
         if (date && !isNaN(date)) {
             const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
@@ -82,35 +89,26 @@ function computeStats(items) {
 
     topRated = topRated.sort((a, b) => b.rating - a.rating).slice(0, 10);
     const avgRating = ratedCount > 0 ? (totalRating / ratedCount).toFixed(1) : 0;
-
-    // Top genres
     const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0, 8);
 
-    // Timeline (last 12 months)
     const now = new Date();
     const timeline = [];
     for (let i = 11; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const label = d.toLocaleDateString(i18n.lang, { month: 'short', year: '2-digit' });
+        const label = d.toLocaleDateString(i18n.lang || 'fr', { month: 'short', year: '2-digit' });
         timeline.push({ key, label, count: byMonth[key] || 0 });
     }
     const maxMonth = Math.max(...timeline.map(t => t.count), 1);
-
-    // Streak
     const streak = computeStreak(byDay);
 
-    // Heatmap (12 cells = months)
     const heatmap = timeline.map(t => {
         const level = t.count === 0 ? 0 : t.count <= 2 ? 1 : t.count <= 5 ? 2 : t.count <= 10 ? 3 : 4;
         return { ...t, level };
     });
 
-    // Completion rate
     const completed = byStatus['Terminé'] || byStatus['Completed'] || byStatus['Completado'] || 0;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    // Best genre by frequency
     const bestGenre = topGenres.length > 0 ? topGenres[0][0] : '—';
 
     return {
@@ -142,7 +140,6 @@ function computeStreak(byDay) {
 }
 
 function buildStatsHTML(s, items) {
-    // Map status localized colors
     const statusColors = {
         'En cours': 'var(--color-success)', 'Reading': 'var(--color-success)', 'Leyendo': 'var(--color-success)',
         'Terminé': 'var(--color-primary)', 'Completed': 'var(--color-primary)', 'Completado': 'var(--color-primary)',
@@ -155,7 +152,7 @@ function buildStatsHTML(s, items) {
     return `
     <!-- Overview -->
     <div class="section-card">
-        <h3 class="section-title"><i class="fas fa-eye"></i> <span>${i18n.t('stats.overview')}</span></h3>
+        <h3 class="section-title"><i class="fas fa-chart-pie"></i> <span>${i18n.t('stats.overview')}</span></h3>
         <div class="analytics-overview">
             <div class="analytics-mini">
                 <div class="analytics-mini-value">${s.total}</div>
@@ -200,18 +197,6 @@ function buildStatsHTML(s, items) {
                 <div class="stat-box-icon" style="color:var(--color-success)"><i class="fas fa-clock"></i></div>
                 <div class="stat-box-value" style="font-size:1.1rem; padding-top:0.25rem; font-weight:700">${formatReadingTime(s.totalChapters * 10)}</div>
                 <div class="stat-box-label">${i18n.t('stats.indicator.readtime')}</div>
-            </div>
-        </div>
-
-        <div style="margin-top:1.5rem">
-            <div class="progress-bar-wrap">
-                <div class="progress-header">
-                    <span>${i18n.t('stats.globalProgress')}</span>
-                    <span style="color:var(--color-primary); font-weight:700">${s.completionRate}%</span>
-                </div>
-                <div class="progress-bar-track">
-                    <div class="progress-bar-fill" data-width="${s.completionRate}" style="width:0%"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -380,4 +365,4 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-console.log('[Analyse] Module loaded');
+console.log('[Analyse v5.0.1] Module loaded');

@@ -1086,3 +1086,205 @@
     .items-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .analytics-overview { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================
+   MANLORE v5.0.1 - QUESTS & PROGRESSION STYLES
+   ============================================ */
+.quest-card-modern {
+    background: linear-gradient(135deg, rgba(30, 30, 56, 0.95), rgba(20, 20, 38, 0.95));
+    border: 1px solid rgba(108, 92, 231, 0.35);
+    border-radius: var(--radius-lg, 16px);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(108, 92, 231, 0.15);
+}
+
+.quest-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.quest-rank-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid;
+}
+
+.quest-badge-icon {
+    font-size: 1.8rem;
+}
+
+.quest-rank-level {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.quest-rank-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #a4b0be);
+    font-weight: 600;
+}
+
+.quest-exp-display {
+    text-align: right;
+}
+
+.quest-exp-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #00f2fe;
+}
+
+.quest-exp-label {
+    font-size: 0.75rem;
+    color: var(--text-muted, #747d8c);
+    display: block;
+}
+
+.quest-bar-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.quest-bar-track {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.quest-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quest-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #a4b0be);
+}
+
+.quest-daily-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-primary, #6c5ce7);
+}
+
+.quest-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.quest-item-box {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md, 10px);
+    transition: all 0.2s ease;
+}
+
+.quest-item-box.completed {
+    border-color: rgba(46, 204, 113, 0.3);
+    background: rgba(46, 204, 113, 0.05);
+}
+
+.quest-icon-bubble {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(108, 92, 231, 0.2);
+    color: var(--color-primary, #6c5ce7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.quest-icon-bubble.done {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+}
+
+.quest-info-content {
+    flex: 1;
+}
+
+.quest-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.quest-reward {
+    font-size: 0.75rem;
+    color: #ffd32a;
+    font-weight: 800;
+}
+
+.quest-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted, #747d8c);
+    margin-top: 0.15rem;
+}
+
+.quest-status-count {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary, #a4b0be);
+}
+
+/* ============ ROULETTE DU DESTIN MODAL ============ */
+.roulette-modal-content {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.roulette-cover-wrap {
+    width: 160px;
+    height: 230px;
+    margin: 1rem auto;
+    border-radius: var(--radius-md, 12px);
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4);
+    border: 2px solid var(--color-primary, #6c5ce7);
+}
+
+.roulette-cover-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.roulette-spinning {
+    animation: roulette-spin 0.12s linear infinite;
+}
+
+@keyframes roulette-spin {
+    0% { transform: scale(0.96) rotate(-2deg); }
+    50% { transform: scale(1.04) rotate(2deg); }
+    100% { transform: scale(0.96) rotate(-2deg); }
+}
