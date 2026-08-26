@@ -1,0 +1,712 @@
+{
+  "version": 1,
+  "game": "ManLore",
+  "lang": "fr",
+  "description": "Système de quêtes XP quotidiennes, hebdomadaires, mensuelles, annuelles et de progression de rang.",
+  "xp_rules": {
+    "daily_reset": "00:00",
+    "weekly_reset": "Monday 00:00",
+    "monthly_reset": "First day of month 00:00",
+    "annual_reset": "January 1 00:00",
+    "anti_abuse": {
+      "active_minutes": "Compter uniquement le temps actif, avec une limite raisonnable par session.",
+      "unique_views": "Un même titre ne compte qu'une fois par période pour les objectifs de titres différents.",
+      "actions": "Les actions doivent être réellement effectuées et validées côté application."
+    }
+  },
+  "rank_system": {
+    "ranks": [
+      {
+        "rank": "E",
+        "title": "Novice du Lore",
+        "xp_required": 0,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path></svg>",
+        "color": "#95a5a6"
+      },
+      {
+        "rank": "D",
+        "title": "Lecteur Curieux",
+        "xp_required": 500,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"14.5 17.5 3 6 3 3 6 3 17.5 14.5\"></polyline><line x1=\"13\" y1=\"19\" x2=\"19\" y2=\"13\"></line><line x1=\"16\" y1=\"16\" x2=\"20\" y2=\"20\"></line><line x1=\"19\" y1=\"21\" x2=\"21\" y2=\"19\"></line></svg>",
+        "color": "#2ecc71"
+      },
+      {
+        "rank": "C",
+        "title": "Chasseur de Chapitres",
+        "xp_required": 1500,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m14.5 17.5-11.5-11.5v-3h3l11.5 11.5\"></path><path d=\"m9.5 17.5 11.5-11.5v-3h-3l-11.5 11.5\"></path><line x1=\"5\" y1=\"19\" x2=\"19\" y2=\"5\"></line></svg>",
+        "color": "#3498db"
+      },
+      {
+        "rank": "B",
+        "title": "Explorateur d'Univers",
+        "xp_required": 3000,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path><path d=\"M12 8v8\"></path><path d=\"M8 12h8\"></path></svg>",
+        "color": "#9b59b6"
+      },
+      {
+        "rank": "A",
+        "title": "Érudit des Mondes",
+        "xp_required": 5500,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14\"></path></svg>",
+        "color": "#f39c12"
+      },
+      {
+        "rank": "S",
+        "title": "Seigneur du ManLore",
+        "xp_required": 8500,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"></path></svg>",
+        "color": "#e74c3c"
+      }
+    ],
+    "rank_up_rewards": {
+      "E_to_D": 350,
+      "D_to_C": 500,
+      "C_to_B": 650,
+      "B_to_A": 850,
+      "A_to_S": 1100
+    },
+    "design_note": "Progression de rangs E -> S. Les récompenses augmentent à chaque palier de rang franchi."
+  },
+  "quests": {
+    "daily": [
+      {
+        "id": "daily_001",
+        "title": "Première connexion",
+        "description": "Ouvrir ManLore et rester actif au moins 5 minutes.",
+        "xp": 50,
+        "target": {
+          "type": "active_minutes",
+          "value": 5
+        }
+      },
+      {
+        "id": "daily_002",
+        "title": "Session prolongée",
+        "description": "Passer au moins 10 minutes sur ManLore.",
+        "xp": 75,
+        "target": {
+          "type": "active_minutes",
+          "value": 10
+        }
+      },
+      {
+        "id": "daily_003",
+        "title": "Longue session",
+        "description": "Passer au moins 20 minutes sur ManLore.",
+        "xp": 125,
+        "target": {
+          "type": "active_minutes",
+          "value": 20
+        }
+      },
+      {
+        "id": "daily_004",
+        "title": "Session complète",
+        "description": "Passer au moins 30 minutes sur ManLore.",
+        "xp": 175,
+        "target": {
+          "type": "active_minutes",
+          "value": 30
+        }
+      },
+      {
+        "id": "daily_005",
+        "title": "Éditeur",
+        "description": "Modifier le titre d'un contenu.",
+        "xp": 60,
+        "target": {
+          "type": "title_edit",
+          "value": 1
+        }
+      },
+      {
+        "id": "daily_006",
+        "title": "Nettoyage",
+        "description": "Supprimer un titre de ta collection.",
+        "xp": 60,
+        "target": {
+          "type": "title_delete",
+          "value": 1
+        }
+      },
+      {
+        "id": "daily_007",
+        "title": "Collectionneur",
+        "description": "Ajouter 1 nouveau titre à ta collection.",
+        "xp": 60,
+        "target": {
+          "type": "title_add",
+          "value": 1
+        }
+      },
+      {
+        "id": "daily_008",
+        "title": "Explorateur",
+        "description": "Consulter 5 titres différents.",
+        "xp": 75,
+        "target": {
+          "type": "title_view",
+          "value": 5
+        }
+      },
+      {
+        "id": "daily_009",
+        "title": "Curieux",
+        "description": "Consulter 10 titres différents.",
+        "xp": 120,
+        "target": {
+          "type": "title_view",
+          "value": 10
+        }
+      },
+      {
+        "id": "daily_010",
+        "title": "Organisateur",
+        "description": "Modifier 3 titres.",
+        "xp": 125,
+        "target": {
+          "type": "title_edit",
+          "value": 3
+        }
+      },
+      {
+        "id": "daily_011",
+        "title": "Archiviste",
+        "description": "Ajouter 3 titres à ta collection.",
+        "xp": 125,
+        "target": {
+          "type": "title_add",
+          "value": 3
+        }
+      },
+      {
+        "id": "daily_012",
+        "title": "Grand nettoyage",
+        "description": "Supprimer 3 titres de ta collection.",
+        "xp": 125,
+        "target": {
+          "type": "title_delete",
+          "value": 3
+        }
+      },
+      {
+        "id": "daily_013",
+        "title": "Mix parfait",
+        "description": "Ajouter, modifier et consulter au moins un titre.",
+        "xp": 150,
+        "target": {
+          "type": "compound",
+          "conditions": [
+            "title_add>=1",
+            "title_edit>=1",
+            "title_view>=1"
+          ]
+        }
+      },
+      {
+        "id": "daily_014",
+        "title": "Retour aux sources",
+        "description": "Revenir sur ManLore après une journée précédente.",
+        "xp": 50,
+        "target": {
+          "type": "daily_return",
+          "value": 1
+        }
+      },
+      {
+        "id": "daily_015",
+        "title": "Routine",
+        "description": "Effectuer 3 interactions différentes avec l'application.",
+        "xp": 100,
+        "target": {
+          "type": "unique_actions",
+          "value": 3
+        }
+      },
+      {
+        "id": "daily_016",
+        "title": "Bibliothèque active",
+        "description": "Interagir avec 5 titres au total.",
+        "xp": 100,
+        "target": {
+          "type": "title_interactions",
+          "value": 5
+        }
+      },
+      {
+        "id": "daily_017",
+        "title": "Petit archiviste",
+        "description": "Créer ou ajouter 2 titres.",
+        "xp": 90,
+        "target": {
+          "type": "title_add",
+          "value": 2
+        }
+      },
+      {
+        "id": "daily_018",
+        "title": "Révision",
+        "description": "Modifier 5 titres.",
+        "xp": 175,
+        "target": {
+          "type": "title_edit",
+          "value": 5
+        }
+      },
+      {
+        "id": "daily_019",
+        "title": "Découverte",
+        "description": "Consulter 15 titres différents.",
+        "xp": 175,
+        "target": {
+          "type": "title_view",
+          "value": 15
+        }
+      },
+      {
+        "id": "daily_020",
+        "title": "Présence",
+        "description": "Passer au moins 45 minutes sur ManLore.",
+        "xp": 225,
+        "target": {
+          "type": "active_minutes",
+          "value": 45
+        }
+      }
+    ],
+    "weekly": [
+      {
+        "id": "weekly_001",
+        "title": "Habitué",
+        "description": "Ouvrir ManLore au moins 3 jours cette semaine.",
+        "xp": 250,
+        "target": {
+          "type": "active_days",
+          "value": 3
+        }
+      },
+      {
+        "id": "weekly_002",
+        "title": "Régulier",
+        "description": "Ouvrir ManLore au moins 5 jours cette semaine.",
+        "xp": 450,
+        "target": {
+          "type": "active_days",
+          "value": 5
+        }
+      },
+      {
+        "id": "weekly_003",
+        "title": "Semaine parfaite",
+        "description": "Ouvrir ManLore les 7 jours de la semaine.",
+        "xp": 750,
+        "target": {
+          "type": "active_days",
+          "value": 7
+        }
+      },
+      {
+        "id": "weekly_004",
+        "title": "Temps investi",
+        "description": "Accumuler 60 minutes d'activité cette semaine.",
+        "xp": 300,
+        "target": {
+          "type": "active_minutes",
+          "value": 60
+        }
+      },
+      {
+        "id": "weekly_005",
+        "title": "Marathon",
+        "description": "Accumuler 180 minutes d'activité cette semaine.",
+        "xp": 650,
+        "target": {
+          "type": "active_minutes",
+          "value": 180
+        }
+      },
+      {
+        "id": "weekly_006",
+        "title": "Éditeur régulier",
+        "description": "Modifier 10 titres cette semaine.",
+        "xp": 350,
+        "target": {
+          "type": "title_edit",
+          "value": 10
+        }
+      },
+      {
+        "id": "weekly_007",
+        "title": "Éditeur acharné",
+        "description": "Modifier 25 titres cette semaine.",
+        "xp": 700,
+        "target": {
+          "type": "title_edit",
+          "value": 25
+        }
+      },
+      {
+        "id": "weekly_008",
+        "title": "Collection hebdomadaire",
+        "description": "Ajouter 10 titres cette semaine.",
+        "xp": 350,
+        "target": {
+          "type": "title_add",
+          "value": 10
+        }
+      },
+      {
+        "id": "weekly_009",
+        "title": "Grande collection",
+        "description": "Ajouter 25 titres cette semaine.",
+        "xp": 700,
+        "target": {
+          "type": "title_add",
+          "value": 25
+        }
+      },
+      {
+        "id": "weekly_010",
+        "title": "Nettoyeur",
+        "description": "Supprimer 10 titres cette semaine.",
+        "xp": 350,
+        "target": {
+          "type": "title_delete",
+          "value": 10
+        }
+      },
+      {
+        "id": "weekly_011",
+        "title": "Exploration",
+        "description": "Consulter 50 titres différents cette semaine.",
+        "xp": 400,
+        "target": {
+          "type": "title_view",
+          "value": 50
+        }
+      },
+      {
+        "id": "weekly_012",
+        "title": "Grand explorateur",
+        "description": "Consulter 100 titres différents cette semaine.",
+        "xp": 800,
+        "target": {
+          "type": "title_view",
+          "value": 100
+        }
+      },
+      {
+        "id": "weekly_013",
+        "title": "Interactions",
+        "description": "Effectuer 50 interactions avec des titres.",
+        "xp": 400,
+        "target": {
+          "type": "title_interactions",
+          "value": 50
+        }
+      },
+      {
+        "id": "weekly_014",
+        "title": "Routine solide",
+        "description": "Effectuer au moins 1 interaction chaque jour pendant 7 jours.",
+        "xp": 900,
+        "target": {
+          "type": "daily_activity_streak",
+          "value": 7
+        }
+      },
+      {
+        "id": "weekly_015",
+        "title": "Polyvalent",
+        "description": "Utiliser au moins 5 types d'actions différents.",
+        "xp": 350,
+        "target": {
+          "type": "unique_actions",
+          "value": 5
+        }
+      }
+    ],
+    "monthly": [
+      {
+        "id": "monthly_001",
+        "title": "Membre régulier",
+        "description": "Être actif au moins 15 jours ce mois-ci.",
+        "xp": 900,
+        "target": {
+          "type": "active_days",
+          "value": 15
+        }
+      },
+      {
+        "id": "monthly_002",
+        "title": "Mois complet",
+        "description": "Être actif au moins 25 jours ce mois-ci.",
+        "xp": 1600,
+        "target": {
+          "type": "active_days",
+          "value": 25
+        }
+      },
+      {
+        "id": "monthly_003",
+        "title": "Fidélité",
+        "description": "Être actif tous les jours d'un mois de 30 jours.",
+        "xp": 2500,
+        "target": {
+          "type": "active_days",
+          "value": 30
+        }
+      },
+      {
+        "id": "monthly_004",
+        "title": "Temps mensuel",
+        "description": "Accumuler 600 minutes d'activité ce mois-ci.",
+        "xp": 1200,
+        "target": {
+          "type": "active_minutes",
+          "value": 600
+        }
+      },
+      {
+        "id": "monthly_005",
+        "title": "Grosse présence",
+        "description": "Accumuler 1200 minutes d'activité ce mois-ci.",
+        "xp": 2200,
+        "target": {
+          "type": "active_minutes",
+          "value": 1200
+        }
+      },
+      {
+        "id": "monthly_006",
+        "title": "Éditeur du mois",
+        "description": "Modifier 50 titres ce mois-ci.",
+        "xp": 1200,
+        "target": {
+          "type": "title_edit",
+          "value": 50
+        }
+      },
+      {
+        "id": "monthly_007",
+        "title": "Archiviste du mois",
+        "description": "Ajouter 50 titres ce mois-ci.",
+        "xp": 1200,
+        "target": {
+          "type": "title_add",
+          "value": 50
+        }
+      },
+      {
+        "id": "monthly_008",
+        "title": "Nettoyeur du mois",
+        "description": "Supprimer 50 titres ce mois-ci.",
+        "xp": 1200,
+        "target": {
+          "type": "title_delete",
+          "value": 50
+        }
+      },
+      {
+        "id": "monthly_009",
+        "title": "Explorateur du mois",
+        "description": "Consulter 300 titres différents ce mois-ci.",
+        "xp": 1500,
+        "target": {
+          "type": "title_view",
+          "value": 300
+        }
+      },
+      {
+        "id": "monthly_010",
+        "title": "Maître des interactions",
+        "description": "Effectuer 500 interactions avec des titres.",
+        "xp": 1800,
+        "target": {
+          "type": "title_interactions",
+          "value": 500
+        }
+      },
+      {
+        "id": "monthly_011",
+        "title": "Sérieuse routine",
+        "description": "Maintenir une série d'activité de 14 jours.",
+        "xp": 1400,
+        "target": {
+          "type": "daily_activity_streak",
+          "value": 14
+        }
+      },
+      {
+        "id": "monthly_012",
+        "title": "Polyvalence",
+        "description": "Utiliser au moins 8 types d'actions différents au cours du mois.",
+        "xp": 1000,
+        "target": {
+          "type": "unique_actions",
+          "value": 8
+        }
+      }
+    ],
+    "annual": [
+      {
+        "id": "annual_001",
+        "title": "Première année",
+        "description": "Être actif au moins 100 jours sur l'année.",
+        "xp": 5000,
+        "target": {
+          "type": "active_days",
+          "value": 100
+        }
+      },
+      {
+        "id": "annual_002",
+        "title": "Année régulière",
+        "description": "Être actif au moins 200 jours sur l'année.",
+        "xp": 9000,
+        "target": {
+          "type": "active_days",
+          "value": 200
+        }
+      },
+      {
+        "id": "annual_003",
+        "title": "Année légendaire",
+        "description": "Être actif au moins 300 jours sur l'année.",
+        "xp": 15000,
+        "target": {
+          "type": "active_days",
+          "value": 300
+        }
+      },
+      {
+        "id": "annual_004",
+        "title": "Fidèle à ManLore",
+        "description": "Être actif au moins 365 jours sur l'année.",
+        "xp": 25000,
+        "target": {
+          "type": "active_days",
+          "value": 365
+        }
+      },
+      {
+        "id": "annual_005",
+        "title": "Temps record",
+        "description": "Accumuler 100 heures d'activité sur l'année.",
+        "xp": 7000,
+        "target": {
+          "type": "active_minutes",
+          "value": 6000
+        }
+      },
+      {
+        "id": "annual_006",
+        "title": "Grand lecteur",
+        "description": "Consulter 2000 titres différents sur l'année.",
+        "xp": 8000,
+        "target": {
+          "type": "title_view",
+          "value": 2000
+        }
+      },
+      {
+        "id": "annual_007",
+        "title": "Grand archiviste",
+        "description": "Ajouter 500 titres sur l'année.",
+        "xp": 7000,
+        "target": {
+          "type": "title_add",
+          "value": 500
+        }
+      },
+      {
+        "id": "annual_008",
+        "title": "Grand éditeur",
+        "description": "Modifier 500 titres sur l'année.",
+        "xp": 7000,
+        "target": {
+          "type": "title_edit",
+          "value": 500
+        }
+      },
+      {
+        "id": "annual_009",
+        "title": "Grand nettoyeur",
+        "description": "Supprimer 500 titres sur l'année.",
+        "xp": 7000,
+        "target": {
+          "type": "title_delete",
+          "value": 500
+        }
+      },
+      {
+        "id": "annual_010",
+        "title": "Maître de la constance",
+        "description": "Obtenir au moins 30 séries quotidiennes complètes.",
+        "xp": 10000,
+        "target": {
+          "type": "completed_daily_streaks",
+          "value": 30
+        }
+      }
+    ],
+    "rank": [
+      {
+        "id": "rank_E_to_D",
+        "title": "Passage au rang D",
+        "description": "Atteindre le rang D.",
+        "xp": 350,
+        "target": {
+          "type": "rank",
+          "from": "E",
+          "to": "D"
+        }
+      },
+      {
+        "id": "rank_D_to_C",
+        "title": "Passage au rang C",
+        "description": "Atteindre le rang C.",
+        "xp": 500,
+        "target": {
+          "type": "rank",
+          "from": "D",
+          "to": "C"
+        }
+      },
+      {
+        "id": "rank_C_to_B",
+        "title": "Passage au rang B",
+        "description": "Atteindre le rang B.",
+        "xp": 650,
+        "target": {
+          "type": "rank",
+          "from": "C",
+          "to": "B"
+        }
+      },
+      {
+        "id": "rank_B_to_A",
+        "title": "Passage au rang A",
+        "description": "Atteindre le rang A.",
+        "xp": 850,
+        "target": {
+          "type": "rank",
+          "from": "B",
+          "to": "A"
+        }
+      },
+      {
+        "id": "rank_A_to_S",
+        "title": "Passage au rang S",
+        "description": "Atteindre le rang S.",
+        "xp": 1100,
+        "target": {
+          "type": "rank",
+          "from": "A",
+          "to": "S"
+        }
+      }
+    ]
+  }
+}
