@@ -1535,4 +1535,155 @@
     gap: 0.3rem;
 }
 
+/* ============================================
+   IMPORT PROGRESS OVERLAY & SCREEN
+   ============================================ */
+.import-progress-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 10, 20, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    padding: 1.5rem;
+    transition: opacity 0.3s ease;
+}
+
+.import-progress-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none !important;
+}
+
+.import-progress-card {
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(15, 15, 30, 0.95));
+    border: 1px solid rgba(108, 92, 231, 0.4);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(108, 92, 231, 0.25);
+    border-radius: var(--radius-lg, 16px);
+    width: 100%;
+    max-width: 440px;
+    padding: 2rem 1.75rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.import-progress-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6c5ce7, #00f2fe, #ffd32a);
+}
+
+.import-progress-icon-wrap {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.import-spinner-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid rgba(108, 92, 231, 0.2);
+    border-top-color: #00f2fe;
+    border-right-color: #6c5ce7;
+    border-radius: 50%;
+    animation: import-spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+@keyframes import-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.import-pulse-icon {
+    font-size: 1.5rem;
+    color: #00f2fe;
+    animation: pulse-ready 1.5s infinite;
+}
+
+.import-progress-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.35rem;
+}
+
+.import-progress-sub {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #a4b0be);
+    margin-bottom: 1.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0.5rem;
+}
+
+.import-progress-bar-track {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 1.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.import-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c5ce7, #00f2fe, #2ecc71);
+    border-radius: 99px;
+    transition: width 0.15s ease-out;
+    position: relative;
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+}
+
+.import-progress-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.import-stat-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.65rem 0.4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.import-stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #ffd32a;
+}
+
+.import-stat-label {
+    font-size: 0.7rem;
+    color: var(--text-muted, #747d8c);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+
 

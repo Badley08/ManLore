@@ -798,19 +798,35 @@ async function importDataFromFile(file) {
         const text = await file.text();
         const parsed = JSON.parse(text);
 
-        let items = [];
+        let rawItems = [];
         if (Array.isArray(parsed)) {
-            items = parsed;
+            rawItems = parsed;
         } else if (parsed && Array.isArray(parsed.items)) {
-            items = parsed.items;
+            rawItems = parsed.items;
             if (parsed.progression && window.questManager) {
-                // Restauration facultative de la progression si présente
                 window.questManager.data.exp = Math.max(window.questManager.data.exp || 0, parsed.progression.exp || 0);
                 window.questManager.saveProgression(true);
             }
         } else {
             return { success: false, count: 0, error: 'Format invalide' };
         }
+
+        const items = rawItems.map(item => ({
+            id: item.id || item.objectId || ('import_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
+            title: (item.title || 'Sans titre').trim(),
+            type: item.type || 'Manga',
+            status: item.status || 'En cours',
+            rating: typeof item.rating === 'number' ? item.rating : (parseFloat(item.rating) || 0),
+            genres: Array.isArray(item.genres) ? item.genres : [],
+            link: item.link || '',
+            image: item.image || item.imageUrl || '',
+            imageUrl: item.imageUrl || item.image || '',
+            chapters: typeof item.chapters === 'number' ? item.chapters : (parseInt(item.chapters || '0', 10) || 0),
+            notes: item.notes || '',
+            malId: item.malId || '',
+            createdAt: item.createdAt || new Date().toISOString(),
+            updatedAt: item.updatedAt || new Date().toISOString()
+        }));
 
         return { success: true, count: items.length, items };
     } catch (e) {

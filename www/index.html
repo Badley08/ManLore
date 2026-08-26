@@ -935,6 +935,37 @@
 <!-- ==================== TOAST CONTAINER ==================== -->
 <div id="toastContainer"></div>
 
+<!-- ==================== IMPORT PROGRESS OVERLAY ==================== -->
+<div id="importProgressModal" class="import-progress-overlay hidden">
+    <div class="import-progress-card">
+        <div class="import-progress-icon-wrap">
+            <div class="import-spinner-ring"></div>
+            <i class="fas fa-file-import import-pulse-icon"></i>
+        </div>
+        <h3 class="import-progress-title" data-i18n="data.import.progressTitle">Importation des données</h3>
+        <p class="import-progress-sub" id="importCurrentTitle">Traitement en cours...</p>
+        
+        <div class="import-progress-bar-track">
+            <div class="import-progress-bar-fill" id="importProgressBarFill" style="width: 0%"></div>
+        </div>
+
+        <div class="import-progress-stats-grid">
+            <div class="import-stat-box">
+                <span class="import-stat-val" id="importStatProcessed">0 / 0</span>
+                <span class="import-stat-label" data-i18n="data.import.imported">Importés</span>
+            </div>
+            <div class="import-stat-box">
+                <span class="import-stat-val" id="importStatRemaining">0</span>
+                <span class="import-stat-label" data-i18n="data.import.remaining">Restants</span>
+            </div>
+            <div class="import-stat-box">
+                <span class="import-stat-val" id="importStatTime">~0s</span>
+                <span class="import-stat-label" data-i18n="data.import.estimated">Temps estimé</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== LOADING ==================== -->
 <div id="loadingOverlay" class="loading-overlay hidden">
     <div class="loading-spinner"></div>

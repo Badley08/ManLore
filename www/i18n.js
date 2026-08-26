@@ -254,6 +254,11 @@ const TRANSLATIONS = {
         'toast.vote.counted': 'Vote enregistré !',
         'toast.offline': 'Hors ligne — données sauvegardées localement',
         'toast.guest.feature': 'Connectez-vous pour accéder à cette fonctionnalité',
+        // Import progress modal
+        'data.import.progressTitle': 'Importation des données',
+        'data.import.imported': 'Importés',
+        'data.import.remaining': 'Restants',
+        'data.import.estimated': 'Temps estimé',
     },
 
     en: {
@@ -492,6 +497,11 @@ const TRANSLATIONS = {
         'toast.vote.counted': 'Vote recorded!',
         'toast.offline': 'Offline — data saved locally',
         'toast.guest.feature': 'Log in to access this feature',
+        // Import progress modal
+        'data.import.progressTitle': 'Importing data',
+        'data.import.imported': 'Imported',
+        'data.import.remaining': 'Remaining',
+        'data.import.estimated': 'Time left',
     },
 
     es: {
@@ -730,6 +740,11 @@ const TRANSLATIONS = {
         'toast.vote.counted': '¡Voto registrado!',
         'toast.offline': 'Sin conexión — datos guardados localmente',
         'toast.guest.feature': 'Inicia sesión para acceder a esta función',
+        // Import progress modal
+        'data.import.progressTitle': 'Importando datos',
+        'data.import.imported': 'Importados',
+        'data.import.remaining': 'Restantes',
+        'data.import.estimated': 'Tiempo restante',
     }
 };
 

@@ -687,8 +687,36 @@ async function handleExport() {
     );
 }
 
-function handleImportClick() {
-    document.getElementById('importFile').click();
+function showImportProgressModal(show) {
+    const modal = document.getElementById('importProgressModal');
+    if (!modal) return;
+    modal.classList.toggle('hidden', !show);
+}
+
+function updateImportProgressUI(processed, total, currentTitle, startTime) {
+    const percent = Math.min(100, Math.round((processed / total) * 100));
+    const fillEl = document.getElementById('importProgressBarFill');
+    const processedEl = document.getElementById('importStatProcessed');
+    const remainingEl = document.getElementById('importStatRemaining');
+    const timeEl = document.getElementById('importStatTime');
+    const titleEl = document.getElementById('importCurrentTitle');
+
+    if (fillEl) fillEl.style.width = `${percent}%`;
+    if (processedEl) processedEl.textContent = `${processed} / ${total} (${percent}%)`;
+    if (remainingEl) remainingEl.textContent = `${Math.max(0, total - processed)}`;
+    if (titleEl && currentTitle) titleEl.textContent = `Importation : "${currentTitle}"`;
+
+    if (timeEl && processed > 0) {
+        const elapsedMs = Date.now() - startTime;
+        const avgPerItem = elapsedMs / processed;
+        const remainingMs = (total - processed) * avgPerItem;
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        if (remainingSec >= 60) {
+            timeEl.textContent = `~${Math.floor(remainingSec / 60)}m ${remainingSec % 60}s`;
+        } else {
+            timeEl.textContent = `~${Math.max(1, remainingSec)}s`;
+        }
+    }
 }
 
 async function handleImportFile(file) {
@@ -699,29 +727,55 @@ async function handleImportFile(file) {
             showToast('Fichier invalide ou vide', 'error');
             return;
         }
+
         showConfirmDialog(
-            i18n.t('confirm.import.title'),
-            `${parsed.count} ${i18n.t('confirm.import.msg')}`,
+            i18n.t('confirm.import.title') || 'Confirmation d\'importation',
+            `${parsed.count} ${i18n.t('confirm.import.msg') || 'titres détectés. Voulez-vous les importer dans votre collection ?'}`,
             'Importer',
-            i18n.t('modal.form.cancel'),
+            i18n.t('modal.form.cancel') || 'Annuler',
             'info',
             async () => {
-                showLoading(true);
+                showImportProgressModal(true);
+                const startTime = Date.now();
+                const total = parsed.items.length;
                 let imported = 0;
-                for (const item of parsed.items) {
-                    const result = await createItem(item);
-                    if (result.success) {
-                        const ni = result.item instanceof Parse.Object ? parseItemToObject(result.item) : result.item;
-                        allItems.unshift(ni);
-                        imported++;
+
+                updateImportProgressUI(0, total, 'Démarrage...', startTime);
+
+                for (let i = 0; i < total; i++) {
+                    const item = parsed.items[i];
+                    updateImportProgressUI(i, total, item.title || 'Titre', startTime);
+
+                    try {
+                        const result = await createItem(item);
+                        if (result.success) {
+                            const ni = (result.item && typeof result.item.get === 'function') ? parseItemToObject(result.item) : result.item;
+                            allItems.unshift(ni);
+                            imported++;
+                        }
+                    } catch (itemErr) {
+                        console.warn('[Import] Item import note:', itemErr);
+                    }
+
+                    // Laisser le thread UI respirer et animer la barre de progression
+                    if (total > 20 && i % 2 === 0) {
+                        await new Promise(r => setTimeout(r, 15));
                     }
                 }
-                showLoading(false);
+
+                updateImportProgressUI(total, total, 'Terminé avec succès !', startTime);
+                await new Promise(r => setTimeout(r, 400));
+                showImportProgressModal(false);
+
                 applyFiltersAndRender();
-                showToast(`${i18n.t('toast.import.success')} (${imported}/${parsed.count})`, 'success');
+                showToast(`✓ Importation terminée (${imported}/${total} titres ajoutés)`, 'success');
+                if (window.launchRankConfetti && imported > 5) {
+                    window.launchRankConfetti();
+                }
             }
         );
     } catch (e) {
+        showImportProgressModal(false);
         showToast('Erreur: ' + e.message, 'error');
     }
     document.getElementById('importFile').value = '';
