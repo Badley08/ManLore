@@ -1,56 +1,32 @@
 /* ============================================
    MANLORE v5.0.1 - LOGIC.JS
-   Dual Server Back4App Architecture (Server A & Server B)
-   Smart Cross-Server Failover, Unique User Token,
-   Parse Row Level Security (RLS) & Offline Sync
+   Ultra-Resilient Native REST Client for Back4App (Server A & Server B)
+   Automatic Server A First -> Silent Failover to Server B
+   Diagnostics & Server Failover Logged to Logger
+   Instant Stale-While-Revalidate, Row Level Security (RLS) & Offline Sync
    ============================================ */
 
 'use strict';
 
-// ============ MULTI-SERVER CONFIGURATION ============
+// ============ MULTI-SERVER BACK4APP CONFIGURATION ============
 const BACK4APP_SERVERS = {
     A: {
         id: 'A',
         name: 'Serveur Principal (A)',
         appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
         clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
-        serverURL: 'https://parseapi.back4app.com/'
+        url: 'https://parseapi.back4app.com'
     },
     B: {
         id: 'B',
         name: 'Serveur Secondaire (B)',
         appId: 'OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu',
         clientKey: 'WPvwJkRsmofv2u480N2f2c2wluTh5zGyBIhkc4dP',
-        serverURL: 'https://parseapi.back4app.com/'
+        url: 'https://parseapi.back4app.com'
     }
 };
 
 let currentServerId = localStorage.getItem('manlore_active_server') || 'A';
-
-function applyParseServer(serverId) {
-    const config = BACK4APP_SERVERS[serverId] || BACK4APP_SERVERS.A;
-    try {
-        if (typeof Parse !== 'undefined') {
-            Parse.initialize(config.appId);
-            if (Parse.CoreManager) {
-                Parse.CoreManager.set('APPLICATION_ID', config.appId);
-                Parse.CoreManager.set('CLIENT_KEY', config.clientKey);
-                Parse.CoreManager.set('JAVASCRIPT_KEY', null);
-            }
-            Parse.serverURL = config.serverURL;
-        }
-        currentServerId = config.id;
-        localStorage.setItem('manlore_active_server', config.id);
-        console.log(`[Backend] Connecté au ${config.name} (${config.appId.substr(0, 8)}...)`);
-    } catch (e) {
-        console.warn('[Backend] Erreur initialisation Parse Server:', e);
-    }
-}
-
-// Initialisation immédiate sur le serveur mémorisé
-applyParseServer(currentServerId);
-
-// ============ GLOBALS ============
 let currentUser = null;
 let syncQueue = [];
 let isOnline = navigator.onLine;
@@ -58,7 +34,307 @@ let autoSyncInterval = null;
 let isGuestMode = false;
 let storageMode = 'cloud'; // 'local' | 'cloud'
 
-// Générateur de Token Unique Utilisateur
+// ============================================
+// NATIVE HTTP REST CLIENT AVEC FAILOVER AUTOMATIQUE
+// ============================================
+
+async function executeBack4AppRequest(server, endpoint, method = 'GET', data = null, sessionToken = null) {
+    const url = server.url + endpoint;
+    const headers = {
+        'X-Parse-Application-Id': server.appId,
+        'X-Parse-REST-API-Key': server.clientKey,
+        'X-Parse-Client-Key': server.clientKey,
+        'X-Parse-Revocable-Session': '1',
+        'Content-Type': 'application/json'
+    };
+
+    if (sessionToken) {
+        headers['X-Parse-Session-Token'] = sessionToken;
+    }
+
+    const options = {
+        method,
+        headers,
+        mode: 'cors'
+    };
+
+    if (data && (method === 'POST' || method === 'PUT')) {
+        options.body = JSON.stringify(data);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    options.signal = controller.signal;
+
+    try {
+        const response = await fetch(url, options);
+        clearTimeout(timeoutId);
+
+        let json = null;
+        try {
+            json = await response.json();
+        } catch {
+            json = {};
+        }
+
+        return {
+            ok: response.ok,
+            status: response.status,
+            data: json,
+            server: server.id
+        };
+    } catch (err) {
+        clearTimeout(timeoutId);
+        return {
+            ok: false,
+            status: 0,
+            error: err.name === 'AbortError' ? 'Délai d\'attente dépassé (timeout 10s)' : err.message,
+            server: server.id
+        };
+    }
+}
+
+// Appel intelligent : Serveur A en priorité -> Basculement silencieux sur Serveur B si erreur
+async function back4appApiCall(endpoint, method = 'GET', data = null, sessionToken = null, preferredServer = null) {
+    const firstServerId = preferredServer || currentServerId || 'A';
+    const secondServerId = firstServerId === 'A' ? 'B' : 'A';
+
+    const server1 = BACK4APP_SERVERS[firstServerId];
+    const server2 = BACK4APP_SERVERS[secondServerId];
+
+    // 1. Tentative sur le premier serveur
+    const res1 = await executeBack4AppRequest(server1, endpoint, method, data, sessionToken);
+
+    if (res1.ok) {
+        if (currentServerId !== firstServerId) {
+            currentServerId = firstServerId;
+            localStorage.setItem('manlore_active_server', firstServerId);
+        }
+        return res1;
+    }
+
+    // 2. Si échec (404, 400, 401, network) -> Basculement silencieux sur le second serveur
+    console.log(`[Failover] Requête échouée sur ${server1.name} (Code: ${res1.status}), basculement silencieux vers ${server2.name}...`);
+    if (window.appLogger) {
+        window.appLogger.log('server_failover', `Basculement de ${server1.id} vers ${server2.id}`, {
+            endpoint,
+            method,
+            reason: res1.data?.error || res1.error || `HTTP ${res1.status}`
+        });
+    }
+
+    const res2 = await executeBack4AppRequest(server2, endpoint, method, data, sessionToken);
+    if (res2.ok) {
+        currentServerId = secondServerId;
+        localStorage.setItem('manlore_active_server', secondServerId);
+        console.log(`[Failover] Succès sur le ${server2.name} ! Serveur actif mémorisé.`);
+        return res2;
+    }
+
+    // Si les deux échouent, on retourne la réponse d'origine
+    return res1.status !== 0 ? res1 : res2;
+}
+
+// ============================================
+// MODÈLE UTILISATEUR COMPATIBLE (PARSE USER INTERFACE)
+// ============================================
+
+class UserSession {
+    constructor(userData, sessionToken, serverLocation = 'A') {
+        this.id = userData.objectId || userData.id;
+        this.objectId = this.id;
+        this.sessionToken = sessionToken || userData.sessionToken;
+        this.serverLocation = serverLocation || userData.serverLocation || currentServerId;
+        this._attributes = { ...userData };
+    }
+
+    get(field) {
+        return this._attributes[field];
+    }
+
+    set(field, value) {
+        this._attributes[field] = value;
+    }
+
+    getSessionToken() {
+        return this.sessionToken;
+    }
+
+    async save() {
+        const updatePayload = { ...this._attributes };
+        delete updatePayload.objectId;
+        delete updatePayload.createdAt;
+        delete updatePayload.updatedAt;
+        delete updatePayload.sessionToken;
+
+        const res = await executeBack4AppRequest(
+            BACK4APP_SERVERS[this.serverLocation] || BACK4APP_SERVERS.A,
+            `/users/${this.objectId}`,
+            'PUT',
+            updatePayload,
+            this.sessionToken
+        );
+
+        if (res.ok) {
+            this._attributes.updatedAt = res.data.updatedAt;
+            saveUserSessionToLocal(this);
+            return this;
+        }
+        throw new Error(res.data?.error || 'Erreur sauvegarde utilisateur');
+    }
+
+    async fetch() {
+        const res = await executeBack4AppRequest(
+            BACK4APP_SERVERS[this.serverLocation] || BACK4APP_SERVERS.A,
+            `/users/${this.objectId}`,
+            'GET',
+            null,
+            this.sessionToken
+        );
+
+        if (res.ok) {
+            this._attributes = { ...this._attributes, ...res.data };
+            saveUserSessionToLocal(this);
+            return this;
+        }
+        throw new Error(res.data?.error || 'Erreur chargement utilisateur');
+    }
+}
+
+function saveUserSessionToLocal(userSession) {
+    if (!userSession) {
+        localStorage.removeItem('manlore_user_session');
+        return;
+    }
+    localStorage.setItem('manlore_user_session', JSON.stringify({
+        objectId: userSession.id,
+        sessionToken: userSession.sessionToken,
+        serverLocation: userSession.serverLocation,
+        attributes: userSession._attributes
+    }));
+}
+
+function loadUserSessionFromLocal() {
+    try {
+        const raw = localStorage.getItem('manlore_user_session');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const user = new UserSession(parsed.attributes || {}, parsed.sessionToken, parsed.serverLocation);
+            return user;
+        }
+    } catch {}
+    return null;
+}
+
+// ============================================
+// COMPATIBILITÉ AVEC LE SDK PARSE GLOBAL
+// ============================================
+
+window.Parse = window.Parse || {};
+window.Parse.User = {
+    current: () => currentUser,
+    logIn: (u, p) => logIn(u, p),
+    logOut: () => logOut(),
+    signUp: (u, e, p) => signUp(u, e, p)
+};
+window.Parse.Object = {
+    extend: (className) => {
+        return function () {
+            this.className = className;
+            this._attributes = {};
+            this.set = (k, v) => { this._attributes[k] = v; };
+            this.get = (k) => this._attributes[k];
+            this.setACL = (acl) => { this._attributes.ACL = acl; };
+            this.save = async () => {
+                const res = await back4appApiCall(
+                    `/classes/${className}`,
+                    'POST',
+                    this._attributes,
+                    currentUser?.getSessionToken()
+                );
+                if (res.ok) {
+                    this.id = res.data.objectId;
+                    this.objectId = res.data.objectId;
+                    return this;
+                }
+                throw new Error(res.data?.error || 'Erreur sauvegarde objet');
+            };
+        };
+    },
+    saveAll: async (objects) => {
+        if (!Array.isArray(objects) || objects.length === 0) return [];
+        const results = [];
+        for (const obj of objects) {
+            try {
+                results.push(await obj.save());
+            } catch (e) {
+                console.warn('[ParseCompat] saveAll item note:', e);
+            }
+        }
+        return results;
+    }
+};
+window.Parse.ACL = class {
+    constructor(user) {
+        this.permissions = {};
+        if (user && user.id) {
+            this.permissions[user.id] = { read: true, write: true };
+        }
+    }
+    setPublicReadAccess(val) {
+        if (!this.permissions['*']) this.permissions['*'] = {};
+        this.permissions['*'].read = val;
+    }
+    setPublicWriteAccess(val) {
+        if (!this.permissions['*']) this.permissions['*'] = {};
+        this.permissions['*'].write = val;
+    }
+};
+window.Parse.Query = class {
+    constructor(objectClass) {
+        this.className = objectClass?.prototype?.className || 'Items';
+        this.filters = {};
+    }
+    equalTo(key, val) {
+        if (val && val.id) {
+            this.filters[key] = { __type: 'Pointer', className: '_User', objectId: val.id };
+        } else {
+            this.filters[key] = val;
+        }
+    }
+    descending(field) {
+        this.order = '-' + field;
+    }
+    limit(num) {
+        this.limitNum = num;
+    }
+    async find() {
+        const params = new URLSearchParams();
+        if (Object.keys(this.filters).length > 0) {
+            params.set('where', JSON.stringify(this.filters));
+        }
+        if (this.order) params.set('order', this.order);
+        if (this.limitNum) params.set('limit', String(this.limitNum));
+
+        const endpoint = `/classes/${this.className}?${params.toString()}`;
+        const res = await back4appApiCall(endpoint, 'GET', null, currentUser?.getSessionToken());
+        if (res.ok && res.data?.results) {
+            return res.data.results.map(r => ({
+                id: r.objectId,
+                objectId: r.objectId,
+                createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
+                updatedAt: r.updatedAt ? new Date(r.updatedAt) : new Date(),
+                get: (k) => r[k]
+            }));
+        }
+        return [];
+    }
+};
+
+// ============================================
+// INITIALISATION DU BACKEND
+// ============================================
+
 function generateUniqueUserToken(username) {
     const randomPart = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
     const timePart = Date.now().toString(36);
@@ -66,12 +342,8 @@ function generateUniqueUserToken(username) {
     return `ML_${cleanUser}_${timePart}_${randomPart}`;
 }
 
-// ============================================
-// INITIALISATION DU BACKEND AVEC FAILOVER
-// ============================================
-
 async function initializeBackend() {
-    console.log('[Backend] Initialisation v5.0.1 multi-serveur...');
+    console.log('[Backend] Initialisation v5.0.1 (Client REST Haute Résilience)...');
 
     storageMode = localStorage.getItem('manlore_storage_mode') || 'cloud';
     isGuestMode = localStorage.getItem('manlore_guest_mode') === 'true';
@@ -79,81 +351,76 @@ async function initializeBackend() {
     loadSyncQueue();
     updateOnlineStatus(navigator.onLine);
 
-    if (!isGuestMode && typeof Parse !== 'undefined') {
-        try {
-            let user = Parse.User.current();
-            if (user && user.getSessionToken()) {
-                // Vérifier la validité de la session sur le serveur actif
+    if (!isGuestMode) {
+        const savedUser = loadUserSessionFromLocal();
+        if (savedUser && savedUser.sessionToken) {
+            currentUser = savedUser;
+            currentServerId = savedUser.serverLocation || 'A';
+            startAutoSync();
+
+            // Vérification silencieuse de validité en arrière-plan
+            setTimeout(async () => {
                 try {
-                    await user.fetch();
-                    currentUser = user;
-                    isGuestMode = false;
-                    startAutoSync();
+                    await currentUser.fetch();
                     if (window.questManager) {
                         window.questManager.syncFromCloud();
                     }
-                    return;
-                } catch (fetchErr) {
-                    console.warn('[Backend] Session token invalide sur le serveur', currentServerId, '-> Test sur l\'autre serveur');
-                    // Si la session échoue sur le serveur actuel, test de l'autre serveur
-                    const otherServerId = currentServerId === 'A' ? 'B' : 'A';
-                    applyParseServer(otherServerId);
-                    user = Parse.User.current();
-                    if (user && user.getSessionToken()) {
-                        await user.fetch().catch(() => {});
-                        currentUser = user;
-                        isGuestMode = false;
-                        startAutoSync();
-                        if (window.questManager) {
-                            window.questManager.syncFromCloud();
-                        }
-                        return;
+                } catch {
+                    // Si session révoquée sur ce serveur, tenter l'autre serveur
+                    const otherServer = currentServerId === 'A' ? 'B' : 'A';
+                    currentUser.serverLocation = otherServer;
+                    try {
+                        await currentUser.fetch();
+                        currentServerId = otherServer;
+                        localStorage.setItem('manlore_active_server', otherServer);
+                    } catch {
+                        console.warn('[Backend] Session expirée');
                     }
                 }
-            }
-        } catch (e) {
-            console.warn('[Backend] Parse.User.current check note:', e);
+            }, 1000);
         }
     }
 }
 
 // ============================================
-// AUTHENTIFICATION INTELLIGENTE CROSS-SERVEUR
+// AUTHENTIFICATION HAUTE FIABILITÉ (SERVEUR A -> B)
 // ============================================
 
 async function signUp(username, email, password) {
     const startTime = Date.now();
-    try {
-        // Inscription sur le serveur actif (défaut A)
-        const targetServerId = currentServerId || 'A';
-        applyParseServer(targetServerId);
+    const cleanUser = username.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const userToken = generateUniqueUserToken(cleanUser);
 
-        // Déconnexion préventive d'une éventuelle session résiduelle
-        if (typeof Parse !== 'undefined' && Parse.User.current()) {
-            await Parse.User.logOut().catch(() => {});
-        }
+    const payload = {
+        username: cleanUser,
+        email: cleanEmail,
+        password: password,
+        userUniqueToken: userToken,
+        serverLocation: 'A',
+        exp: 0,
+        rank: 'E'
+    };
 
-        const user = new Parse.User();
-        const userToken = generateUniqueUserToken(username);
+    // Forcer Serveur A d'abord, puis basculer silencieusement sur B en cas d'erreur
+    console.log('[Auth] Inscription : Tentative prioritaire sur Serveur A...');
+    let res = await back4appApiCall('/users', 'POST', payload, null, 'A');
 
-        user.set('username', username.trim());
-        user.set('email', email.trim().toLowerCase());
-        user.set('password', password);
-        user.set('userUniqueToken', userToken);
-        user.set('serverLocation', targetServerId);
-        user.set('exp', 0);
-        user.set('rank', 'E');
-
-        await Promise.race([
-            user.signUp(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Délai d\'attente dépassé (timeout 10s)')), 10000))
-        ]);
-
-        currentUser = user;
+    if (res.ok) {
+        const userData = {
+            objectId: res.data.objectId,
+            username: cleanUser,
+            email: cleanEmail,
+            userUniqueToken: userToken,
+            serverLocation: res.server || 'A',
+            exp: 0,
+            rank: 'E'
+        };
+        currentUser = new UserSession(userData, res.data.sessionToken, res.server || 'A');
+        saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
         localStorage.setItem('manlore_user_token', userToken);
-        localStorage.setItem('manlore_active_server', targetServerId);
 
         if (window.questManager) {
             window.questManager.syncFromCloud();
@@ -161,60 +428,44 @@ async function signUp(username, email, password) {
 
         if (window.appLogger) {
             window.appLogger.trackNetwork('signUp', Date.now() - startTime, 200);
+            window.appLogger.log('auth_success', `Compte créé avec succès sur Serveur ${res.server}`, { username: cleanUser });
         }
 
-        return { success: true, user, server: targetServerId, userToken };
-    } catch (error) {
-        console.error('[Auth] Signup error:', error);
-        if (window.appLogger) {
-            window.appLogger.log('auth', 'Erreur création de compte', { error: error.message });
-        }
-        return { success: false, error: error.message || 'Erreur lors de l\'inscription' };
+        return { success: true, user: currentUser, server: res.server };
     }
+
+    const errMsg = res.data?.error || res.error || 'Erreur lors de l\'inscription';
+    if (window.appLogger) {
+        window.appLogger.log('auth_error', `Échec d'inscription : ${errMsg}`, { username: cleanUser });
+    }
+    return { success: false, error: errMsg };
 }
 
 async function logIn(usernameOrEmail, password) {
     const startTime = Date.now();
     const cleanInput = usernameOrEmail.trim();
 
-    // 1. Tenter la connexion sur le premier serveur
-    const primaryServer = currentServerId || 'A';
-    const secondaryServer = primaryServer === 'A' ? 'B' : 'A';
+    console.log('[Auth] Connexion : Recherche prioritaire sur Serveur A...');
+    const endpoint = `/login?username=${encodeURIComponent(cleanInput)}&password=${encodeURIComponent(password)}`;
 
-    console.log(`[Auth] Tentative de connexion sur le serveur ${primaryServer}...`);
-    applyParseServer(primaryServer);
+    // Forcer Serveur A en premier -> Basculement automatique sur Serveur B si non trouvé
+    let res = await back4appApiCall(endpoint, 'GET', null, null, 'A');
 
-    let loginResult = await tryServerLogin(cleanInput, password, primaryServer);
+    if (res.ok && res.data?.sessionToken) {
+        const userData = {
+            ...res.data,
+            serverLocation: res.server || 'A'
+        };
 
-    // 2. Si échec sur le premier serveur, tenter automatiquement sur le second serveur
-    if (!loginResult.success) {
-        console.log(`[Auth] Échec sur le serveur ${primaryServer}, basculement automatique sur le serveur ${secondaryServer}...`);
-        applyParseServer(secondaryServer);
-        loginResult = await tryServerLogin(cleanInput, password, secondaryServer);
-
-        if (loginResult.success) {
-            console.log(`[Auth] Connexion réussie sur le serveur secondaire ${secondaryServer} !`);
-            localStorage.setItem('manlore_active_server', secondaryServer);
-        } else {
-            // Remettre le serveur initial
-            applyParseServer(primaryServer);
+        if (!userData.userUniqueToken) {
+            userData.userUniqueToken = generateUniqueUserToken(userData.username);
         }
-    }
 
-    if (loginResult.success) {
-        currentUser = loginResult.user;
+        currentUser = new UserSession(userData, res.data.sessionToken, res.server || 'A');
+        saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
-
-        // Générer et mémoriser le token unique si non existant
-        let userToken = currentUser.get('userUniqueToken');
-        if (!userToken) {
-            userToken = generateUniqueUserToken(currentUser.get('username'));
-            currentUser.set('userUniqueToken', userToken);
-            currentUser.set('serverLocation', currentServerId);
-            currentUser.save().catch(() => {});
-        }
-        localStorage.setItem('manlore_user_token', userToken);
+        localStorage.setItem('manlore_user_token', userData.userUniqueToken);
 
         startAutoSync();
 
@@ -224,48 +475,43 @@ async function logIn(usernameOrEmail, password) {
 
         if (window.appLogger) {
             window.appLogger.trackNetwork('logIn', Date.now() - startTime, 200);
+            window.appLogger.log('auth_success', `Connexion réussie sur Serveur ${res.server}`, { username: userData.username });
         }
 
-        return { success: true, user: currentUser, server: currentServerId, userToken };
+        return { success: true, user: currentUser, server: res.server };
     }
 
-    return { success: false, error: loginResult.error || 'Identifiants invalides (utilisateur non trouvé)' };
-}
-
-async function tryServerLogin(cleanInput, password, serverId) {
-    try {
-        const loginPromise = (async () => {
-            return await Parse.User.logIn(cleanInput, password);
-        })();
-
-        const user = await Promise.race([
-            loginPromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout connexion')), 8000))
-        ]);
-
-        return { success: true, user };
-    } catch (e) {
-        return { success: false, error: e.message };
+    const errMsg = res.data?.error || res.error || 'Identifiants invalides (compte non trouvé)';
+    if (window.appLogger) {
+        window.appLogger.log('auth_error', `Échec de connexion : ${errMsg}`, { input: cleanInput });
     }
+    return { success: false, error: errMsg };
 }
 
 async function logOut() {
     try {
-        if (!isGuestMode && typeof Parse !== 'undefined') {
-            await Parse.User.logOut().catch(() => {});
+        if (currentUser && currentUser.sessionToken) {
+            executeBack4AppRequest(
+                BACK4APP_SERVERS[currentUser.serverLocation] || BACK4APP_SERVERS.A,
+                '/logout',
+                'POST',
+                {},
+                currentUser.sessionToken
+            ).catch(() => {});
         }
         currentUser = null;
         isGuestMode = false;
+        saveUserSessionToLocal(null);
         localStorage.removeItem('manlore_guest_mode');
         localStorage.removeItem('manlore_user_token');
         stopAutoSync();
+
         if (window.questManager) {
             window.questManager.onLogout();
         }
         return { success: true };
-    } catch (error) {
-        console.error('[Auth] Logout error:', error);
-        return { success: false, error: error.message };
+    } catch (e) {
+        return { success: false, error: e.message };
     }
 }
 
@@ -279,9 +525,7 @@ function loginAsGuest() {
 
 function getCurrentUser() {
     if (isGuestMode) return null;
-    const user = Parse.User.current();
-    if (user) { currentUser = user; return user; }
-    return null;
+    return currentUser;
 }
 
 // ============ STORAGE MODE & INSTANT LOCAL CACHE ============
@@ -296,7 +540,7 @@ function getStorageMode() {
 }
 
 // ============================================
-// CRUD AVEC PARSE ROW LEVEL SECURITY (RLS)
+// CRUD AVEC RENDU INSTANTANÉ & ROW LEVEL SECURITY (RLS)
 // ============================================
 
 async function fetchAllItems() {
@@ -321,20 +565,39 @@ async function fetchAllItems() {
 async function fetchFromCloud() {
     try {
         if (!currentUser) return { success: true, items: loadFromLocalStorage(), offline: true };
-        const Item = Parse.Object.extend('Items');
-        const query = new Parse.Query(Item);
-        query.equalTo('userId', currentUser);
-        query.descending('createdAt');
-        query.limit(2000);
 
-        const results = await Promise.race([
-            query.find(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Cloud fetch timeout')), 8000))
-        ]);
+        const params = new URLSearchParams();
+        params.set('where', JSON.stringify({
+            userId: { __type: 'Pointer', className: '_User', objectId: currentUser.id }
+        }));
+        params.set('order', '-createdAt');
+        params.set('limit', '2000');
 
-        const parsedItems = results.map(item => parseItemToObject(item));
-        localStorage.setItem('manlore_items', JSON.stringify(parsedItems));
-        return { success: true, items: parsedItems };
+        const endpoint = `/classes/Items?${params.toString()}`;
+        const res = await back4appApiCall(endpoint, 'GET', null, currentUser.getSessionToken(), currentUser.serverLocation);
+
+        if (res.ok && res.data?.results) {
+            const parsedItems = res.data.results.map(r => ({
+                id: r.objectId,
+                title: r.title || '',
+                type: r.type || 'manga',
+                status: r.status || 'reading',
+                rating: r.rating || 0,
+                genres: r.genres || [],
+                link: r.link || '',
+                image: r.image || '',
+                imageUrl: r.imageUrl || '',
+                chapters: r.chapters || 0,
+                notes: r.notes || '',
+                malId: r.malId || '',
+                createdAt: r.createdAt || new Date().toISOString(),
+                updatedAt: r.updatedAt || new Date().toISOString()
+            }));
+
+            localStorage.setItem('manlore_items', JSON.stringify(parsedItems));
+            return { success: true, items: parsedItems };
+        }
+        return { success: true, items: loadFromLocalStorage(), offline: true };
     } catch (error) {
         console.error('[CRUD] Fetch cloud error:', error);
         return { success: true, items: loadFromLocalStorage(), offline: true };
@@ -376,31 +639,38 @@ function createItemLocal(itemData) {
 async function createItemCloud(itemData) {
     try {
         if (!currentUser) throw new Error('Non connecté');
-        const Item = Parse.Object.extend('Items');
-        const item = new Item();
-        item.set('title', itemData.title);
-        item.set('type', itemData.type);
-        item.set('status', itemData.status);
-        item.set('rating', itemData.rating || 0);
-        item.set('genres', itemData.genres || []);
-        item.set('link', itemData.link || '');
-        item.set('image', itemData.image || '');
-        item.set('imageUrl', itemData.imageUrl || '');
-        item.set('chapters', itemData.chapters || 0);
-        item.set('notes', itemData.notes || '');
-        item.set('malId', itemData.malId || '');
-        item.set('userId', currentUser);
 
-        // Row Level Security (RLS) : seul le propriétaire de l'élément a accès en lecture/écriture
-        const itemAcl = new Parse.ACL(currentUser);
-        itemAcl.setPublicReadAccess(false);
-        itemAcl.setPublicWriteAccess(false);
-        item.setACL(itemAcl);
+        const payload = {
+            title: itemData.title,
+            type: itemData.type,
+            status: itemData.status,
+            rating: itemData.rating || 0,
+            genres: itemData.genres || [],
+            link: itemData.link || '',
+            image: itemData.image || '',
+            imageUrl: itemData.imageUrl || '',
+            chapters: itemData.chapters || 0,
+            notes: itemData.notes || '',
+            malId: itemData.malId || '',
+            userId: { __type: 'Pointer', className: '_User', objectId: currentUser.id },
+            ACL: {
+                [currentUser.id]: { read: true, write: true }
+            }
+        };
 
-        const saved = await item.save();
-        const plain = parseItemToObject(saved);
-        saveToLocalStorage(plain);
-        return { success: true, item: plain };
+        const res = await back4appApiCall('/classes/Items', 'POST', payload, currentUser.getSessionToken(), currentUser.serverLocation);
+
+        if (res.ok) {
+            const plain = {
+                id: res.data.objectId,
+                ...payload,
+                createdAt: res.data.createdAt || new Date().toISOString(),
+                updatedAt: res.data.createdAt || new Date().toISOString()
+            };
+            saveToLocalStorage(plain);
+            return { success: true, item: plain };
+        }
+        throw new Error(res.data?.error || 'Erreur création serveur');
     } catch (error) {
         console.error('[CRUD] Create cloud error:', error);
         addToSyncQueue('create', itemData);
@@ -435,16 +705,14 @@ async function updateItem(itemId, updates) {
     }
 
     try {
-        const Item = Parse.Object.extend('Items');
-        const query = new Parse.Query(Item);
-        const item = await query.get(itemId);
-        if (item) {
-            Object.keys(updates).forEach(key => {
-                if (key !== 'id') item.set(key, updates[key]);
-            });
-            await item.save();
-        }
-        return { success: true };
+        const res = await back4appApiCall(
+            `/classes/Items/${itemId}`,
+            'PUT',
+            updates,
+            currentUser?.getSessionToken(),
+            currentUser?.serverLocation
+        );
+        return { success: res.ok };
     } catch (error) {
         console.error('[CRUD] Update cloud error:', error);
         addToSyncQueue('update', { id: itemId, ...updates });
@@ -469,40 +737,19 @@ async function deleteItem(itemId) {
     }
 
     try {
-        const Item = Parse.Object.extend('Items');
-        const query = new Parse.Query(Item);
-        const item = await query.get(itemId);
-        if (item) {
-            await item.destroy();
-        }
-        return { success: true };
+        const res = await back4appApiCall(
+            `/classes/Items/${itemId}`,
+            'DELETE',
+            null,
+            currentUser?.getSessionToken(),
+            currentUser?.serverLocation
+        );
+        return { success: res.ok };
     } catch (error) {
         console.error('[CRUD] Delete cloud error:', error);
         addToSyncQueue('delete', { id: itemId });
         return { success: true, offline: true };
     }
-}
-
-// ============ HELPER CONVERSION PARSE <-> PLAIN OBJECT ============
-
-function parseItemToObject(parseItem) {
-    if (!parseItem) return null;
-    return {
-        id: parseItem.id || parseItem.objectId,
-        title: parseItem.get('title') || '',
-        type: parseItem.get('type') || 'manga',
-        status: parseItem.get('status') || 'reading',
-        rating: parseItem.get('rating') || 0,
-        genres: parseItem.get('genres') || [],
-        link: parseItem.get('link') || '',
-        image: parseItem.get('image') || '',
-        imageUrl: parseItem.get('imageUrl') || '',
-        chapters: parseItem.get('chapters') || 0,
-        notes: parseItem.get('notes') || '',
-        malId: parseItem.get('malId') || '',
-        createdAt: parseItem.createdAt ? parseItem.createdAt.toISOString() : new Date().toISOString(),
-        updatedAt: parseItem.updatedAt ? parseItem.updatedAt.toISOString() : new Date().toISOString()
-    };
 }
 
 // ============ GESTION DU STOCKAGE LOCAL ============
@@ -608,4 +855,4 @@ function updateOnlineStatus(online) {
 window.addEventListener('online', () => updateOnlineStatus(true));
 window.addEventListener('offline', () => updateOnlineStatus(false));
 
-console.log('[Logic v5.0.1] Multi-Server Back4App System loaded');
+console.log('[Logic v5.0.1] Resilient REST Client & Dual-Server Router loaded');
