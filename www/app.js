@@ -1178,7 +1178,7 @@ function spinRoulette() {
             if (window.questManager) {
                 window.questManager.addExp(10, 'Tirage au sort de lecture');
             }
-            showToast('🎉 Destin scellé ! Bonne lecture !', 'success');
+            showToast('Destin scellé ! Bonne lecture !', 'success');
         }
     }, 80);
 }

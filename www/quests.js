@@ -429,8 +429,9 @@ class QuestManager {
         }
 
         if (before.rank !== after.rank) {
+            launchRankConfetti();
             if (window.showToast) {
-                window.showToast(`🎉 [${this.getText('rank')} ${after.rank}] ${after.title} !`, 'success');
+                window.showToast(`[${this.getText('rank')} ${after.rank}] ${after.title} !`, 'success');
             }
             if (window.appLogger) {
                 window.appLogger.log('rank_up', `Promotion de Rang : ${after.rank}`, { from: before.rank, to: after.rank, totalExp: this.data.exp });
@@ -804,6 +805,90 @@ function openRankOverviewModal() {
     openModal('rankModal');
 }
 
+function launchRankConfetti() {
+    let canvas = document.getElementById('rankConfettiCanvas');
+    if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'rankConfettiCanvas';
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '99999';
+        document.body.appendChild(canvas);
+    }
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const colors = ['#ffd32a', '#6c5ce7', '#00f2fe', '#e74c3c', '#2ecc71', '#ff9f43', '#54a0ff'];
+    const particles = [];
+    const count = 130;
+
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: canvas.width / 2 + (Math.random() - 0.5) * 180,
+            y: canvas.height * 0.45 + (Math.random() - 0.5) * 50,
+            vx: (Math.random() - 0.5) * 16,
+            vy: Math.random() * -14 - 5,
+            size: Math.random() * 8 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            vRot: (Math.random() - 0.5) * 12,
+            opacity: 1,
+            gravity: 0.38,
+            shape: Math.random() > 0.45 ? 'rect' : 'circle'
+        });
+    }
+
+    const startTime = Date.now();
+
+    function render() {
+        const elapsed = Date.now() - startTime;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.vx *= 0.98;
+            p.rotation += p.vRot;
+            if (elapsed > 2000) {
+                p.opacity = Math.max(0, 1 - (elapsed - 2000) / 1200);
+            }
+
+            ctx.save();
+            ctx.globalAlpha = p.opacity;
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.fillStyle = p.color;
+
+            if (p.shape === 'rect') {
+                ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            } else {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        });
+
+        if (elapsed < 3500) {
+            requestAnimationFrame(render);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.remove();
+        }
+    }
+
+    render();
+}
+window.launchRankConfetti = launchRankConfetti;
+
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -814,3 +899,4 @@ window.addEventListener('languageChanged', () => {
 });
 
 console.log('[Quests v5.0.1] Multi-period System loaded');
+
