@@ -30,8 +30,15 @@ let currentServerId = localStorage.getItem('manlore_active_server') || 'A';
 function applyParseServer(serverId) {
     const config = BACK4APP_SERVERS[serverId] || BACK4APP_SERVERS.A;
     try {
-        Parse.initialize(config.appId, config.clientKey);
-        Parse.serverURL = config.serverURL;
+        if (typeof Parse !== 'undefined') {
+            Parse.initialize(config.appId);
+            if (Parse.CoreManager) {
+                Parse.CoreManager.set('APPLICATION_ID', config.appId);
+                Parse.CoreManager.set('CLIENT_KEY', config.clientKey);
+                Parse.CoreManager.set('JAVASCRIPT_KEY', null);
+            }
+            Parse.serverURL = config.serverURL;
+        }
         currentServerId = config.id;
         localStorage.setItem('manlore_active_server', config.id);
         console.log(`[Backend] Connecté au ${config.name} (${config.appId.substr(0, 8)}...)`);
@@ -121,6 +128,11 @@ async function signUp(username, email, password) {
         const targetServerId = currentServerId || 'A';
         applyParseServer(targetServerId);
 
+        // Déconnexion préventive d'une éventuelle session résiduelle
+        if (typeof Parse !== 'undefined' && Parse.User.current()) {
+            await Parse.User.logOut().catch(() => {});
+        }
+
         const user = new Parse.User();
         const userToken = generateUniqueUserToken(username);
 
@@ -131,12 +143,6 @@ async function signUp(username, email, password) {
         user.set('serverLocation', targetServerId);
         user.set('exp', 0);
         user.set('rank', 'E');
-
-        // Row Level Security (RLS) : seul l'utilisateur peut lire et modifier son compte
-        const userAcl = new Parse.ACL();
-        userAcl.setPublicReadAccess(false);
-        userAcl.setPublicWriteAccess(false);
-        user.setACL(userAcl);
 
         await Promise.race([
             user.signUp(),
