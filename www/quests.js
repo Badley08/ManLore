@@ -167,7 +167,7 @@ class QuestManager {
         };
     }
 
-    saveProgression() {
+    saveProgression(immediateCloud = false) {
         try {
             const serializable = {
                 ...this.data,
@@ -184,9 +184,78 @@ class QuestManager {
                 claimedQuests: this.data.claimedQuests || {}
             };
             localStorage.setItem(QUESTS_STORAGE_KEY, JSON.stringify(serializable));
+            this.syncToCloud(serializable, immediateCloud);
         } catch (e) {
             console.warn('[Quests] Erreur sauvegarde', e);
         }
+    }
+
+    syncToCloud(serializable, immediate = false) {
+        if (this._cloudTimer) clearTimeout(this._cloudTimer);
+        const doSave = async () => {
+            try {
+                if (typeof Parse !== 'undefined' && Parse.User) {
+                    const user = Parse.User.current();
+                    if (user && !isGuestMode && navigator.onLine) {
+                        const rankInfo = this.getCurrentRankInfo();
+                        user.set('exp', this.data.exp || 0);
+                        user.set('rank', rankInfo.rank);
+                        user.set('rankTitle', rankInfo.title);
+                        user.set('progressionData', serializable);
+                        await user.save();
+                        console.log('[Quests] Progression synchronisée sur le serveur (Back4App):', this.data.exp, 'EXP, Rang', rankInfo.rank);
+                    }
+                }
+            } catch (err) {
+                console.warn('[Quests] Cloud sync note:', err.message);
+            }
+        };
+
+        if (immediate) {
+            doSave();
+        } else {
+            this._cloudTimer = setTimeout(doSave, 800);
+        }
+    }
+
+    async syncFromCloud() {
+        try {
+            if (typeof Parse !== 'undefined' && Parse.User) {
+                const user = Parse.User.current();
+                if (user && !isGuestMode && navigator.onLine) {
+                    await user.fetch().catch(() => {});
+                    const cloudData = user.get('progressionData');
+                    const cloudExp = user.get('exp') || 0;
+
+                    if (cloudData && typeof cloudData === 'object') {
+                        // Si le cloud a un EXP supérieur ou égal, on prend le cloud
+                        if (cloudExp >= (this.data.exp || 0)) {
+                            this.data = {
+                                ...this.data,
+                                ...cloudData,
+                                exp: cloudExp
+                            };
+                        } else {
+                            // Le local a plus d'EXP, on met à jour le cloud
+                            this.saveProgression(true);
+                        }
+                    } else if (cloudExp > 0) {
+                        this.data.exp = Math.max(this.data.exp || 0, cloudExp);
+                        this.saveProgression(true);
+                    }
+
+                    console.log('[Quests] Progression chargée depuis le serveur:', this.data.exp, 'EXP');
+                    if (typeof renderQuestUI === 'function') renderQuestUI();
+                }
+            }
+        } catch (e) {
+            console.warn('[Quests] Erreur syncFromCloud:', e);
+        }
+    }
+
+    onLogout() {
+        this.data = this.loadProgression();
+        if (typeof renderQuestUI === 'function') renderQuestUI();
     }
 
     getWeekNumber(d) {

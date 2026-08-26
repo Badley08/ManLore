@@ -44,6 +44,9 @@ function initializeBackend() {
                 currentUser = user;
                 isGuestMode = false;
                 startAutoSync();
+                if (window.questManager) {
+                    window.questManager.syncFromCloud();
+                }
             }
         } catch (e) {
             console.warn('[Backend] Parse.User.current error:', e);
@@ -72,6 +75,10 @@ async function signUp(username, email, password) {
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
         
+        if (window.questManager) {
+            window.questManager.syncFromCloud();
+        }
+
         if (window.appLogger) {
             window.appLogger.trackNetwork('signUp', Date.now() - startTime, 200);
         }
@@ -107,6 +114,10 @@ async function logIn(usernameOrEmail, password) {
         localStorage.removeItem('manlore_guest_mode');
         startAutoSync();
 
+        if (window.questManager) {
+            window.questManager.syncFromCloud();
+        }
+
         if (window.appLogger) {
             window.appLogger.trackNetwork('logIn', Date.now() - startTime, 200);
         }
@@ -130,6 +141,9 @@ async function logOut() {
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
         stopAutoSync();
+        if (window.questManager) {
+            window.questManager.onLogout();
+        }
         return { success: true };
     } catch (error) {
         console.error('[Auth] Logout error:', error);
