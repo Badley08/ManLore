@@ -602,6 +602,9 @@ function applyStoredTheme() {
 // ============ LANGUAGE ============
 function applyLanguage(lang) {
     i18n.setLang(lang);
+    if (window.questManager) {
+        window.questManager.loadQuestDefinitions();
+    }
     applyFiltersAndRender();
     if (currentPage === 'wishlist') {
         renderWishlist();

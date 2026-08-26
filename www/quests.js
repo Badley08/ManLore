@@ -1,12 +1,108 @@
 /* ============================================
    MANLORE v5.0.1 - QUESTS.JS
    Multi-period Quest System (Daily, Weekly, Monthly, Annual, Rank)
-   Language Switch Support & Rank Overview Modal
+   Multi-language Support (FR, EN, ES) & Rank Overview Modal
    ============================================ */
 
 'use strict';
 
 const QUESTS_STORAGE_KEY = 'manlore_quest_progression_v5';
+
+const QUEST_I18N = {
+    fr: {
+        rank: 'Rang',
+        expTotal: 'EXP Total',
+        towards: 'vers',
+        maxRank: 'Niveau Maximum',
+        tabDaily: 'Quotidiennes',
+        tabWeekly: 'Hebdo',
+        tabMonthly: 'Mensuelles',
+        tabAnnual: 'Annuelles',
+        noQuests: 'Aucune quête disponible',
+        yourRank: 'VOTRE RANG',
+        expRequired: 'EXP requis',
+        missingExp: 'Il vous manque <strong>{exp} EXP</strong> pour atteindre le rang <strong>{title}</strong>.',
+        maxRankCongrats: 'Félicitations ! Vous avez atteint le rang suprême du ManLore !',
+        guideTitle: "Comment gagner plus d'XP ?",
+        hierarchyTitle: 'Hiérarchie des Rangs (E ➔ S)',
+        statusTitle: 'Votre statut actuel',
+        modalTitle: 'Système de Rangs & Progression',
+        guideChaptersTitle: 'Lire des Chapitres',
+        guideChaptersVal: '+5 EXP par chapitre lu',
+        guideAddTitle: 'Ajouter une Œuvre',
+        guideAddVal: '+25 EXP par œuvre ajoutée',
+        guideRateTitle: 'Évaluer & Noter',
+        guideRateVal: '+15 EXP par note donnée',
+        guideStreakTitle: 'Maintenir sa Série',
+        guideStreakVal: '+50 EXP bonus de fidélité',
+        guideQuestsTitle: 'Quêtes Quotidiennes / Hebdo',
+        guideQuestsVal: '+50 à +800 EXP par quête',
+        guideAnnualTitle: 'Quêtes Annuelles',
+        guideAnnualVal: "Jusqu'à +25 000 EXP",
+    },
+    en: {
+        rank: 'Rank',
+        expTotal: 'Total EXP',
+        towards: 'towards',
+        maxRank: 'Maximum Rank',
+        tabDaily: 'Daily',
+        tabWeekly: 'Weekly',
+        tabMonthly: 'Monthly',
+        tabAnnual: 'Annual',
+        noQuests: 'No quests available',
+        yourRank: 'YOUR RANK',
+        expRequired: 'EXP required',
+        missingExp: 'You need <strong>{exp} EXP</strong> to reach <strong>{title}</strong> rank.',
+        maxRankCongrats: 'Congratulations! You have reached the supreme rank of ManLore!',
+        guideTitle: 'How to earn more XP?',
+        hierarchyTitle: 'Rank Hierarchy (E ➔ S)',
+        statusTitle: 'Your current status',
+        modalTitle: 'Rank System & Progression',
+        guideChaptersTitle: 'Read Chapters',
+        guideChaptersVal: '+5 EXP per read chapter',
+        guideAddTitle: 'Add a Title',
+        guideAddVal: '+25 EXP per added title',
+        guideRateTitle: 'Rate & Review',
+        guideRateVal: '+15 EXP per rating',
+        guideStreakTitle: 'Maintain Streak',
+        guideStreakVal: '+50 EXP loyalty bonus',
+        guideQuestsTitle: 'Daily / Weekly Quests',
+        guideQuestsVal: '+50 to +800 EXP per quest',
+        guideAnnualTitle: 'Annual Quests',
+        guideAnnualVal: 'Up to +25,000 EXP',
+    },
+    es: {
+        rank: 'Rango',
+        expTotal: 'EXP Total',
+        towards: 'hacia',
+        maxRank: 'Nivel Máximo',
+        tabDaily: 'Diarias',
+        tabWeekly: 'Semanales',
+        tabMonthly: 'Mensuales',
+        tabAnnual: 'Anuales',
+        noQuests: 'Sin misiones disponibles',
+        yourRank: 'TU RANGO',
+        expRequired: 'EXP requerido',
+        missingExp: 'Te faltan <strong>{exp} EXP</strong> para alcanzar el rango <strong>{title}</strong>.',
+        maxRankCongrats: '¡Felicidades! ¡Has alcanzado el rango supremo de ManLore!',
+        guideTitle: '¿Cómo ganar más XP?',
+        hierarchyTitle: 'Jerarquía de Rangos (E ➔ S)',
+        statusTitle: 'Tu estado actual',
+        modalTitle: 'Sistema de Rangos y Progresión',
+        guideChaptersTitle: 'Leer Capítulos',
+        guideChaptersVal: '+5 EXP por capítulo leído',
+        guideAddTitle: 'Añadir una Obra',
+        guideAddVal: '+25 EXP por obra añadida',
+        guideRateTitle: 'Calificar y Puntuar',
+        guideRateVal: '+15 EXP por calificación',
+        guideStreakTitle: 'Mantener la Racha',
+        guideStreakVal: '+50 EXP bono de fidelidad',
+        guideQuestsTitle: 'Misiones Diarias / Semanales',
+        guideQuestsVal: '+50 a +800 EXP por misión',
+        guideAnnualTitle: 'Misiones Anuales',
+        guideAnnualVal: 'Hasta +25,000 EXP',
+    }
+};
 
 class QuestManager {
     constructor() {
@@ -96,7 +192,6 @@ class QuestManager {
         const monthNum = now.getMonth();
         const yearNum = now.getFullYear();
 
-        // Convert array to Sets if reloaded
         if (Array.isArray(this.data.actionsToday)) this.data.actionsToday = new Set(this.data.actionsToday);
         if (Array.isArray(this.data.actionsWeek)) this.data.actionsWeek = new Set(this.data.actionsWeek);
         if (Array.isArray(this.data.actionsMonth)) this.data.actionsMonth = new Set(this.data.actionsMonth);
@@ -104,7 +199,6 @@ class QuestManager {
         if (Array.isArray(this.data.activeDaysThisMonth)) this.data.activeDaysThisMonth = new Set(this.data.activeDaysThisMonth);
         if (Array.isArray(this.data.activeDaysThisYear)) this.data.activeDaysThisYear = new Set(this.data.activeDaysThisYear);
 
-        // Daily reset
         if (this.data.lastDailyDate !== today) {
             this.data.lastDailyDate = today;
             this.data.activeMinutesToday = 0;
@@ -115,7 +209,6 @@ class QuestManager {
             this.data.actionsToday = new Set();
         }
 
-        // Weekly reset
         if (this.data.lastWeekNumber !== weekNum) {
             this.data.lastWeekNumber = weekNum;
             this.data.activeMinutesWeek = 0;
@@ -127,7 +220,6 @@ class QuestManager {
             this.data.activeDaysThisWeek = new Set([today]);
         }
 
-        // Monthly reset
         if (this.data.lastMonth !== monthNum) {
             this.data.lastMonth = monthNum;
             this.data.activeMinutesMonth = 0;
@@ -139,7 +231,6 @@ class QuestManager {
             this.data.activeDaysThisMonth = new Set([today]);
         }
 
-        // Annual reset
         if (this.data.lastYear !== yearNum) {
             this.data.lastYear = yearNum;
             this.data.activeMinutesYear = 0;
@@ -171,7 +262,7 @@ class QuestManager {
     }
 
     async loadQuestDefinitions() {
-        const lang = (window.i18n?.currentLang || 'fr').toLowerCase();
+        const lang = (window.i18n?.lang || window.i18n?.currentLang || localStorage.getItem('manlore_lang') || 'fr').toLowerCase();
         this.currentLang = ['en', 'es'].includes(lang) ? lang : 'fr';
 
         const jsonFile = `manlore_${this.currentLang}-quests_xp.json`;
@@ -189,8 +280,20 @@ class QuestManager {
         // Fallback fetch fr
         try {
             const resFr = await fetch('manlore_fr-quests_xp.json');
-            if (resFr.ok) this.questData = await resFr.json();
+            if (resFr.ok) {
+                this.questData = await resFr.json();
+                if (typeof renderQuestUI === 'function') renderQuestUI();
+            }
         } catch {}
+    }
+
+    getText(key, vars = {}) {
+        const dict = QUEST_I18N[this.currentLang] || QUEST_I18N.fr;
+        let str = dict[key] || QUEST_I18N.fr[key] || key;
+        Object.keys(vars).forEach(k => {
+            str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), vars[k]);
+        });
+        return str;
     }
 
     getRanks() {
@@ -232,7 +335,7 @@ class QuestManager {
             totalExpForRank,
             percent,
             remainingExp,
-            nextRankTitle: nextRank ? nextRank.title : 'Niveau Maximum',
+            nextRankTitle: nextRank ? nextRank.title : this.getText('maxRank'),
             nextRankXp: nextRank ? nextRank.xp_required : currentExp
         };
     }
@@ -249,7 +352,7 @@ class QuestManager {
 
         if (before.rank !== after.rank) {
             if (window.showToast) {
-                window.showToast(`🎉 Rang supérieur débloqué : [Rang ${after.rank}] ${after.title} !`, 'success');
+                window.showToast(`🎉 [${this.getText('rank')} ${after.rank}] ${after.title} !`, 'success');
             }
             if (window.appLogger) {
                 window.appLogger.log('rank_up', `Promotion de Rang : ${after.rank}`, { from: before.rank, to: after.rank, totalExp: this.data.exp });
@@ -259,7 +362,6 @@ class QuestManager {
         if (typeof renderQuestUI === 'function') renderQuestUI();
     }
 
-    // Action hooks
     onTitleAdded() {
         this.checkResets();
         this.data.titlesAddedToday = (this.data.titlesAddedToday || 0) + 1;
@@ -404,9 +506,10 @@ function renderQuestUI() {
     const container = document.getElementById('questProgressionContainer');
     if (!container) return;
 
-    const rankInfo = window.questManager.getCurrentRankInfo();
-    const activeTab = window.questManager.activeTab || 'daily';
-    const quests = window.questManager.getQuestsForTab(activeTab);
+    const qm = window.questManager;
+    const rankInfo = qm.getCurrentRankInfo();
+    const activeTab = qm.activeTab || 'daily';
+    const quests = qm.getQuestsForTab(activeTab);
 
     container.innerHTML = `
         <div class="quest-card-modern">
@@ -414,12 +517,12 @@ function renderQuestUI() {
                 <div class="quest-rank-badge clickable-rank" onclick="openRankOverviewModal()" title="Cliquer pour voir la progression de rang E -> S" style="background: ${rankInfo.color}22; border-color: ${rankInfo.color}; cursor:pointer">
                     <span class="quest-badge-icon" style="color:${rankInfo.color}">${rankInfo.badge_svg}</span>
                     <div>
-                        <div class="quest-rank-level" style="color: ${rankInfo.color}">Rang ${rankInfo.rank} <i class="fas fa-external-link-alt" style="font-size:0.75rem; opacity:0.8"></i></div>
+                        <div class="quest-rank-level" style="color: ${rankInfo.color}">${qm.getText('rank')} ${rankInfo.rank} <i class="fas fa-external-link-alt" style="font-size:0.75rem; opacity:0.8"></i></div>
                         <div class="quest-rank-title">${rankInfo.title}</div>
                     </div>
                 </div>
                 <div class="quest-exp-display">
-                    <span class="quest-exp-number">${rankInfo.currentExp}</span> <span class="quest-exp-label">EXP Total</span>
+                    <span class="quest-exp-number">${rankInfo.currentExp}</span> <span class="quest-exp-label">${qm.getText('expTotal')}</span>
                 </div>
             </div>
 
@@ -428,7 +531,7 @@ function renderQuestUI() {
                     <div class="quest-bar-fill" style="width: ${rankInfo.percent}%; background: linear-gradient(90deg, ${rankInfo.color}, #00f2fe);"></div>
                 </div>
                 <div class="quest-bar-labels">
-                    <span>${rankInfo.expInCurrentRank} / ${rankInfo.totalExpForRank} EXP vers [${rankInfo.nextRankTitle}]</span>
+                    <span>${rankInfo.expInCurrentRank} / ${rankInfo.totalExpForRank} EXP ${qm.getText('towards')} [${rankInfo.nextRankTitle}]</span>
                     <span style="font-weight:700;">${rankInfo.percent}%</span>
                 </div>
             </div>
@@ -436,21 +539,21 @@ function renderQuestUI() {
             <!-- Tabs Quêtes -->
             <div class="quest-tabs-nav">
                 <button class="quest-tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="switchQuestTab('daily')">
-                    <i class="fas fa-calendar-day"></i> Quotidiennes
+                    <i class="fas fa-calendar-day"></i> ${qm.getText('tabDaily')}
                 </button>
                 <button class="quest-tab-btn ${activeTab === 'weekly' ? 'active' : ''}" onclick="switchQuestTab('weekly')">
-                    <i class="fas fa-calendar-week"></i> Hebdo
+                    <i class="fas fa-calendar-week"></i> ${qm.getText('tabWeekly')}
                 </button>
                 <button class="quest-tab-btn ${activeTab === 'monthly' ? 'active' : ''}" onclick="switchQuestTab('monthly')">
-                    <i class="fas fa-calendar-alt"></i> Mensuelles
+                    <i class="fas fa-calendar-alt"></i> ${qm.getText('tabMonthly')}
                 </button>
                 <button class="quest-tab-btn ${activeTab === 'annual' ? 'active' : ''}" onclick="switchQuestTab('annual')">
-                    <i class="fas fa-award"></i> Annuelles
+                    <i class="fas fa-award"></i> ${qm.getText('tabAnnual')}
                 </button>
             </div>
 
             <div class="quest-list">
-                ${quests.length === 0 ? '<p class="text-xs text-muted" style="padding:1rem;text-align:center">Aucune quête disponible</p>' : quests.map(q => `
+                ${quests.length === 0 ? `<p class="text-xs text-muted" style="padding:1rem;text-align:center">${qm.getText('noQuests')}</p>` : quests.map(q => `
                     <div class="quest-item-box ${q.completed ? 'completed' : ''}">
                         <div class="quest-icon-bubble ${q.completed ? 'done' : ''}">
                             <i class="fas ${q.completed ? 'fa-check' : 'fa-scroll'}"></i>
@@ -485,12 +588,13 @@ function openRankOverviewModal() {
     const modal = document.getElementById('rankModal');
     if (!modal) return;
 
-    const rankInfo = window.questManager.getCurrentRankInfo();
-    const ranks = window.questManager.getRanks();
+    const qm = window.questManager;
+    const rankInfo = qm.getCurrentRankInfo();
+    const ranks = qm.getRanks();
 
     const ranksListContainer = document.getElementById('ranksHierarchyList');
     if (ranksListContainer) {
-        ranksListContainer.innerHTML = ranks.map((r, idx) => {
+        ranksListContainer.innerHTML = ranks.map((r) => {
             const isCurrent = r.rank === rankInfo.rank;
             const isPassed = rankInfo.currentExp >= r.xp_required;
             return `
@@ -499,12 +603,12 @@ function openRankOverviewModal() {
                         <div style="display:flex; align-items:center; gap:0.75rem">
                             <span class="rank-card-svg-badge" style="color:${r.color}">${r.badge_svg || ''}</span>
                             <div>
-                                <h4 style="font-family:'Orbitron',sans-serif; font-size:1rem; color:${r.color}">Rang ${r.rank} : ${r.title}</h4>
-                                <span class="text-xs text-muted">${r.xp_required} EXP requis</span>
+                                <h4 style="font-family:'Orbitron',sans-serif; font-size:1rem; color:${r.color}">${qm.getText('rank')} ${r.rank} : ${r.title}</h4>
+                                <span class="text-xs text-muted">${r.xp_required} ${qm.getText('expRequired')}</span>
                             </div>
                         </div>
                         <div>
-                            ${isCurrent ? '<span class="badge-current-rank">VOTRE RANG</span>' : isPassed ? '<i class="fas fa-check-circle" style="color:#2ecc71"></i>' : '<i class="fas fa-lock" style="color:#747d8c"></i>'}
+                            ${isCurrent ? `<span class="badge-current-rank">${qm.getText('yourRank')}</span>` : isPassed ? '<i class="fas fa-check-circle" style="color:#2ecc71"></i>' : '<i class="fas fa-lock" style="color:#747d8c"></i>'}
                         </div>
                     </div>
                 </div>
@@ -515,18 +619,25 @@ function openRankOverviewModal() {
     const currentRankTitleEl = document.getElementById('modalCurrentRankTitle');
     if (currentRankTitleEl) {
         currentRankTitleEl.innerHTML = `
-            <span style="color:${rankInfo.color}; font-weight:800">[Rang ${rankInfo.rank}]</span> ${rankInfo.title} (${rankInfo.currentExp} EXP)
+            <span style="color:${rankInfo.color}; font-weight:800">[${qm.getText('rank')} ${rankInfo.rank}]</span> ${rankInfo.title} (${rankInfo.currentExp} EXP)
         `;
     }
 
     const nextRankAdviceEl = document.getElementById('modalNextRankAdvice');
     if (nextRankAdviceEl) {
         if (rankInfo.remainingExp > 0) {
-            nextRankAdviceEl.innerHTML = `Il vous manque <strong>${rankInfo.remainingExp} EXP</strong> pour atteindre le rang <strong>${rankInfo.nextRankTitle}</strong>.`;
+            nextRankAdviceEl.innerHTML = qm.getText('missingExp', { exp: rankInfo.remainingExp, title: rankInfo.nextRankTitle });
         } else {
-            nextRankAdviceEl.textContent = 'Félicitations ! Vous avez atteint le rang suprême du ManLore !';
+            nextRankAdviceEl.textContent = qm.getText('maxRankCongrats');
         }
     }
+
+    // Localize modal static titles
+    const statusBoxHeader = modal.querySelector('.rank-modal-status-box p');
+    if (statusBoxHeader) statusBoxHeader.textContent = qm.getText('statusTitle');
+
+    const modalTitleEl = modal.querySelector('.modal-title');
+    if (modalTitleEl) modalTitleEl.innerHTML = `<i class="fas fa-crown" style="color:#ffd32a"></i> ${qm.getText('modalTitle')}`;
 
     openModal('rankModal');
 }
@@ -536,7 +647,6 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Rafraîchir lors d'un changement de langue
 window.addEventListener('languageChanged', () => {
     window.questManager?.loadQuestDefinitions();
 });

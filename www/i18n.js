@@ -733,11 +733,16 @@ class I18n {
         this.fallback = 'fr';
     }
 
+    get currentLang() {
+        return this.lang;
+    }
+
     setLang(lang) {
         if (TRANSLATIONS[lang]) {
             this.lang = lang;
             localStorage.setItem('manlore_lang', lang);
             this.applyAll();
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
         }
     }
 
