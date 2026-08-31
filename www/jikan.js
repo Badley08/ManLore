@@ -1,12 +1,13 @@
 /* ============================================
-   MANLORE v5.0.1 - JIKAN.JS
-   Jikan v4 + Kitsu Multi-Search + Auto-Translate + NSFW Filter + Telemetry
+   MANLORE v6.0.1 - JIKAN.JS
+   Jikan v4 + Kitsu + AniList Multi-Search + Auto-Translate + NSFW Filter
    ============================================ */
 
 'use strict';
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
-const JIKAN_CACHE_KEY = 'manlore_jikan_cache_v5';
+const ANILIST_BASE = 'https://graphql.anilist.co';
+const JIKAN_CACHE_KEY = 'manlore_jikan_cache_v6';
 const JIKAN_CACHE_TTL = 48 * 60 * 60 * 1000; // 48h
 const JIKAN_RATE_LIMIT_MS = 350;
 
@@ -236,6 +237,89 @@ class JikanAPI {
         };
     }
 
+    // ===== ANILIST =====
+    mapAniListFormat(format) {
+        const map = {
+            MANGA: 'Manga', MANHWA: 'Manwha', MANHUA: 'Manhua',
+            NOVEL: 'Light Novel', ONE_SHOT: 'Manga'
+        };
+        return map[format] || 'Manga';
+    }
+
+    normalizeAniListResult(media) {
+        const title = media.title?.english || media.title?.romaji || media.title?.native || '';
+        const author = (media.staff?.edges || [])
+            .filter(e => ['Story', 'Art', 'Story & Art'].includes(e.role))
+            .map(e => e.node?.name?.full)
+            .filter(Boolean)
+            .join(', ');
+        // Strip HTML tags from description
+        const synopsis = (media.description || '')
+            .replace(/<br\s*\/?>/gi, ' ')
+            .replace(/<[^>]+>/g, '')
+            .trim()
+            .slice(0, 700);
+        return {
+            malId: `anilist-${media.id}`,
+            title,
+            originalTitle: media.title?.native || title,
+            titleEnglish: media.title?.english || '',
+            allTitles: [media.title?.english, media.title?.romaji, media.title?.native].filter(Boolean),
+            type: this.mapAniListFormat(media.format),
+            imageUrl: media.coverImage?.large || media.coverImage?.medium || '',
+            synopsis,
+            genres: media.genres || [],
+            score: media.averageScore ? (media.averageScore / 10).toFixed(1) : 0,
+            rank: 0,
+            popularity: media.popularity || 0,
+            members: media.popularity || 0,
+            year: media.startDate?.year || null,
+            chapters: media.chapters || 0,
+            status: media.status === 'FINISHED' ? 'Terminé' : (media.status === 'RELEASING' ? 'En cours' : 'À lire'),
+            authors: author,
+            url: media.siteUrl || '',
+            source: 'AniList'
+        };
+    }
+
+    async searchAniList(query) {
+        const gql = `
+            query ($search: String) {
+              Page(perPage: 12) {
+                media(search: $search, type: MANGA, sort: [SEARCH_MATCH, POPULARITY_DESC]) {
+                  id isAdult format
+                  title { romaji english native }
+                  genres
+                  coverImage { large medium }
+                  description(asHtml: false)
+                  averageScore popularity chapters status
+                  startDate { year }
+                  staff(perPage: 4, sort: [ROLE]) { edges { role node { name { full } } } }
+                  siteUrl
+                }
+              }
+            }`;
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 8000);
+            const res = await fetch(ANILIST_BASE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ query: gql, variables: { search: query.trim() } }),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error(`AniList HTTP ${res.status}`);
+            const json = await res.json();
+            return (json.data?.Page?.media || [])
+                .filter(m => !m.isAdult)
+                .map(m => this.normalizeAniListResult(m));
+        } catch (e) {
+            console.warn('[AniList] Search error:', e.message);
+            return [];
+        }
+    }
+
     async searchJikan(query, jikanType = '') {
         try {
             // sfw=true obligatoire pour conformité Play Store
@@ -290,35 +374,36 @@ class JikanAPI {
         const startT = Date.now();
 
         try {
-            const jikanPromise = this.searchJikan(query, jikanType);
-            const kitsuPromise = this.searchKitsu(query);
+            // 3 sources en parallèle : MAL (Jikan) + Kitsu + AniList
+            const [jikanRes, kitsuRes, anilistRes] = await Promise.allSettled([
+                this.searchJikan(query, jikanType),
+                this.searchKitsu(query),
+                this.searchAniList(query)
+            ]);
 
-            const settled = await Promise.allSettled([jikanPromise, kitsuPromise]);
-            
-            const jikanResults = settled[0].status === 'fulfilled' ? settled[0].value : [];
-            const kitsuResults = settled[1].status === 'fulfilled' ? settled[1].value : [];
+            const jikanResults   = jikanRes.status   === 'fulfilled' ? jikanRes.value   : [];
+            const kitsuResults   = kitsuRes.status   === 'fulfilled' ? kitsuRes.value   : [];
+            const anilistResults = anilistRes.status === 'fulfilled' ? anilistRes.value : [];
 
+            // Interleave: AniList prioritaire pour les manhuas, puis MAL, puis Kitsu
             const seen = new Set();
             const merged = [];
 
-            const maxLen = Math.max(jikanResults.length, kitsuResults.length);
-            for (let i = 0; i < maxLen; i++) {
-                if (i < jikanResults.length) {
-                    const item = jikanResults[i];
+            const addUnique = (list) => {
+                for (const item of list) {
                     const key = (item.title || '').toLowerCase().trim();
                     if (key && !seen.has(key)) { seen.add(key); merged.push(item); }
                 }
-                if (i < kitsuResults.length) {
-                    const item = kitsuResults[i];
-                    const key = (item.title || '').toLowerCase().trim();
-                    if (key && !seen.has(key)) { seen.add(key); merged.push(item); }
-                }
-            }
+            };
 
-            const finalResults = merged.slice(0, 15);
+            // AniList en tête car meilleure couverture Manhua/Manhwa
+            addUnique(anilistResults);
+            addUnique(jikanResults);
+            addUnique(kitsuResults);
+
+            const finalResults = merged.slice(0, 20);
             this.setCached(cacheKey, finalResults);
 
-            // Télémétrie
             if (window.appLogger) {
                 if (finalResults.length === 0) {
                     window.appLogger.trackTitleSearch(query, null, Date.now() - startT);
@@ -368,15 +453,37 @@ class JikanAPI {
         if (!navigator.onLine) return null;
 
         try {
-            if (String(malId).startsWith('kitsu-')) {
-                const id = String(malId).replace('kitsu-', '');
-                const url = `https://kitsu.io/api/edge/manga/${id}?include=categories`;
+            const id = String(malId);
+
+            if (id.startsWith('anilist-')) {
+                const numId = parseInt(id.replace('anilist-', ''), 10);
+                const gql = `query ($id: Int) { Media(id: $id, type: MANGA) {
+                    id isAdult format title { romaji english native }
+                    genres coverImage { large medium } description(asHtml: false)
+                    averageScore popularity chapters status startDate { year }
+                    staff(perPage: 4, sort:[ROLE]) { edges { role node { name { full } } } }
+                    siteUrl } }`;
+                const res = await fetch(ANILIST_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                    body: JSON.stringify({ query: gql, variables: { id: numId } })
+                });
+                if (!res.ok) throw new Error(`AniList HTTP ${res.status}`);
+                const json = await res.json();
+                const result = this.normalizeAniListResult(json.data.Media);
+                this.setCached(cacheKey, result);
+                return result;
+
+            } else if (id.startsWith('kitsu-')) {
+                const kitsuId = id.replace('kitsu-', '');
+                const url = `https://kitsu.io/api/edge/manga/${kitsuId}?include=categories`;
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 const result = this.normalizeKitsuResult(data.data, data.included || []);
                 this.setCached(cacheKey, result);
                 return result;
+
             } else {
                 const data = await this.fetchWithRetry(`${JIKAN_BASE}/manga/${malId}/full`);
                 const result = this.normalizeResult(data.data);
@@ -425,4 +532,4 @@ class JikanAPI {
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v5.0.1] Module loaded');
+console.log('[Jikan v6.0.1] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList');
