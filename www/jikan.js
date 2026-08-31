@@ -1,12 +1,13 @@
 /* ============================================
    MANLORE v6.0.1 - JIKAN.JS
-   Jikan v4 + Kitsu + AniList Multi-Search + Auto-Translate + NSFW Filter
+   Jikan v4 + Kitsu + AniList + MangaDex Multi-Search + Auto-Translate + NSFW Filter
    ============================================ */
 
 'use strict';
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4';
 const ANILIST_BASE = 'https://graphql.anilist.co';
+const MANGADEX_BASE = 'https://api.mangadex.org';
 const JIKAN_CACHE_KEY = 'manlore_jikan_cache_v6';
 const JIKAN_CACHE_TTL = 48 * 60 * 60 * 1000; // 48h
 const JIKAN_RATE_LIMIT_MS = 350;
@@ -320,6 +321,87 @@ class JikanAPI {
         }
     }
 
+    // ===== MANGADEX =====
+    mapMangaDexFormat(status) {
+        // MangaDex type isn't always distinct, we use originalLanguage if available
+        return 'Manga'; // Will be refined in normalize
+    }
+
+    normalizeMangaDexResult(item) {
+        const attrs = item.attributes || {};
+        
+        // Titre
+        let title = '';
+        if (attrs.title) {
+            title = attrs.title.en || attrs.title.fr || attrs.title.es || Object.values(attrs.title)[0] || '';
+        }
+        
+        const altTitles = (attrs.altTitles || []).map(t => Object.values(t)[0]).filter(Boolean);
+        const originalTitle = altTitles.find(t => t.match(/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF\uFF66-\uFF9F]/)) || title;
+        
+        // Type deduction
+        let type = 'Manga';
+        if (attrs.originalLanguage === 'ko') type = 'Manwha';
+        if (attrs.originalLanguage === 'zh') type = 'Manhua';
+
+        // Synopsis (FR > EN > ES > first available)
+        let synopsis = '';
+        if (attrs.description) {
+            synopsis = attrs.description.fr || attrs.description.en || attrs.description.es || Object.values(attrs.description)[0] || '';
+        }
+        synopsis = synopsis.replace(/\[\/?(b|i|u|url|spoiler)[^\]]*\]/gi, '').slice(0, 700).trim(); // Remove bbcode
+
+        // Image
+        let imageUrl = '';
+        const coverRel = (item.relationships || []).find(r => r.type === 'cover_art');
+        if (coverRel && coverRel.attributes && coverRel.attributes.fileName) {
+            imageUrl = `https://uploads.mangadex.org/covers/${item.id}/${coverRel.attributes.fileName}.256.jpg`;
+        }
+
+        const genres = (attrs.tags || [])
+            .filter(t => t.attributes && t.attributes.group === 'genre')
+            .map(t => t.attributes.name.en)
+            .filter(Boolean);
+
+        return {
+            malId: `mangadex-${item.id}`,
+            title,
+            originalTitle,
+            titleEnglish: attrs.title?.en || '',
+            allTitles: [title, originalTitle, ...altTitles].filter(Boolean),
+            type,
+            imageUrl,
+            synopsis,
+            genres,
+            score: 0, // MangaDex requires separate rating endpoint
+            rank: 0,
+            popularity: 0,
+            members: 0,
+            year: attrs.year || null,
+            chapters: attrs.lastChapter ? parseInt(attrs.lastChapter, 10) : 0,
+            status: attrs.status === 'ongoing' ? 'En cours' : (attrs.status === 'completed' ? 'Terminé' : 'À lire'),
+            authors: '',
+            url: `https://mangadex.org/title/${item.id}`,
+            source: 'MangaDex'
+        };
+    }
+
+    async searchMangaDex(query) {
+        try {
+            const url = `${MANGADEX_BASE}/manga?title=${encodeURIComponent(query.trim())}&limit=10&includes[]=cover_art&contentRating[]=safe&contentRating[]=suggestive`;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 8000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error(`MangaDex HTTP ${res.status}`);
+            const data = await res.json();
+            return (data.data || []).map(item => this.normalizeMangaDexResult(item));
+        } catch (e) {
+            console.warn('[MangaDex] Search error:', e.message);
+            return [];
+        }
+    }
+
     async searchJikan(query, jikanType = '') {
         try {
             // sfw=true obligatoire pour conformité Play Store
@@ -374,18 +456,20 @@ class JikanAPI {
         const startT = Date.now();
 
         try {
-            // 3 sources en parallèle : MAL (Jikan) + Kitsu + AniList
-            const [jikanRes, kitsuRes, anilistRes] = await Promise.allSettled([
+            // 4 sources en parallèle : MAL (Jikan) + Kitsu + AniList + MangaDex
+            const [jikanRes, kitsuRes, anilistRes, mangadexRes] = await Promise.allSettled([
                 this.searchJikan(query, jikanType),
                 this.searchKitsu(query),
-                this.searchAniList(query)
+                this.searchAniList(query),
+                this.searchMangaDex(query)
             ]);
 
-            const jikanResults   = jikanRes.status   === 'fulfilled' ? jikanRes.value   : [];
-            const kitsuResults   = kitsuRes.status   === 'fulfilled' ? kitsuRes.value   : [];
-            const anilistResults = anilistRes.status === 'fulfilled' ? anilistRes.value : [];
+            const jikanResults    = jikanRes.status    === 'fulfilled' ? jikanRes.value    : [];
+            const kitsuResults    = kitsuRes.status    === 'fulfilled' ? kitsuRes.value    : [];
+            const anilistResults  = anilistRes.status  === 'fulfilled' ? anilistRes.value  : [];
+            const mangadexResults = mangadexRes.status === 'fulfilled' ? mangadexRes.value : [];
 
-            // Interleave: AniList prioritaire pour les manhuas, puis MAL, puis Kitsu
+            // Interleave: AniList prioritaire pour les manhuas, puis MangaDex, MAL, Kitsu
             const seen = new Set();
             const merged = [];
 
@@ -396,12 +480,12 @@ class JikanAPI {
                 }
             };
 
-            // AniList en tête car meilleure couverture Manhua/Manhwa
             addUnique(anilistResults);
+            addUnique(mangadexResults);
             addUnique(jikanResults);
             addUnique(kitsuResults);
 
-            const finalResults = merged.slice(0, 20);
+            const finalResults = merged.slice(0, 25);
             this.setCached(cacheKey, finalResults);
 
             if (window.appLogger) {
@@ -484,6 +568,16 @@ class JikanAPI {
                 this.setCached(cacheKey, result);
                 return result;
 
+            } else if (id.startsWith('mangadex-')) {
+                const mdId = id.replace('mangadex-', '');
+                const url = `${MANGADEX_BASE}/manga/${mdId}?includes[]=cover_art`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const result = this.normalizeMangaDexResult(data.data);
+                this.setCached(cacheKey, result);
+                return result;
+
             } else {
                 const data = await this.fetchWithRetry(`${JIKAN_BASE}/manga/${malId}/full`);
                 const result = this.normalizeResult(data.data);
@@ -532,4 +626,4 @@ class JikanAPI {
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v6.0.1] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList');
+console.log('[Jikan v6.0.1] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');

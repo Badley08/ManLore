@@ -460,6 +460,19 @@ function getCurrentUser() {
     return currentUser;
 }
 
+async function saveUserSettingsToCloud(key, value) {
+    if (!currentUser || !currentUser.sessionToken || !isOnline) return;
+    try {
+        const payload = {};
+        if (key === 'theme') payload.preferredTheme = value;
+        if (key === 'language') payload.preferredLanguage = value;
+        
+        await back4appApiCall(`/users/${currentUser.id}`, 'PUT', payload, currentUser.sessionToken);
+    } catch (e) {
+        console.error('[Cloud] Error saving user settings:', e);
+    }
+}
+
 // ============ GESTION DE LA PHOTO DE PROFIL (BASE64) ============
 
 function getUserAvatar() {

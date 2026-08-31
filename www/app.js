@@ -647,6 +647,9 @@ function applyTheme(theme) {
         btn.classList.toggle('active', btn.dataset.theme === theme);
     });
     showToast(i18n.t('toast.theme.changed'), 'info');
+    if (typeof saveUserSettingsToCloud === 'function') {
+        saveUserSettingsToCloud('theme', theme);
+    }
 }
 
 function applyStoredTheme() {
@@ -670,6 +673,9 @@ function applyLanguage(lang) {
         renderStats(allItems);
     }
     showToast(i18n.t('toast.lang.changed'), 'info');
+    if (typeof saveUserSettingsToCloud === 'function') {
+        saveUserSettingsToCloud('language', lang);
+    }
 }
 
 // ============ STORAGE MODE UI ============
@@ -743,6 +749,10 @@ async function handleExport() {
             }
         }
     );
+}
+
+function handleImportClick() {
+    document.getElementById('importFile')?.click();
 }
 
 function showImportProgressModal(show) {

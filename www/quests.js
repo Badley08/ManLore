@@ -742,6 +742,16 @@ class QuestManager {
                 current = curIdx >= targetIdx ? 1 : 0;
                 target = 1;
                 break;
+            case 'daily_return':
+                current = (this.data.activeDaysThisWeek?.size || 0) >= 2 ? 1 : 0;
+                target = 1;
+                break;
+            case 'title_interactions':
+                current = period === 'daily' ? ((this.data.titlesAddedToday||0)+(this.data.titlesEditedToday||0)+(this.data.titlesDeletedToday||0)+(this.data.titlesViewedToday?.length||0)) :
+                          period === 'weekly' ? ((this.data.titlesAddedWeek||0)+(this.data.titlesEditedWeek||0)+(this.data.titlesDeletedWeek||0)+(this.data.titlesViewedWeek?.length||0)) :
+                          period === 'monthly' ? ((this.data.titlesAddedMonth||0)+(this.data.titlesEditedMonth||0)+(this.data.titlesDeletedMonth||0)+(this.data.titlesViewedMonth?.length||0)) : 
+                          ((this.data.titlesAddedYear||0)+(this.data.titlesEditedYear||0)+(this.data.titlesDeletedYear||0)+(this.data.titlesViewedYear?.length||0));
+                break;
             default:
                 current = 0;
                 break;

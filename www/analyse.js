@@ -173,63 +173,6 @@ function buildStatsHTML(s, items) {
     };
 
     return `
-    <!-- Overview (Vue d'ensemble compacte) -->
-    <div class="section-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem">
-            <h3 class="section-title" style="margin:0"><i class="fas fa-chart-pie"></i> <span>${i18n.t('stats.overview')}</span></h3>
-            <button class="btn-primary" style="font-size:0.8rem; padding:0.45rem 0.9rem" onclick="openStatsDetailModal()">
-                <i class="fas fa-expand-arrows-alt"></i> <span>${i18n.t('stats.btn.viewDetails') || 'Détails & Graphiques'}</span>
-            </button>
-        </div>
-        
-        <div class="analytics-overview">
-            <div class="analytics-mini">
-                <div class="analytics-mini-value">${s.total}</div>
-                <div class="analytics-mini-label">${i18n.t('home.stat.total')}</div>
-            </div>
-            <div class="analytics-mini">
-                <div class="analytics-mini-value" style="color:var(--color-success)">${s.reading}</div>
-                <div class="analytics-mini-label">${i18n.t('home.stat.reading')}</div>
-            </div>
-            <div class="analytics-mini">
-                <div class="analytics-mini-value" style="color:var(--color-primary)">${s.completed}</div>
-                <div class="analytics-mini-label">${i18n.t('home.stat.completed')}</div>
-            </div>
-            <div class="analytics-mini">
-                <div class="analytics-mini-value" style="color:var(--color-warning)">${s.toRead}</div>
-                <div class="analytics-mini-label">${i18n.t('home.stat.toRead')}</div>
-            </div>
-            <div class="analytics-mini">
-                <div class="analytics-mini-value" style="color:var(--color-star)">${s.avgRating > 0 ? s.avgRating : '—'}</div>
-                <div class="analytics-mini-label">${i18n.t('stats.avgRating')}</div>
-            </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-top:1.5rem">
-            <div class="stat-box reactive">
-                <div class="stat-box-icon"><i class="fas fa-bookmark"></i></div>
-                <div class="stat-box-value">${s.totalChapters}</div>
-                <div class="stat-box-label">${i18n.t('stats.indicator.chapters')}</div>
-            </div>
-            <div class="stat-box reactive">
-                <div class="stat-box-icon" style="color:var(--color-warning)"><i class="fas fa-fire"></i></div>
-                <div class="stat-box-value">${s.streak}</div>
-                <div class="stat-box-label">${i18n.t('stats.streak')}</div>
-                <div class="stat-box-sub">${s.streak} ${i18n.t('stats.days')}</div>
-            </div>
-            <div class="stat-box reactive">
-                <div class="stat-box-icon" style="color:var(--color-primary)"><i class="fas fa-percent"></i></div>
-                <div class="stat-box-value">${s.completionRate}%</div>
-                <div class="stat-box-label">${i18n.t('stats.indicator.completion')}</div>
-            </div>
-            <div class="stat-box reactive">
-                <div class="stat-box-icon" style="color:var(--color-success)"><i class="fas fa-clock"></i></div>
-                <div class="stat-box-value" style="font-size:1.1rem; padding-top:0.25rem; font-weight:700">${formatReadingTime(s.totalChapters * 10)}</div>
-                <div class="stat-box-label">${i18n.t('stats.indicator.readtime')}</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Quick CTA Banner to Full Interactive Graphs Popup -->
     <div class="section-card" style="background:linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(0,242,254,0.05) 100%); border:1px solid var(--border-color); cursor:pointer;" onclick="openStatsDetailModal()">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
