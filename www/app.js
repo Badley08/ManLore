@@ -15,17 +15,28 @@ let promptCallback = null;
 
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof initializeBackend === 'function') {
+        await initializeBackend();
+    }
     i18n.applyAll();
     applyStoredTheme();
     applyStoredSettings();
     setupEventListeners();
 
+    // Request notifications after short delay
+    if (typeof requestPushPermissions === 'function') {
+        setTimeout(requestPushPermissions, 2500);
+    }
+
     // Show auth or app
     const guestMode = localStorage.getItem('manlore_guest_mode') === 'true';
-    const user = !guestMode ? Parse.User.current() : null;
+    const user = !guestMode ? (typeof Parse !== 'undefined' && Parse.User ? Parse.User.current() : null) : null;
 
     if (user || guestMode) {
         await showApp();
+        if (typeof deduplicateCollection === 'function') {
+            await deduplicateCollection();
+        }
     } else {
         showAuth();
     }
@@ -75,7 +86,41 @@ function showUserSettingsUI(user) {
     const em = document.getElementById('settingsEmail');
     if (un) un.value = user.get('username') || '';
     if (em) em.value = user.get('email') || '';
+    // Load avatar
+    if (typeof getUserAvatar === 'function') {
+        updateAvatarDisplay(getUserAvatar());
+    }
 }
+
+function updateAvatarDisplay(base64) {
+    const img = document.getElementById('settingsAvatarImg');
+    const placeholder = document.getElementById('settingsAvatarPlaceholder');
+    const removeBtn = document.getElementById('removeAvatarBtn');
+    if (!img) return;
+    if (base64) {
+        img.src = base64;
+        img.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+        if (removeBtn) removeBtn.style.display = 'inline-flex';
+    } else {
+        img.src = '';
+        img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        if (removeBtn) removeBtn.style.display = 'none';
+    }
+}
+window.updateAvatarDisplay = updateAvatarDisplay;
+
+async function handleRemoveAvatar() {
+    showLoading(true, 'Suppression...');
+    const result = await deleteUserProfileAvatar();
+    showLoading(false);
+    if (result.success) {
+        updateAvatarDisplay('');
+        showToast('Photo de profil supprimée', 'info');
+    }
+}
+window.handleRemoveAvatar = handleRemoveAvatar;
 
 // ============ NAVIGATION ============
 function navigateTo(page) {
@@ -96,7 +141,10 @@ function navigateTo(page) {
 
     if (page === 'stats') renderStats(allItems);
     if (page === 'wishlist') { renderWishlist(); }
-    if (page === 'settings') updateStorageModeUI();
+    if (page === 'settings') {
+        updateStorageModeUI();
+        if (typeof getUserAvatar === 'function') updateAvatarDisplay(getUserAvatar());
+    }
 
     // Close sidebar on mobile
     closeSidebar();
@@ -301,6 +349,9 @@ function openEditModal(itemId) {
 function openViewModal(itemId) {
     const item = allItems.find(i => i.id === itemId);
     if (!item) return;
+    if (window.questManager) {
+        window.questManager.onTitleViewed(itemId);
+    }
     const genres = Array.isArray(item.genres) ? item.genres : (item.genres || '').split(',').map(g => g.trim()).filter(Boolean);
     const rating = parseInt(item.rating) || 0;
     const imgSrc = item.image || item.imageUrl || '';
@@ -411,16 +462,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 const idx = allItems.findIndex(i => i.id === editingItemId);
                 if (idx !== -1) allItems[idx] = { ...allItems[idx], ...itemData };
+                if (window.questManager) window.questManager.onTitleEdited();
                 showToast(i18n.t('toast.item.updated'), 'success');
             }
         } else {
             result = await createItem(itemData);
             if (result.success) {
-                const newItem = result.item instanceof Parse.Object
-                    ? parseItemToObject(result.item)
-                    : result.item;
-                allItems.unshift(newItem);
-                showToast(i18n.t('toast.item.added') + (result.offline ? ' (hors ligne)' : ''), 'success');
+                if (result.isDuplicateMerged) {
+                    const idx = allItems.findIndex(i => String(i.id) === String(result.item?.id));
+                    if (idx !== -1) allItems[idx] = result.item;
+                    showToast(result.message || 'Doublon évité : titre mis à jour avec succès', 'success');
+                } else {
+                    const newItem = result.item instanceof Parse.Object
+                        ? parseItemToObject(result.item)
+                        : result.item;
+                    allItems.unshift(newItem);
+                    showToast(i18n.t('toast.item.added') + (result.offline ? ' (hors ligne)' : ''), 'success');
+                }
             }
         }
         showLoading(false);
@@ -749,8 +807,13 @@ async function handleImportFile(file) {
                     try {
                         const result = await createItem(item);
                         if (result.success) {
-                            const ni = (result.item && typeof result.item.get === 'function') ? parseItemToObject(result.item) : result.item;
-                            allItems.unshift(ni);
+                            if (result.isDuplicateMerged) {
+                                const idx = allItems.findIndex(i => String(i.id) === String(result.item?.id));
+                                if (idx !== -1) allItems[idx] = result.item;
+                            } else {
+                                const ni = (result.item && typeof result.item.get === 'function') ? parseItemToObject(result.item) : result.item;
+                                allItems.unshift(ni);
+                            }
                             imported++;
                         }
                     } catch (itemErr) {
@@ -763,12 +826,16 @@ async function handleImportFile(file) {
                     }
                 }
 
+                if (typeof deduplicateCollection === 'function') {
+                    await deduplicateCollection();
+                }
+
                 updateImportProgressUI(total, total, 'Terminé avec succès !', startTime);
                 await new Promise(r => setTimeout(r, 400));
                 showImportProgressModal(false);
 
                 applyFiltersAndRender();
-                showToast(`✓ Importation terminée (${imported}/${total} titres ajoutés)`, 'success');
+                showToast(`✓ Importation terminée (${imported}/${total} titres traités avec préservation des dates et fusion)`, 'success');
                 if (window.launchRankConfetti && imported > 5) {
                     window.launchRankConfetti();
                 }
@@ -935,16 +1002,34 @@ function setupEventListeners() {
         else showToast(result.error || 'Erreur', 'error');
     });
 
+    function switchAuthTab(tab) {
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const tabLogin = document.getElementById('tabBtnLogin');
+        const tabSignup = document.getElementById('tabBtnSignup');
+
+        if (tab === 'signup') {
+            loginForm?.classList.add('hidden');
+            signupForm?.classList.remove('hidden');
+            if (tabLogin) tabLogin.className = 'btn-secondary';
+            if (tabSignup) tabSignup.className = 'btn-primary';
+        } else {
+            signupForm?.classList.add('hidden');
+            loginForm?.classList.remove('hidden');
+            if (tabLogin) tabLogin.className = 'btn-primary';
+            if (tabSignup) tabSignup.className = 'btn-secondary';
+        }
+    }
+    window.switchAuthTab = switchAuthTab;
+
     document.getElementById('showSignup')?.addEventListener('click', e => {
         e.preventDefault();
-        document.getElementById('loginForm').classList.add('hidden');
-        document.getElementById('signupForm').classList.remove('hidden');
+        switchAuthTab('signup');
     });
 
     document.getElementById('showLogin')?.addEventListener('click', e => {
         e.preventDefault();
-        document.getElementById('signupForm').classList.add('hidden');
-        document.getElementById('loginForm').classList.remove('hidden');
+        switchAuthTab('login');
     });
 
     // Guest mode
@@ -974,6 +1059,26 @@ function setupEventListeners() {
     };
     document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
     document.getElementById('settingsLogoutBtn')?.addEventListener('click', handleLogout);
+
+    // Avatar file upload handler
+    document.getElementById('avatarFileInput')?.addEventListener('change', async e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            showToast('Image trop grande (max 3 Mo)', 'warning');
+            return;
+        }
+        const base64 = await readFileAsDataURL(file);
+        showLoading(true, 'Enregistrement de la photo...');
+        const result = await updateUserProfileAvatar(base64);
+        showLoading(false);
+        if (result.success) {
+            updateAvatarDisplay(base64);
+            showToast('Photo de profil mise à jour !', 'success');
+        } else {
+            showToast('Erreur lors de l\'enregistrement', 'error');
+        }
+    });
 
     // Add button
     document.getElementById('addBtn')?.addEventListener('click', openAddModal);
@@ -1141,10 +1246,12 @@ function setupEventListeners() {
         );
     });
 
-    // Close modals on backdrop click
-    ['itemModal','viewModal','passwordModal','wishlistModal','featureModal','rouletteModal'].forEach(id => {
-        document.getElementById(id)?.addEventListener('click', e => {
-            if (e.target.id === id) closeModal(id);
+    // Close modals on backdrop / outside click
+    document.querySelectorAll('.modal').forEach(modalEl => {
+        modalEl.addEventListener('click', e => {
+            if (e.target === modalEl || e.target.classList.contains('modal-backdrop')) {
+                closeModal(modalEl.id);
+            }
         });
     });
 
@@ -1155,7 +1262,7 @@ function setupEventListeners() {
     // Keyboard ESC
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
-            ['itemModal','viewModal','passwordModal','wishlistModal','featureModal','rouletteModal'].forEach(closeModal);
+            document.querySelectorAll('.modal.active').forEach(m => closeModal(m.id));
             closeConfirmDialog();
             closePromptDialog();
             closeSidebar();

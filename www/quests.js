@@ -261,6 +261,67 @@ class QuestManager {
         return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
     }
 
+    getStreak() {
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const lastDate = this.data.lastStreakDate;
+        let count = this.data.streakCount || 0;
+
+        if (!lastDate) return count > 0 ? count : 1;
+        if (lastDate === today) return count;
+        if (lastDate === yesterday) return count;
+        return 0; // Streak expired
+    }
+
+    recordDailyActivity() {
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const lastDate = this.data.lastStreakDate;
+
+        if (!lastDate) {
+            this.data.streakCount = 1;
+            this.data.lastStreakDate = today;
+        } else if (lastDate === today) {
+            // Already counted today
+        } else if (lastDate === yesterday) {
+            this.data.streakCount = (this.data.streakCount || 0) + 1;
+            this.data.lastStreakDate = today;
+            if (this.data.streakCount > (this.data.longestStreak || 0)) {
+                this.data.longestStreak = this.data.streakCount;
+            }
+            if (window.showToast && this.data.streakCount > 1) {
+                window.showToast(`🔥 Série active : ${this.data.streakCount} jours consécutifs !`, 'success');
+            }
+        } else {
+            // Broken streak
+            this.data.streakCount = 1;
+            this.data.lastStreakDate = today;
+        }
+
+        if (this.data.streakCount % 7 === 0) {
+            this.data.completedDailyStreaks = (this.data.completedDailyStreaks || 0) + 1;
+        }
+
+        this.checkStreakNotification();
+        this.saveProgression();
+    }
+
+    checkStreakNotification() {
+        const today = new Date().toISOString().split('T')[0];
+        const lastDate = this.data.lastStreakDate;
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        // If after 18h and user hasn't logged streak activity today, warn them!
+        if (lastDate !== today && currentHour >= 18) {
+            if (window.sendPushNotification) {
+                const title = (window.i18n && window.i18n.t('notif.streak.title')) || '⚠️ ManLore streak at risk!';
+                const body = (window.i18n && window.i18n.t('notif.streak.body')) || 'Your daily streak is about to expire! Complete your daily quests before midnight!';
+                window.sendPushNotification(title, body, 'streak-warning');
+            }
+        }
+    }
+
     checkResets() {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
@@ -282,6 +343,8 @@ class QuestManager {
             this.data.titlesAddedToday = 0;
             this.data.titlesEditedToday = 0;
             this.data.titlesDeletedToday = 0;
+            this.data.chaptersReadToday = 0;
+            this.data.titlesRatedToday = 0;
             this.data.titlesViewedToday = [];
             this.data.actionsToday = new Set();
         }
@@ -292,6 +355,8 @@ class QuestManager {
             this.data.titlesAddedWeek = 0;
             this.data.titlesEditedWeek = 0;
             this.data.titlesDeletedWeek = 0;
+            this.data.chaptersReadWeek = 0;
+            this.data.titlesRatedWeek = 0;
             this.data.titlesViewedWeek = [];
             this.data.actionsWeek = new Set();
             this.data.activeDaysThisWeek = new Set([today]);
@@ -303,6 +368,8 @@ class QuestManager {
             this.data.titlesAddedMonth = 0;
             this.data.titlesEditedMonth = 0;
             this.data.titlesDeletedMonth = 0;
+            this.data.chaptersReadMonth = 0;
+            this.data.titlesRatedMonth = 0;
             this.data.titlesViewedMonth = [];
             this.data.actionsMonth = new Set();
             this.data.activeDaysThisMonth = new Set([today]);
@@ -314,6 +381,8 @@ class QuestManager {
             this.data.titlesAddedYear = 0;
             this.data.titlesEditedYear = 0;
             this.data.titlesDeletedYear = 0;
+            this.data.chaptersReadYear = 0;
+            this.data.titlesRatedYear = 0;
             this.data.titlesViewedYear = [];
             this.data.activeDaysThisYear = new Set([today]);
         }
@@ -322,10 +391,12 @@ class QuestManager {
         this.data.activeDaysThisMonth.add(today);
         this.data.activeDaysThisYear.add(today);
 
+        this.recordDailyActivity();
         this.saveProgression();
     }
 
     initActiveTimer() {
+        this.checkResets();
         setInterval(() => {
             if (document.visibilityState === 'visible') {
                 this.checkResets();
@@ -377,11 +448,14 @@ class QuestManager {
     getRanks() {
         return this.questData?.rank_system?.ranks || [
             { rank: "E", title: "Novice du Lore", xp_required: 0, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path></svg>", color: "#95a5a6" },
-            { rank: "D", title: "Lecteur Curieux", xp_required: 500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"14.5 17.5 3 6 3 3 6 3 17.5 14.5\"></polyline><line x1=\"13\" y1=\"19\" x2=\"19\" y2=\"13\"></line><line x1=\"16\" y1=\"16\" x2=\"20\" y2=\"20\"></line><line x1=\"19\" y1=\"21\" x2=\"21\" y2=\"19\"></line></svg>", color: "#2ecc71" },
-            { rank: "C", title: "Chasseur de Chapitres", xp_required: 1500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m14.5 17.5-11.5-11.5v-3h3l11.5 11.5\"></path><path d=\"m9.5 17.5 11.5-11.5v-3h-3l-11.5 11.5\"></path><line x1=\"5\" y1=\"19\" x2=\"19\" y2=\"5\"></line></svg>", color: "#3498db" },
-            { rank: "B", title: "Explorateur d'Univers", xp_required: 3000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path><path d=\"M12 8v8\"></path><path d=\"M8 12h8\"></path></svg>", color: "#9b59b6" },
-            { rank: "A", title: "Érudit des Mondes", xp_required: 5500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14\"></path></svg>", color: "#f39c12" },
-            { rank: "S", title: "Seigneur du ManLore", xp_required: 8500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"></path></svg>", color: "#e74c3c" }
+            { rank: "D", title: "Lecteur Curieux", xp_required: 1200, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"14.5 17.5 3 6 3 3 6 3 17.5 14.5\"></polyline><line x1=\"13\" y1=\"19\" x2=\"19\" y2=\"13\"></line><line x1=\"16\" y1=\"16\" x2=\"20\" y2=\"20\"></line><line x1=\"19\" y1=\"21\" x2=\"21\" y2=\"19\"></line></svg>", color: "#2ecc71" },
+            { rank: "C", title: "Chasseur de Chapitres", xp_required: 3500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m14.5 17.5-11.5-11.5v-3h3l11.5 11.5\"></path><path d=\"m9.5 17.5 11.5-11.5v-3h-3l-11.5 11.5\"></path><line x1=\"5\" y1=\"19\" x2=\"19\" y2=\"5\"></line></svg>", color: "#3498db" },
+            { rank: "B", title: "Explorateur d'Univers", xp_required: 8000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path><path d=\"M12 8v8\"></path><path d=\"M8 12h8\"></path></svg>", color: "#9b59b6" },
+            { rank: "A", title: "Érudit des Mondes", xp_required: 15000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14\"></path></svg>", color: "#f39c12" },
+            { rank: "S", title: "Seigneur du ManLore", xp_required: 25000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"></path></svg>", color: "#e74c3c" },
+            { rank: "S+", title: "Monarque Suprême", xp_required: 40000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"></polygon></svg>", color: "#ff3838" },
+            { rank: "SS", title: "Divinité du Lore", xp_required: 65000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m4.93 4.93 4.24 4.24\"></path><path d=\"m14.83 9.17 4.24-4.24\"></path><path d=\"m14.83 14.83 4.24 4.24\"></path><path d=\"m9.17 14.83-4.24 4.24\"></path><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg>", color: "#ffd32a" },
+            { rank: "SSS", title: "Souverain Cosmique", xp_required: 100000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v20\"></path><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"></path><circle cx=\"12\" cy=\"12\" r=\"9\"></circle></svg>", color: "#ff007f" }
         ];
     }
 
@@ -547,12 +621,27 @@ class QuestManager {
 
     onChapterRead(count = 1) {
         this.checkResets();
+        this.data.chaptersReadToday = (this.data.chaptersReadToday || 0) + count;
+        this.data.chaptersReadWeek = (this.data.chaptersReadWeek || 0) + count;
+        this.data.chaptersReadMonth = (this.data.chaptersReadMonth || 0) + count;
+        this.data.chaptersReadYear = (this.data.chaptersReadYear || 0) + count;
+        this.data.actionsToday?.add('chapter_read');
+        this.data.actionsWeek?.add('chapter_read');
+        this.data.actionsMonth?.add('chapter_read');
         this.addExp(count * 5, `${count} chapitre(s) lu(s)`);
+        this.saveProgression();
     }
 
     onTitleRated() {
         this.checkResets();
+        this.data.titlesRatedToday = (this.data.titlesRatedToday || 0) + 1;
+        this.data.titlesRatedWeek = (this.data.titlesRatedWeek || 0) + 1;
+        this.data.titlesRatedMonth = (this.data.titlesRatedMonth || 0) + 1;
+        this.data.actionsToday?.add('title_rated');
+        this.data.actionsWeek?.add('title_rated');
+        this.data.actionsMonth?.add('title_rated');
         this.addExp(15, 'Titre noté');
+        this.saveProgression();
     }
 
     getQuestsForTab(tabKey) {
@@ -615,13 +704,32 @@ class QuestManager {
                 current = period === 'daily' ? (this.data.actionsToday?.size || 0) :
                           period === 'weekly' ? (this.data.actionsWeek?.size || 0) : (this.data.actionsMonth?.size || 0);
                 break;
+            case 'daily_activity_streak':
+                current = this.getStreak();
+                break;
+            case 'completed_daily_streaks':
+                current = this.data.completedDailyStreaks || Math.floor((this.getStreak() || 0) / 7);
+                break;
+            case 'chapters_read':
+                current = period === 'daily' ? (this.data.chaptersReadToday || 0) :
+                          period === 'weekly' ? (this.data.chaptersReadWeek || 0) :
+                          period === 'monthly' ? (this.data.chaptersReadMonth || 0) : (this.data.chaptersReadYear || 0);
+                break;
+            case 'rating_given':
+                current = period === 'daily' ? (this.data.titlesRatedToday || 0) :
+                          period === 'weekly' ? (this.data.titlesRatedWeek || 0) : (this.data.titlesRatedMonth || 0);
+                break;
+            case 'collection_size':
+            case 'titles_in_collection':
+                current = typeof allItems !== 'undefined' ? allItems.length : (this.data.titlesAddedYear || 0);
+                break;
             case 'compound':
                 const conds = t.conditions || [];
                 let allMet = true;
                 conds.forEach(c => {
-                    if (c.includes('title_add') && this.data.titlesAddedToday < 1) allMet = false;
-                    if (c.includes('title_edit') && this.data.titlesEditedToday < 1) allMet = false;
-                    if (c.includes('title_view') && this.data.titlesViewedToday.length < 1) allMet = false;
+                    if (c.includes('title_add') && (this.data.titlesAddedToday || 0) < 1) allMet = false;
+                    if (c.includes('title_edit') && (this.data.titlesEditedToday || 0) < 1) allMet = false;
+                    if (c.includes('title_view') && (!this.data.titlesViewedToday || this.data.titlesViewedToday.length < 1)) allMet = false;
                 });
                 current = allMet ? 1 : 0;
                 target = 1;

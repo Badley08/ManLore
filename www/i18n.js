@@ -253,7 +253,13 @@ const TRANSLATIONS = {
         'toast.wishlist.removed': 'Retiré de la liste',
         'toast.vote.counted': 'Vote enregistré !',
         'toast.offline': 'Hors ligne — données sauvegardées localement',
-        'toast.guest.feature': 'Connectez-vous pour accéder à cette fonctionnalité',
+        // Notifications
+        'notif.streak.title': '⚠️ Série ManLore en danger !',
+        'notif.streak.body': 'Votre streak quotidienne va bientôt expirer ! Venez valider vos quêtes du jour avant minuit !',
+        'notif.quest.title': '🎯 Quêtes disponibles',
+        'notif.quest.body': 'De nouvelles quêtes vous attendent pour gagner de l\'EXP !',
+        'notif.announcement.title': '📢 Annonce ManLore',
+        'notif.announcement.body': 'Mise à jour et nouvelles fonctionnalités disponibles !',
         // Import progress modal
         'data.import.progressTitle': 'Importation des données',
         'data.import.imported': 'Importés',
@@ -495,8 +501,13 @@ const TRANSLATIONS = {
         'toast.wishlist.added': 'Added to wishlist',
         'toast.wishlist.removed': 'Removed from list',
         'toast.vote.counted': 'Vote recorded!',
-        'toast.offline': 'Offline — data saved locally',
-        'toast.guest.feature': 'Log in to access this feature',
+        // Notifications
+        'notif.streak.title': '⚠️ ManLore streak at risk!',
+        'notif.streak.body': 'Your daily streak is about to expire! Complete your daily quests before midnight!',
+        'notif.quest.title': '🎯 Quests available',
+        'notif.quest.body': 'New quests are waiting for you to earn EXP!',
+        'notif.announcement.title': '📢 ManLore Announcement',
+        'notif.announcement.body': 'Update and new features available!',
         // Import progress modal
         'data.import.progressTitle': 'Importing data',
         'data.import.imported': 'Imported',
@@ -736,10 +747,13 @@ const TRANSLATIONS = {
         'toast.storage.changed': 'Modo de almacenamiento cambiado',
         'toast.migrated': '¡Migración exitosa!',
         'toast.wishlist.added': 'Añadido a la lista de deseos',
-        'toast.wishlist.removed': 'Eliminado de la lista',
-        'toast.vote.counted': '¡Voto registrado!',
-        'toast.offline': 'Sin conexión — datos guardados localmente',
-        'toast.guest.feature': 'Inicia sesión para acceder a esta función',
+        // Notifications
+        'notif.streak.title': '⚠️ ¡Racha de ManLore en peligro!',
+        'notif.streak.body': '¡Tu racha diaria está a punto de caducar! ¡Completa tus misiones diarias antes de medianoche!',
+        'notif.quest.title': '🎯 Misiones disponibles',
+        'notif.quest.body': '¡Nuevas misiones te esperan para ganar EXP!',
+        'notif.announcement.title': '📢 Anuncio de ManLore',
+        'notif.announcement.body': '¡Actualización y nuevas funciones disponibles!',
         // Import progress modal
         'data.import.progressTitle': 'Importando datos',
         'data.import.imported': 'Importados',

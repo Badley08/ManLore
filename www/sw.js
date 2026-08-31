@@ -118,4 +118,76 @@ self.addEventListener('fetch', event => {
     );
 });
 
-console.log('[SW] Service Worker v5.0.1 loaded');
+// ============ PUSH NOTIFICATIONS & MESSAGES ============
+self.addEventListener('push', event => {
+    let data = { title: 'ManLore', body: 'New notification from ManLore' };
+    try {
+        if (event.data) {
+            data = event.data.json();
+        }
+    } catch {
+        if (event.data) data.body = event.data.text();
+    }
+
+    let finalTitle = data.title || 'ManLore';
+    let finalBody = data.body || '';
+
+    // Support multilingue avec fallback Anglais si la langue n'est pas disponible
+    const clientLang = (self.navigator?.language || 'en').split('-')[0].toLowerCase();
+    if (data[clientLang] && typeof data[clientLang] === 'object') {
+        finalTitle = data[clientLang].title || finalTitle;
+        finalBody = data[clientLang].body || finalBody;
+    } else if (data.en && typeof data.en === 'object') {
+        finalTitle = data.en.title || finalTitle;
+        finalBody = data.en.body || finalBody;
+    } else if (data.fr && typeof data.fr === 'object') {
+        finalTitle = data.fr.title || finalTitle;
+        finalBody = data.fr.body || finalBody;
+    } else if (data.es && typeof data.es === 'object') {
+        finalTitle = data.es.title || finalTitle;
+        finalBody = data.es.body || finalBody;
+    }
+
+    const options = {
+        body: finalBody,
+        icon: './manlore-logo-192.png',
+        badge: './manlore-logo-96.png',
+        vibrate: [100, 50, 100],
+        data: data,
+        tag: data.tag || 'manlore-notification'
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(finalTitle, options)
+    );
+});
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            for (const client of clientList) {
+                if (client.url && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow('./');
+            }
+        })
+    );
+});
+
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+        const { title, body, tag } = event.data;
+        self.registration.showNotification(title || 'ManLore', {
+            body: body || '',
+            icon: './manlore-logo-192.png',
+            badge: './manlore-logo-96.png',
+            tag: tag || 'manlore-msg'
+        });
+    }
+});
+
+console.log('[SW] Service Worker v6.0.1 loaded with Push Notification support');

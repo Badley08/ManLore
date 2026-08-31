@@ -9,7 +9,7 @@ class AppLogger {
     constructor() {
         this.storageKey = 'com.karlitodev.manlore/logs';
         this.legacyKey = 'manlore_diagnostic_logs';
-        this.maxLocalLogs = 200;
+        this.maxLocalLogs = 10;
         this.syncIntervalMs = 7 * 24 * 60 * 60 * 1000; // 7 jours
         this.lastSyncKey = 'manlore_last_log_sync';
         this.buffer = this.loadLocalLogs();

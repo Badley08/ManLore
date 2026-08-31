@@ -79,26 +79,55 @@
     --bottom-nav-height: 64px;
 }
 
-/* ============ THEME: NOIR TOTAL ============ */
+/* ============ THEME: NOIR TOTAL (PITCH BLACK & PURE GOLD) ============ */
 [data-theme="dark-total"] {
     --bg-primary: #000000;
-    --bg-secondary: #080808;
-    --bg-accent: #111111;
-    --bg-card: rgba(12, 12, 12, 0.9);
-    --bg-input: rgba(20, 20, 20, 0.8);
-    --bg-glass: rgba(10, 10, 10, 0.85);
-    --bg-header: rgba(0, 0, 0, 0.97);
-    --bg-sidebar: rgba(5, 5, 5, 0.99);
-    --bg-modal-content: #0a0a0a;
-    --color-primary: #d4af37;
-    --color-primary-rgb: 212, 175, 55;
-    --color-secondary: #f3e5ab;
-    --border-color: rgba(212, 175, 55, 0.2);
-    --border-card: rgba(212, 175, 55, 0.15);
-    --border-input: rgba(212, 175, 55, 0.25);
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.8);
-    --text-secondary: #888899;
-    --text-muted: #555566;
+    --bg-secondary: #050505;
+    --bg-accent: #0c0c0c;
+    --bg-card: #0a0a0a;
+    --bg-input: #121212;
+    --bg-glass: rgba(8, 8, 8, 0.95);
+    --bg-header: rgba(0, 0, 0, 0.98);
+    --bg-sidebar: rgba(3, 3, 3, 0.99);
+    --bg-modal-content: #070707;
+    --color-primary: #ffd700;
+    --color-primary-rgb: 255, 215, 0;
+    --color-secondary: #f6e58d;
+    --color-accent: #d4af37;
+    --gradient-primary: linear-gradient(135deg, #d4af37 0%, #ffd700 50%, #f39c12 100%);
+    --gradient-card: linear-gradient(145deg, rgba(20, 20, 20, 0.9) 0%, rgba(5, 5, 5, 0.95) 100%);
+    --border-color: rgba(212, 175, 55, 0.3);
+    --border-card: rgba(212, 175, 55, 0.22);
+    --border-input: rgba(212, 175, 55, 0.35);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.95), 0 0 15px rgba(212, 175, 55, 0.08);
+    --shadow-hover: 0 12px 40px rgba(0, 0, 0, 1), 0 0 25px rgba(255, 215, 0, 0.2);
+    --shadow-btn: 0 6px 20px rgba(212, 175, 55, 0.35);
+    --text-primary: #ffffff;
+    --text-secondary: #e0d0b0;
+    --text-muted: #8a8070;
+}
+
+[data-theme="dark-total"] .btn-primary {
+    background: linear-gradient(135deg, #d4af37, #f39c12);
+    color: #000000;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+[data-theme="dark-total"] .item-card:hover {
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);
+}
+
+[data-theme="dark-total"] .nav-item.active,
+[data-theme="dark-total"] .bottom-nav-item.active {
+    color: #ffd700;
+}
+
+[data-theme="dark-total"] .genre-tag {
+    background: rgba(212, 175, 55, 0.12);
+    border-color: rgba(212, 175, 55, 0.3);
+    color: #ffd700;
 }
 
 /* ============ THEME: CLAIR ============ */

@@ -167,6 +167,12 @@ function loadUserSessionFromLocal() {
     return null;
 }
 
+// Initialisation immédiate de la session utilisateur
+currentUser = loadUserSessionFromLocal();
+if (currentUser) {
+    console.log('[Auth] Session active restaurée pour :', currentUser.get('username') || currentUser.id);
+}
+
 // ============================================
 // COMPATIBILITÉ SDK PARSE GLOBAL
 // ============================================
@@ -454,7 +460,45 @@ function getCurrentUser() {
     return currentUser;
 }
 
-// ============ STORAGE MODE & INSTANT LOCAL CACHE ============
+// ============ GESTION DE LA PHOTO DE PROFIL (BASE64) ============
+
+function getUserAvatar() {
+    if (currentUser && currentUser.get('avatarBase64')) {
+        return currentUser.get('avatarBase64');
+    }
+    return localStorage.getItem('manlore_user_avatar') || '';
+}
+
+async function updateUserProfileAvatar(base64Data) {
+    try {
+        localStorage.setItem('manlore_user_avatar', base64Data || '');
+        if (currentUser) {
+            currentUser.set('avatarBase64', base64Data || '');
+            saveUserSessionToLocal(currentUser);
+
+            if (navigator.onLine && currentUser.sessionToken) {
+                const endpoint = `/users/${currentUser.id}`;
+                const res = await back4appApiCall(
+                    endpoint,
+                    'PUT',
+                    { avatarBase64: base64Data || '' },
+                    currentUser.getSessionToken()
+                );
+                if (res.ok) {
+                    console.log('[Avatar] Photo de profil synchronisée avec Back4App avec succès');
+                }
+            }
+        }
+        return { success: true, avatar: base64Data };
+    } catch (e) {
+        console.error('[Avatar Error]', e);
+        return { success: false, error: e.message };
+    }
+}
+
+async function deleteUserProfileAvatar() {
+    return await updateUserProfileAvatar('');
+}
 
 function setStorageMode(mode) {
     storageMode = mode;
@@ -516,7 +560,7 @@ async function fetchFromCloud() {
                 chapters: r.chapters || 0,
                 notes: r.notes || '',
                 malId: r.malId || '',
-                createdAt: r.createdAt || new Date().toISOString(),
+                createdAt: r.originalCreatedAt || r.createdAt || new Date().toISOString(),
                 updatedAt: r.updatedAt || new Date().toISOString()
             }));
 
@@ -530,7 +574,182 @@ async function fetchFromCloud() {
     }
 }
 
+// ============ DUPLICATE DETECTION & MERGING (CASE-INSENSITIVE a = A) ============
+function normalizeTitle(t) {
+    if (!t) return '';
+    return String(t)
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/gi, '')
+        .replace(/\s+/g, ' ');
+}
+window.normalizeTitle = normalizeTitle;
+
+async function deduplicateCollection() {
+    console.log('[Deduplication] Analyse des doublons dans la collection...');
+    const items = loadFromLocalStorage();
+    const map = new Map();
+    const toDelete = [];
+    let mergedCount = 0;
+
+    for (const item of items) {
+        const norm = normalizeTitle(item.title);
+        if (!norm) continue;
+
+        if (map.has(norm)) {
+            const existing = map.get(norm);
+            // Merge into existing
+            const highestChapters = Math.max(existing.chapters || 0, item.chapters || 0);
+            const bestRating = Math.max(existing.rating || 0, item.rating || 0);
+            const bestImage = existing.image || existing.imageUrl || item.image || item.imageUrl || '';
+            const mergedNotes = (item.notes && item.notes.length > (existing.notes || '').length) ? item.notes : existing.notes;
+            const mergedGenres = Array.from(new Set([...(existing.genres || []), ...(item.genres || [])]));
+            const oldestDate = (existing.createdAt && item.createdAt && new Date(item.createdAt) < new Date(existing.createdAt)) ? item.createdAt : existing.createdAt;
+
+            existing.chapters = highestChapters;
+            existing.rating = bestRating;
+            existing.image = bestImage;
+            existing.imageUrl = bestImage;
+            existing.notes = mergedNotes;
+            existing.genres = mergedGenres;
+            existing.createdAt = oldestDate;
+
+            toDelete.push(item.id);
+            mergedCount++;
+        } else {
+            map.set(norm, { ...item });
+        }
+    }
+
+    if (mergedCount > 0) {
+        // Save cleaned items
+        const cleanList = Array.from(map.values());
+        localStorage.setItem('manlore_items', JSON.stringify(cleanList));
+
+        // Delete cloud duplicates
+        for (const id of toDelete) {
+            try {
+                if (currentUser && !String(id).startsWith('local_')) {
+                    await back4appApiCall(`/classes/Items/${id}`, 'DELETE', null, currentUser.getSessionToken());
+                }
+            } catch (e) {
+                console.warn('[Deduplication] Note delete duplicate cloud:', id, e);
+            }
+        }
+
+        // Update keepers on cloud
+        for (const item of cleanList) {
+            try {
+                if (currentUser && !String(item.id).startsWith('local_')) {
+                    await updateItem(item.id, item);
+                }
+            } catch (e) {}
+        }
+
+        console.log(`[Deduplication] ${mergedCount} doublons fusionnés et nettoyés avec succès.`);
+        if (window.showToast) {
+            window.showToast(`✨ Nettoyage : ${mergedCount} doublon(s) fusionné(s) sans perte de données`, 'success');
+        }
+    }
+
+    return { mergedCount, totalRemaining: map.size };
+}
+window.deduplicateCollection = deduplicateCollection;
+
+// ============================================
+// PUSH NOTIFICATIONS & RAPPELS PROACTIFS
+// ============================================
+async function requestPushPermissions() {
+    try {
+        if ('Notification' in window) {
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+                console.log('[Push] Permissions notifications accordées');
+                if (window.showToast) window.showToast('🔔 Notifications activées', 'success');
+                return true;
+            }
+        }
+    } catch (e) {
+        console.warn('[Push] Notification permission note:', e);
+    }
+    return false;
+}
+window.requestPushPermissions = requestPushPermissions;
+
+function sendPushNotification(title, body, tag = 'manlore-alert') {
+    try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title || 'ManLore',
+                    body: body || '',
+                    tag: tag
+                });
+                return;
+            }
+            new Notification(title || 'ManLore', {
+                body: body || '',
+                icon: 'manlore-logo-192.png',
+                tag: tag
+            });
+        }
+    } catch (e) {
+        console.log('[Push Notification Note]', e);
+    }
+}
+window.sendPushNotification = sendPushNotification;
+
 async function createItem(itemData) {
+    if (!itemData || !itemData.title) return { success: false, error: 'Titre manquant' };
+
+    // --- VÉRIFICATION ANTI-DUPLICATION AVEC FUSION INTELLIGENTE ---
+    const normNew = normalizeTitle(itemData.title);
+    const existingList = typeof allItems !== 'undefined' && allItems.length > 0 ? allItems : loadFromLocalStorage();
+    const existing = existingList.find(i => normalizeTitle(i.title) === normNew);
+
+    if (existing) {
+        const oldChapters = existing.chapters || 0;
+        const incomingChapters = typeof itemData.chapters === 'number' ? itemData.chapters : (parseInt(itemData.chapters, 10) || 0);
+        const maxChapters = Math.max(oldChapters, incomingChapters);
+        const chaptersDiff = maxChapters - oldChapters;
+
+        const mergedUpdates = {
+            chapters: maxChapters,
+            rating: itemData.rating || existing.rating || 0,
+            status: itemData.status || existing.status,
+            genres: Array.from(new Set([...(existing.genres || []), ...(itemData.genres || [])])),
+            image: itemData.image || itemData.imageUrl || existing.image || existing.imageUrl || '',
+            imageUrl: itemData.imageUrl || itemData.image || existing.imageUrl || existing.image || '',
+            link: itemData.link || existing.link || '',
+            notes: (itemData.notes && itemData.notes.length > (existing.notes || '').length) ? itemData.notes : (existing.notes || ''),
+            malId: itemData.malId || existing.malId || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        await updateItem(existing.id, mergedUpdates);
+
+        if (chaptersDiff > 0 && window.questManager) {
+            window.questManager.onChapterRead(chaptersDiff);
+        }
+
+        const mergedItem = { ...existing, ...mergedUpdates };
+        const idx = existingList.findIndex(i => String(i.id) === String(existing.id));
+        if (idx !== -1) existingList[idx] = mergedItem;
+
+        return { 
+            success: true, 
+            item: mergedItem, 
+            isDuplicateMerged: true, 
+            oldChapters, 
+            newChapters: maxChapters,
+            message: `Titre existant détecté : chapitres mis à jour (${oldChapters} → ${maxChapters})`
+        };
+    }
+
+    // Si nouveau titre unique
     if (window.questManager) {
         window.questManager.onTitleAdded();
     }
@@ -543,12 +762,12 @@ async function createItem(itemData) {
 
 function createItemLocal(itemData) {
     try {
-        const tempId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const tempId = itemData.id || ('local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
         const item = {
-            id: tempId,
             ...itemData,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            id: tempId,
+            createdAt: itemData.createdAt || new Date().toISOString(),
+            updatedAt: itemData.updatedAt || new Date().toISOString()
         };
         const items = loadFromLocalStorage();
         items.unshift(item);
@@ -568,16 +787,17 @@ async function createItemCloud(itemData) {
 
         const payload = {
             title: itemData.title,
-            type: itemData.type,
-            status: itemData.status,
+            type: itemData.type || 'Manga',
+            status: itemData.status || 'En cours',
             rating: itemData.rating || 0,
             genres: itemData.genres || [],
             link: itemData.link || '',
-            image: itemData.image || '',
-            imageUrl: itemData.imageUrl || '',
+            image: itemData.image || itemData.imageUrl || '',
+            imageUrl: itemData.imageUrl || itemData.image || '',
             chapters: itemData.chapters || 0,
             notes: itemData.notes || '',
             malId: itemData.malId || '',
+            originalCreatedAt: itemData.createdAt || null,
             userId: { __type: 'Pointer', className: '_User', objectId: currentUser.id },
             ACL: {
                 [currentUser.id]: { read: true, write: true }
@@ -590,8 +810,8 @@ async function createItemCloud(itemData) {
             const plain = {
                 id: res.data.objectId,
                 ...payload,
-                createdAt: res.data.createdAt || new Date().toISOString(),
-                updatedAt: res.data.createdAt || new Date().toISOString()
+                createdAt: itemData.createdAt || res.data.createdAt || new Date().toISOString(),
+                updatedAt: itemData.updatedAt || res.data.createdAt || new Date().toISOString()
             };
             saveToLocalStorage(plain);
             return { success: true, item: plain };
@@ -680,6 +900,7 @@ async function deleteItem(itemId) {
 function parseItemToObject(item) {
     if (!item) return null;
     if (typeof item.get !== 'function') return item;
+    const originalCreated = item.get('originalCreatedAt');
     return {
         id: item.id || item.objectId,
         title: item.get('title') || '',
@@ -693,7 +914,7 @@ function parseItemToObject(item) {
         chapters: item.get('chapters') || 0,
         notes: item.get('notes') || '',
         malId: item.get('malId') || '',
-        createdAt: item.createdAt ? (typeof item.createdAt.toISOString === 'function' ? item.createdAt.toISOString() : item.createdAt) : new Date().toISOString(),
+        createdAt: originalCreated || (item.createdAt ? (typeof item.createdAt.toISOString === 'function' ? item.createdAt.toISOString() : item.createdAt) : new Date().toISOString()),
         updatedAt: item.updatedAt ? (typeof item.updatedAt.toISOString === 'function' ? item.updatedAt.toISOString() : item.updatedAt) : new Date().toISOString()
     };
 }
@@ -937,4 +1158,30 @@ function updateOnlineStatus(online) {
 window.addEventListener('online', () => updateOnlineStatus(true));
 window.addEventListener('offline', () => updateOnlineStatus(false));
 
-console.log('[Logic v5.0.1] Dedicated Cloud Engine & Universal Exporter loaded');
+// ============ NOTIFICATIONS SERVEUR MULTILINGUES ============
+// Construire un payload push multilingue (fr/en/es) envoyé depuis Back4App
+// Format compatible avec sw.js qui sélectionne automatiquement la bonne langue.
+// Usage: createMultilingualNotification('streak', 'Votre série expire !', 'Your streak expires!', '¡Tu racha expira!')
+function createMultilingualNotification(key, fr, en, es, tag) {
+    return {
+        tag: tag || key,
+        fr: { title: i18n ? i18n.setLang && TRANSLATIONS?.fr?.[`notif.${key}.title`] || fr : fr, body: fr },
+        en: { title: en, body: en },
+        es: { title: es, body: es },
+    };
+}
+
+// sendServerAnnouncementNotification — à appeler depuis Back4App Cloud Code
+// Format: { key, fr: { title, body }, en: { title, body }, es: { title, body }, tag }
+async function sendServerAnnouncementNotification(payload) {
+    if (typeof sendPushNotification === 'function') {
+        const lang = (i18n && i18n.lang) || 'fr';
+        const p = payload[lang] || payload.en || payload.fr || {};
+        const title = p.title || 'ManLore';
+        const body = p.body || '';
+        await sendPushNotification(title, body, payload.tag || 'announcement');
+    }
+}
+window.sendServerAnnouncementNotification = sendServerAnnouncementNotification;
+
+console.log('[Logic v6.0.1] Dedicated Cloud Engine & Universal Exporter loaded');

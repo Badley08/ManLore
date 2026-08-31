@@ -1,2 +1,19 @@
 /build/*
 !/build/.npmkeep
+
+# Ignore node_modules
+/node_modules
+
+# Ignore .vscode folder
+.vscode
+
+# Ignore logs
+/android/app/logs
+
+# Ignore build outputs
+/android/app/build
+/android/build
+/app/build
+
+# Ignore Gradle cache
+.gradle

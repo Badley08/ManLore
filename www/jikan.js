@@ -1,6 +1,6 @@
 /* ============================================
    MANLORE v5.0.1 - JIKAN.JS
-   Jikan v4 + Kitsu Multi-Search + Auto-Translate + SFW Filter + Telemetry
+   Jikan v4 + Kitsu Multi-Search + Auto-Translate + NSFW Filter + Telemetry
    ============================================ */
 
 'use strict';
