@@ -598,6 +598,68 @@ function normalizeTitle(t) {
         .replace(/[^\w\s]/gi, '')
         .replace(/\s+/g, ' ');
 }
+
+async function autoRemoveDuplicates(items) {
+    if (!items || items.length === 0) return items;
+    const grouped = {};
+    const toDelete = [];
+    const keptItems = [];
+
+    // Group by normalized title
+    for (const item of items) {
+        const norm = normalizeTitle(item.title);
+        if (!norm) {
+            keptItems.push(item);
+            continue;
+        }
+        if (!grouped[norm]) {
+            grouped[norm] = [];
+        }
+        grouped[norm].push(item);
+    }
+
+    // Process groups
+    for (const norm in grouped) {
+        const group = grouped[norm];
+        if (group.length === 1) {
+            keptItems.push(group[0]);
+        } else {
+            // Sort by chapters descending, then updated/createdAt descending to keep the most recent/advanced one
+            group.sort((a, b) => {
+                const chapDiff = (b.chapters || 0) - (a.chapters || 0);
+                if (chapDiff !== 0) return chapDiff;
+                const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                return dateB - dateA;
+            });
+
+            // Keep the first one, mark others for deletion
+            const kept = group[0];
+            keptItems.push(kept);
+            for (let i = 1; i < group.length; i++) {
+                toDelete.push(group[i]);
+            }
+        }
+    }
+
+    // Perform deletions
+    if (toDelete.length > 0) {
+        console.log(`[Deduplication] Found ${toDelete.length} duplicates. Deleting...`);
+        for (const item of toDelete) {
+            try {
+                await deleteItem(item.id || item.objectId);
+                console.log(`[Deduplication] Deleted duplicate: ${item.title}`);
+            } catch (e) {
+                console.warn(`[Deduplication] Failed to delete ${item.title}:`, e);
+            }
+        }
+        if (window.showToast) {
+            window.showToast(`${toDelete.length} doublons supprimés automatiquement.`, 'info');
+        }
+    }
+
+    return keptItems;
+}
 window.normalizeTitle = normalizeTitle;
 
 async function deduplicateCollection() {

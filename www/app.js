@@ -166,7 +166,14 @@ async function loadAndRenderItems() {
     showLoading(true);
     try {
         const result = await fetchAllItems();
-        allItems = result.items.map(i => i instanceof Parse.Object ? parseItemToObject(i) : i);
+        let items = result.items.map(i => i instanceof Parse.Object ? parseItemToObject(i) : i);
+        
+        // Auto deduplication (removes lower chapter dupes)
+        if (typeof autoRemoveDuplicates === 'function') {
+            items = await autoRemoveDuplicates(items);
+        }
+        
+        allItems = items;
         applyFiltersAndRender();
     } catch (e) {
         console.error('[App] Load error:', e);
