@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v8.0.0 - STYLES.CSS
+   MANLORE v9.0.0 - STYLES.CSS
    Styles Globaux, Design System, Thèmes Visuels & Micro-Animations
    ============================================ */
 
@@ -188,48 +188,52 @@
     --bg-input: rgba(15, 52, 96, 0.5);
 }
 
-/* ============ THEME: NORDIC FROST (GIVRE NORDIQUE) ============ */
-[data-theme="nordic-frost"] {
-    --bg-primary: #2E3440;
-    --bg-secondary: #0A1010;
-    --bg-accent: #506276;
-    --bg-card: #434A4B;
-    --bg-input: rgba(10, 16, 16, 0.6);
-    --bg-glass: rgba(46, 52, 64, 0.85);
-    --bg-header: rgba(10, 16, 16, 0.95);
-    --bg-sidebar: rgba(10, 16, 16, 0.99);
-    --bg-modal-content: #2E3440;
-    --color-primary: #88C0CE;
-    --color-primary-rgb: 136, 192, 206;
-    --color-secondary: #81A1C1;
-    --color-accent: #506276;
-    --gradient-primary: linear-gradient(135deg, #88C0CE 0%, #81A1C1 100%);
-    --gradient-card: linear-gradient(145deg, #434A4B 0%, #2E3440 100%);
-    --border-color: rgba(136, 192, 206, 0.3);
-    --border-card: rgba(136, 192, 206, 0.25);
-    --border-input: rgba(136, 192, 206, 0.4);
-    --shadow-card: 0 8px 32px rgba(10, 16, 16, 0.6);
-    --shadow-hover: 0 12px 40px rgba(136, 192, 206, 0.25);
-    --shadow-btn: 0 6px 20px rgba(136, 192, 206, 0.3);
-    --text-primary: #ECEFF4;
-    --text-secondary: #D8DEE9;
-    --text-muted: #4C566A;
+/* ============ THEME: FROST (GIVRE ARCTIQUE) ============ */
+[data-theme="frost"], [data-theme="nordic-frost"] {
+    --bg-primary: #141923;
+    --bg-secondary: #0d111a;
+    --bg-accent: #25334d;
+    --bg-card: #1c2333;
+    --bg-input: rgba(13, 17, 26, 0.7);
+    --bg-glass: rgba(20, 25, 35, 0.85);
+    --bg-header: rgba(13, 17, 26, 0.95);
+    --bg-sidebar: rgba(13, 17, 26, 0.99);
+    --bg-modal-content: #141923;
+    --color-primary: #00d2ff;
+    --color-primary-rgb: 0, 210, 255;
+    --color-secondary: #70a1ff;
+    --color-accent: #25334d;
+    --gradient-primary: linear-gradient(135deg, #00d2ff 0%, #70a1ff 100%);
+    --gradient-card: linear-gradient(145deg, #1c2333 0%, #141923 100%);
+    --border-color: rgba(0, 210, 255, 0.25);
+    --border-card: rgba(0, 210, 255, 0.2);
+    --border-input: rgba(0, 210, 255, 0.35);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-hover: 0 12px 40px rgba(0, 210, 255, 0.25);
+    --shadow-btn: 0 6px 20px rgba(0, 210, 255, 0.3);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
 }
 
+[data-theme="frost"] .btn-primary,
 [data-theme="nordic-frost"] .btn-primary {
-    background: linear-gradient(135deg, #88C0CE, #81A1C1);
-    color: #0A1010;
+    background: linear-gradient(135deg, #00d2ff, #70a1ff);
+    color: #0d111a;
     font-weight: 700;
 }
 
+[data-theme="frost"] .item-card:hover,
 [data-theme="nordic-frost"] .item-card:hover {
-    border-color: #88C0CE;
-    box-shadow: 0 0 20px rgba(136, 192, 206, 0.3);
+    border-color: #00d2ff;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
 }
 
+[data-theme="frost"] .nav-item.active,
+[data-theme="frost"] .bottom-nav-item.active,
 [data-theme="nordic-frost"] .nav-item.active,
 [data-theme="nordic-frost"] .bottom-nav-item.active {
-    color: #88C0CE;
+    color: #00d2ff;
 }
 
 /* Disable default context menu & callouts on manga covers */
@@ -290,6 +294,21 @@
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
+
+input, textarea, select, [contenteditable="true"], .selectable-text {
+    -webkit-touch-callout: default !important;
+    -webkit-user-select: text !important;
+    -khtml-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
 }
 
 html {

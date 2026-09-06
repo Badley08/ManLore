@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v8.0.0 - JIKAN.JS
+   MANLORE v9.0.0 - JIKAN.JS
    Jikan v4 + Kitsu + AniList + MangaDex Multi-Search + Auto-Translate + NSFW Filter
    ============================================ */
 
@@ -698,7 +698,7 @@ class JikanAPI {
      * @param {string} typeFilter 'all' | 'manga' | 'manhwa' | 'manhua'
      */
     async getRandomDiscovery(typeFilter = 'all') {
-        const page = Math.floor(Math.random() * 5) + 1;
+        const page = Math.floor(Math.random() * 8) + 1;
         let url = `${JIKAN_BASE}/top/manga?page=${page}&limit=25`;
         if (typeFilter && typeFilter !== 'all') {
             url += `&type=${typeFilter}`;
@@ -708,32 +708,39 @@ class JikanAPI {
             if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`);
             const data = await res.json();
             const list = (data.data || []).filter(item => {
-                const title = (item.title || item.title_japanese || '').toLowerCase();
                 const genres = (item.genres || []).map(g => g.name.toLowerCase());
                 return !genres.includes('hentai') && !genres.includes('erotica');
             });
-            if (list.length === 0) return null;
+            if (list.length === 0) throw new Error('Empty discovery list');
             const chosen = list[Math.floor(Math.random() * list.length)];
+            const rawGenres = (chosen.genres || []).map(g => g.name);
+            const genreStr = rawGenres.length > 0 ? rawGenres.join(', ') : (chosen.type || 'Manga');
+            const mainGenre = rawGenres[0] || chosen.type || 'Manga';
+            const cleanSynopsis = chosen.synopsis ? chosen.synopsis.replace(/\[Written by MAL Rewrite\]/g, '').trim() : 'Aucun synopsis disponible.';
+
             return {
                 id: 'external_' + (chosen.mal_id || Date.now()),
                 title: chosen.title_english || chosen.title || 'Titre inconnu',
                 type: chosen.type || (typeFilter !== 'all' ? typeFilter.toUpperCase() : 'Manga'),
-                image: chosen.images?.jpg?.large_image_url || chosen.images?.jpg?.image_url || '',
-                synopsis: chosen.synopsis || 'Aucun synopsis disponible.',
-                score: chosen.score || 8.0,
+                genre: mainGenre,
+                genres: genreStr,
+                image: chosen.images?.webp?.large_image_url || chosen.images?.jpg?.large_image_url || chosen.images?.jpg?.image_url || '',
+                synopsis: cleanSynopsis,
+                score: chosen.score || 8.2,
                 chapters: chosen.chapters || 0,
                 status: chosen.status || 'En cours',
                 link: chosen.url || ''
             };
         } catch (err) {
             console.warn('[Jikan] getRandomDiscovery fallback:', err);
-            // Fallback hardcoded list if offline or rate limited
             const fallbacks = [
-                { title: "Solo Leveling", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/3/222234.jpg", score: 8.7, synopsis: "Dans un monde où des chasseurs s'éveillent, Sung Jin-Woo est le plus faible de tous...", link: "https://myanimelist.net/manga/121496" },
-                { title: "Omniscient Reader's Viewpoint", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/2/232497.jpg", score: 8.8, synopsis: "Kim Dokja est le seul lecteur à avoir fini le roman des trois manières d'exister...", link: "https://myanimelist.net/manga/127398" },
-                { title: "Chainsaw Man", type: "Manga", image: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", score: 8.6, synopsis: "Denji vit une vie de misère avec son démon-tronçonneuse Pochita...", link: "https://myanimelist.net/manga/116778" },
-                { title: "Tower of God", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/2/178550.jpg", score: 8.4, synopsis: "Que désires-tu ? La gloire, la fortune, le pouvoir ? Tout se trouve au sommet de la Tour...", link: "https://myanimelist.net/manga/122663" },
-                { title: "Tales of Demons and Gods", type: "Manhua", image: "https://cdn.myanimelist.net/images/manga/3/178009.jpg", score: 7.9, synopsis: "Nie Li renaît dans son passé avec toutes les connaissances de sa vie antérieure...", link: "https://myanimelist.net/manga/93557" }
+                { title: "Solo Leveling", type: "Manhwa", genre: "Action", genres: "Action, Fantasy, Superpower", image: "https://cdn.myanimelist.net/images/manga/3/222234.jpg", score: 8.7, synopsis: "Dans un monde où des chasseurs s'éveillent aux capacités magiques, Sung Jin-Woo est le plus faible de tous jusqu'au jour où une double donjon mystérieuse lui offre une seconde chance...", link: "https://myanimelist.net/manga/121496" },
+                { title: "Omniscient Reader's Viewpoint", type: "Manhwa", genre: "Action", genres: "Action, Drama, Fantasy", image: "https://cdn.myanimelist.net/images/manga/2/232497.jpg", score: 8.8, synopsis: "Kim Dokja est le seul lecteur à avoir terminé le roman apocalypse des trois manières d'exister. Soudain, le monde réel se transforme en le monde exact du roman...", link: "https://myanimelist.net/manga/127398" },
+                { title: "Chainsaw Man", type: "Manga", genre: "Action", genres: "Action, Supernatural, Gore", image: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", score: 8.6, synopsis: "Denji vit une vie de misère avec son démon-tronçonneuse Pochita, accumulant les dettes de son père. Après une trahison, Denji ressuscite sous la forme d'un hybride démon-tronçonneuse...", link: "https://myanimelist.net/manga/116778" },
+                { title: "Tower of God", type: "Manhwa", genre: "Fantasy", genres: "Action, Adventure, Drama", image: "https://cdn.myanimelist.net/images/manga/2/178550.jpg", score: 8.4, synopsis: "Que désires-tu ? La gloire, la fortune, le pouvoir ? Tout ce que tu peux imaginer se trouve au sommet de la Tour. Bam part à l'ascension de la tour pour retrouver son amie Rachel...", link: "https://myanimelist.net/manga/122663" },
+                { title: "Tales of Demons and Gods", type: "Manhua", genre: "Fantasy", genres: "Action, Adventure, Martial Arts", image: "https://cdn.myanimelist.net/images/manga/3/178009.jpg", score: 7.9, synopsis: "Nie Li renaît dans son enfance avec toutes ses connaissances de sa vie antérieure pour protéger sa cité céleste d'un destin tragique...", link: "https://myanimelist.net/manga/93557" },
+                { title: "Kingdom", type: "Manga", genre: "Historique", genres: "Action, Historical, Military", image: "https://cdn.myanimelist.net/images/manga/2/171872.jpg", score: 9.0, synopsis: "Dans la Chine ancienne de la période des Royaumes combattants, Shin et Hyo sont deux orphelins de guerre rêvant de devenir de grands généraux sous les cieux...", link: "https://myanimelist.net/manga/16765" },
+                { title: "Berserk", type: "Manga", genre: "Dark Fantasy", genres: "Action, Adventure, Dark Fantasy", image: "https://cdn.myanimelist.net/images/manga/1/157897.jpg", score: 9.4, synopsis: "Guts, le Chevalier Noir, parcourt un monde médiéval sombre et impitoyable à la recherche de vengeance contre la troupe du Faucon et la God Hand...", link: "https://myanimelist.net/manga/2" }
             ];
             return fallbacks[Math.floor(Math.random() * fallbacks.length)];
         }
@@ -741,4 +748,4 @@ class JikanAPI {
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v8.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');
+console.log('[Jikan v9.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');

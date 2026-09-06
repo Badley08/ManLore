@@ -73,7 +73,7 @@ async function showApp() {
     checkWhatsNewModal();
 }
 
-const WHATS_NEW_VERSION = 'v8.0.0';
+const WHATS_NEW_VERSION = 'v9.0.0';
 
 function checkWhatsNewModal() {
     const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
@@ -99,6 +99,11 @@ function closeWhatsNewModal() {
     if (typeof closeModal === 'function') closeModal('whatsNewModal');
 }
 window.closeWhatsNewModal = closeWhatsNewModal;
+
+function openChangelogModal() {
+    if (typeof openModal === 'function') openModal('changelogModal');
+}
+window.openChangelogModal = openChangelogModal;
 
 function showGuestSettingsUI() {
     document.getElementById('guestNotice').classList.remove('hidden');
@@ -1401,10 +1406,12 @@ async function spinRoulette() {
                         setTimeout(() => {
                             const titleInput = document.getElementById('itemTitle');
                             const typeSelect = document.getElementById('itemType');
+                            const genresInput = document.getElementById('itemGenres');
                             const imageInput = document.getElementById('itemImageUrl');
                             const remarksInput = document.getElementById('itemRemarks');
                             if (titleInput) titleInput.value = externalWinner.title;
                             if (typeSelect) typeSelect.value = externalWinner.type || 'Manga';
+                            if (genresInput) genresInput.value = externalWinner.genres || externalWinner.genre || '';
                             if (imageInput) imageInput.value = externalWinner.image || '';
                             if (remarksInput) remarksInput.value = externalWinner.synopsis || '';
                         }, 200);
@@ -1603,6 +1610,8 @@ window.markChapterUpToDate = markChapterUpToDate;
 
 // ============ PRESS-AND-HOLD QUICK IMAGE PREVIEW ============
 let quickPreviewTimer = null;
+let quickPreviewStartX = 0;
+let quickPreviewStartY = 0;
 
 function initQuickPreviewListeners() {
     const overlay = document.getElementById('quickPreviewOverlay');
@@ -1620,6 +1629,10 @@ function initQuickPreviewListeners() {
     function handlePressStart(e) {
         const img = e.target.closest('.item-card img, .cover-img, .wishlist-card img');
         if (!img) return;
+
+        const touch = e.touches ? e.touches[0] : e;
+        quickPreviewStartX = touch.clientX;
+        quickPreviewStartY = touch.clientY;
 
         const card = img.closest('.item-card, .wishlist-card');
         let title = '', type = '', image = img.src, status = '', chapters = '', rating = '', synopsis = '';
@@ -1652,14 +1665,26 @@ function initQuickPreviewListeners() {
                 <div class="text-xs text-muted" style="margin-top:0.75rem; font-style:italic">Relâchez pour fermer l'aperçu</div>
             `;
             overlay.classList.add('active');
-        }, 300);
+        }, 350);
+    }
+
+    function handlePressMove(e) {
+        if (!quickPreviewTimer && !overlay.classList.contains('active')) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const dist = Math.hypot(touch.clientX - quickPreviewStartX, touch.clientY - quickPreviewStartY);
+        if (dist > 8) {
+            hidePreview();
+        }
     }
 
     document.addEventListener('pointerdown', handlePressStart, { passive: true });
     document.addEventListener('touchstart', handlePressStart, { passive: true });
 
-    ['pointerup', 'pointercancel', 'pointerleave', 'touchend', 'touchcancel', 'mouseleave'].forEach(evt => {
-        document.addEventListener(evt, hidePreview, { passive: true });
+    document.addEventListener('pointermove', handlePressMove, { passive: true });
+    document.addEventListener('touchmove', handlePressMove, { passive: true });
+
+    ['pointerup', 'pointercancel', 'pointerleave', 'touchend', 'touchcancel', 'mouseleave', 'scroll'].forEach(evt => {
+        window.addEventListener(evt, hidePreview, { passive: true });
     });
 
     document.addEventListener('contextmenu', (e) => {
@@ -1673,5 +1698,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuickPreviewListeners();
 });
 
-console.log('[App v8.0.0] Module loaded');
+console.log('[App v9.0.0] Module loaded');
 
