@@ -157,6 +157,8 @@ class QuestManager {
             actionsWeek: new Set(),
             actionsMonth: new Set(),
             claimedQuests: {},
+            questClaimCounts: {},
+            totalQuestsClaimedDaily: 0,
             lastDailyDate: new Date().toISOString().split('T')[0],
             lastWeekNumber: this.getWeekNumber(new Date()),
             lastMonth: new Date().getMonth(),
@@ -446,7 +448,7 @@ class QuestManager {
     }
 
     getRanks() {
-        return this.questData?.rank_system?.ranks || [
+        const rawRanks = this.questData?.rank_system?.ranks || [
             { rank: "E", title: "Novice du Lore", xp_required: 0, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path></svg>", color: "#95a5a6" },
             { rank: "D", title: "Lecteur Curieux", xp_required: 1200, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"14.5 17.5 3 6 3 3 6 3 17.5 14.5\"></polyline><line x1=\"13\" y1=\"19\" x2=\"19\" y2=\"13\"></line><line x1=\"16\" y1=\"16\" x2=\"20\" y2=\"20\"></line><line x1=\"19\" y1=\"21\" x2=\"21\" y2=\"19\"></line></svg>", color: "#2ecc71" },
             { rank: "C", title: "Chasseur de Chapitres", xp_required: 3500, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m14.5 17.5-11.5-11.5v-3h3l11.5 11.5\"></path><path d=\"m9.5 17.5 11.5-11.5v-3h-3l-11.5 11.5\"></path><line x1=\"5\" y1=\"19\" x2=\"19\" y2=\"5\"></line></svg>", color: "#3498db" },
@@ -455,8 +457,12 @@ class QuestManager {
             { rank: "S", title: "Seigneur du ManLore", xp_required: 25000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"></path></svg>", color: "#e74c3c" },
             { rank: "S+", title: "Monarque Suprême", xp_required: 40000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"></polygon></svg>", color: "#ff3838" },
             { rank: "SS", title: "Divinité du Lore", xp_required: 65000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"m4.93 4.93 4.24 4.24\"></path><path d=\"m14.83 9.17 4.24-4.24\"></path><path d=\"m14.83 14.83 4.24 4.24\"></path><path d=\"m9.17 14.83-4.24 4.24\"></path><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg>", color: "#ffd32a" },
-            { rank: "SSS", title: "Souverain Cosmique", xp_required: 100000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v20\"></path><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"></path><circle cx=\"12\" cy=\"12\" r=\"9\"></circle></svg>", color: "#ff007f" }
+            { rank: "SSS", title: "Souverain Cosmique", xp_required: 100000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v20\"></path><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"></path><circle cx=\"12\" cy=\"12\" r=\"9\"></circle></svg>", color: "#ff007f" },
+            { rank: "Z", title: "Transcendance Cosmique", xp_required: 350000, badge_svg: "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2L3 14h9l-1 8 10-12h-9l1-8z\"></path></svg>", color: "#a000ff", hidden: true }
         ];
+
+        const currentExp = this.data?.exp || 0;
+        return rawRanks.filter(r => !r.hidden || currentExp >= 65000);
     }
 
     getCurrentRankInfo() {
@@ -542,6 +548,11 @@ class QuestManager {
         }
 
         this.data.claimedQuests[claimKey] = true;
+        if (!this.data.questClaimCounts) this.data.questClaimCounts = {};
+        this.data.questClaimCounts[quest.id] = (this.data.questClaimCounts[quest.id] || 0) + 1;
+        if (period === 'daily') {
+            this.data.totalQuestsClaimedDaily = (this.data.totalQuestsClaimedDaily || 0) + 1;
+        }
         this.addExp(quest.xp || 50, quest.title);
         this.saveProgression();
     }
@@ -648,8 +659,24 @@ class QuestManager {
         this.checkResets();
         if (!this.questData?.quests) return [];
 
-        const rawList = this.questData.quests[tabKey] || [];
-        return rawList.map(q => {
+        let rawList = this.questData.quests[tabKey] || [];
+
+        // Daily quest rotation based on date seed for non-activity daily quests
+        if (tabKey === 'daily' && rawList.length > 10) {
+            const todayStr = this.data.lastDailyDate || new Date().toISOString().split('T')[0];
+            let seed = 0;
+            for (let i = 0; i < todayStr.length; i++) seed = (seed << 5) - seed + todayStr.charCodeAt(i);
+            seed = Math.abs(seed);
+
+            const fixedCore = rawList.filter(q => q.target?.type === 'active_minutes');
+            const pool = rawList.filter(q => q.target?.type !== 'active_minutes');
+
+            const offset = seed % (pool.length || 1);
+            const rotatedPool = [...pool.slice(offset), ...pool.slice(0, offset)];
+            rawList = [...fixedCore, ...rotatedPool];
+        }
+
+        const evaluated = rawList.map(q => {
             const progress = this.calculateQuestProgress(q, tabKey);
             const claimKey = this.getClaimKey(q.id, tabKey);
             const claimed = Boolean(this.data.claimedQuests?.[claimKey]);
@@ -663,6 +690,21 @@ class QuestManager {
                 percent: Math.min(100, Math.round((progress.current / progress.target) * 100))
             };
         });
+
+        // Separate unclaimed vs claimed
+        const unclaimed = evaluated.filter(q => !q.claimed);
+        const claimed = evaluated.filter(q => q.claimed);
+
+        // Sort unclaimed so that completed (accomplished background) quests ALWAYS come first!
+        unclaimed.sort((a, b) => {
+            if (a.completed && !b.completed) return -1;
+            if (!a.completed && b.completed) return 1;
+            return b.percent - a.percent;
+        });
+
+        // Return up to 10 active unclaimed quests + claimed quests for current view
+        const visibleUnclaimed = unclaimed.slice(0, 10);
+        return [...visibleUnclaimed, ...claimed];
     }
 
     calculateQuestProgress(quest, period) {
@@ -714,6 +756,20 @@ class QuestManager {
                 current = period === 'daily' ? (this.data.chaptersReadToday || 0) :
                           period === 'weekly' ? (this.data.chaptersReadWeek || 0) :
                           period === 'monthly' ? (this.data.chaptersReadMonth || 0) : (this.data.chaptersReadYear || 0);
+                break;
+            case 'chapters_read_total':
+                if (typeof allItems !== 'undefined' && Array.isArray(allItems)) {
+                    current = allItems.reduce((sum, item) => sum + (parseInt(item.chapters) || 0), 0);
+                } else {
+                    current = this.data.chaptersReadYear || 0;
+                }
+                break;
+            case 'quest_repetition':
+                const counts = Object.values(this.data.questClaimCounts || {});
+                current = counts.length > 0 ? Math.max(...counts) : 0;
+                break;
+            case 'quests_completed_period':
+                current = this.data.totalQuestsClaimedDaily || 0;
                 break;
             case 'rating_given':
                 current = period === 'daily' ? (this.data.titlesRatedToday || 0) :

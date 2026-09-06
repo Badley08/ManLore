@@ -3,7 +3,7 @@
   "name": "ManLore - Ton Codex Visuel, Ton Lore Personnel",
   "short_name": "ManLore",
   "description": "Gère et explore ton univers de collection : Manga, Manhwa, Manhua, Webtoons, Comics, Graphic Novels et plus. Suis tes lectures, découvre des stats et construis ton lore personnel.",
-  "version": "5.0.1",
+  "version": "6.0.1",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",

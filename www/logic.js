@@ -1167,6 +1167,78 @@ function deleteFromLocalStorage(itemId) {
     localStorage.setItem('manlore_items', JSON.stringify(filtered));
 }
 
+// ============ CORBEILLE DE SUPPRESSION (15 JOURS) ============
+const TRASH_BIN_KEY = 'manlore_trash_bin_v5';
+
+function loadTrashBin() {
+    try {
+        const raw = localStorage.getItem(TRASH_BIN_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        const now = Date.now();
+        const maxAgeMs = 15 * 86400 * 1000; // 15 jours
+        const valid = list.filter(item => item && item.deletedAt && (now - item.deletedAt) < maxAgeMs);
+        if (valid.length !== list.length) {
+            localStorage.setItem(TRASH_BIN_KEY, JSON.stringify(valid));
+        }
+        return valid;
+    } catch (e) {
+        return [];
+    }
+}
+
+function moveToTrashBin(item) {
+    if (!item) return;
+    const trash = loadTrashBin();
+    const itemCopy = JSON.parse(JSON.stringify(item));
+    itemCopy.deletedAt = Date.now();
+    trash.unshift(itemCopy);
+    localStorage.setItem(TRASH_BIN_KEY, JSON.stringify(trash));
+    syncTrashBinToCloud(trash);
+}
+
+function restoreFromTrashBin(itemId) {
+    const trash = loadTrashBin();
+    const targetIdx = trash.findIndex(i => String(i.id) === String(itemId) || String(i.objectId) === String(itemId));
+    if (targetIdx >= 0) {
+        const restoredItem = trash.splice(targetIdx, 1)[0];
+        delete restoredItem.deletedAt;
+        localStorage.setItem(TRASH_BIN_KEY, JSON.stringify(trash));
+        syncTrashBinToCloud(trash);
+        saveToLocalStorage(restoredItem);
+        if (typeof allItems !== 'undefined' && Array.isArray(allItems)) {
+            allItems.unshift(restoredItem);
+            if (typeof applyFiltersAndRender === 'function') applyFiltersAndRender();
+        }
+        if (typeof showToast === 'function') {
+            showToast(i18n.t('trash.restored') || 'Titre restauré avec succès', 'success');
+        }
+    }
+}
+
+function permanentlyDeleteFromTrash(itemId) {
+    const trash = loadTrashBin();
+    const filtered = trash.filter(i => String(i.id) !== String(itemId) && String(i.objectId) !== String(itemId));
+    localStorage.setItem(TRASH_BIN_KEY, JSON.stringify(filtered));
+    syncTrashBinToCloud(filtered);
+    if (typeof renderTrashBinModal === 'function') renderTrashBinModal();
+}
+
+function emptyTrashBin() {
+    localStorage.setItem(TRASH_BIN_KEY, JSON.stringify([]));
+    syncTrashBinToCloud([]);
+    if (typeof renderTrashBinModal === 'function') renderTrashBinModal();
+}
+
+function syncTrashBinToCloud(trashList) {
+    try {
+        if (typeof Parse !== 'undefined' && Parse.User && Parse.User.current()) {
+            const u = Parse.User.current();
+            u.set('trashBinData', trashList);
+            u.save();
+        }
+    } catch (e) {}
+}
+
 // ============ FILE D'ATTENTE DE SYNCHRONISATION HORS-LIGNE ============
 
 function loadSyncQueue() {

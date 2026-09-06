@@ -3,7 +3,7 @@
    Offline PWA Support & Relative Scope Routing
    ============================================ */
 
-const CACHE_NAME = 'manlore-v5.0.1-cache';
+const CACHE_NAME = 'manlore-v5.1.0-cache';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -38,7 +38,7 @@ const STATIC_ASSETS = [
 
 // Install
 self.addEventListener('install', event => {
-    console.log('[SW] Installing v5.0.1...');
+    console.log('[SW] Installing v5.1.0...');
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return Promise.allSettled(
@@ -50,7 +50,7 @@ self.addEventListener('install', event => {
 
 // Activate — clean old caches
 self.addEventListener('activate', event => {
-    console.log('[SW] Activating v5.0.1...');
+    console.log('[SW] Activating v5.1.0...');
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => {
@@ -61,7 +61,7 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch — network first for API, cache first for static
+// Fetch — network first for API, stale-while-revalidate for static
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
@@ -98,23 +98,21 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Static assets — network first, fallback to cache
+    // Static assets — Stale-While-Revalidate (instant startup + background update)
     event.respondWith(
-        fetch(event.request).then(response => {
-            if (response.ok) {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-            }
-            return response;
-        }).catch(() =>
-            caches.match(event.request).then(cached => {
-                if (cached) return cached;
-                if (event.request.destination === 'document') {
-                    return caches.match('./index.html') || caches.match('index.html');
+        caches.match(event.request).then(cached => {
+            const networkFetch = fetch(event.request).then(response => {
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 }
-                return new Response('Offline', { status: 503 });
-            })
-        )
+                return response;
+            }).catch(() => null);
+
+            return cached || networkFetch.then(res => res || (
+                event.request.destination === 'document' ? caches.match('./index.html') : new Response('Offline', { status: 503 })
+            ));
+        })
     );
 });
 

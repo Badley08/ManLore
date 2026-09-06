@@ -70,7 +70,35 @@ async function showApp() {
     updateStorageModeUI();
     await loadAndRenderItems();
     navigateTo('home');
+    checkWhatsNewModal();
 }
+
+const WHATS_NEW_VERSION = 'v5.1.0';
+
+function checkWhatsNewModal() {
+    const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
+    if (!dismissed) {
+        setTimeout(() => {
+            if (typeof openModal === 'function') openModal('whatsNewModal');
+        }, 600);
+    }
+}
+
+function closeWhatsNewModal() {
+    const check = document.getElementById('dontShowWhatsNewCheck');
+    if (check && check.checked) {
+        localStorage.setItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
+        try {
+            if (typeof Parse !== 'undefined' && Parse.User && Parse.User.current()) {
+                const u = Parse.User.current();
+                u.set('whatsNewDismissedVersion', WHATS_NEW_VERSION);
+                u.save();
+            }
+        } catch (e) {}
+    }
+    if (typeof closeModal === 'function') closeModal('whatsNewModal');
+}
+window.closeWhatsNewModal = closeWhatsNewModal;
 
 function showGuestSettingsUI() {
     document.getElementById('guestNotice').classList.remove('hidden');
@@ -501,18 +529,22 @@ document.addEventListener('DOMContentLoaded', () => {
 async function handleDeleteItem(itemId) {
     showConfirmDialog(
         i18n.t('confirm.delete.title'),
-        i18n.t('confirm.delete.msg'),
+        i18n.t('trash.notice') || 'Ce titre sera placé dans la corbeille et définitivement supprimé après 15 jours. Vous pourrez le restaurer à tout moment dans la section Statistiques.',
         i18n.t('confirm.delete.yes'),
         i18n.t('confirm.delete.no'),
         'danger',
         async () => {
             showLoading(true);
+            const item = allItems.find(i => String(i.id) === String(itemId) || String(i.objectId) === String(itemId));
+            if (item && typeof moveToTrashBin === 'function') {
+                moveToTrashBin(item);
+            }
             const result = await deleteItem(itemId);
             showLoading(false);
             if (result.success) {
-                allItems = allItems.filter(i => i.id !== itemId);
+                allItems = allItems.filter(i => String(i.id) !== String(itemId) && String(i.objectId) !== String(itemId));
                 applyFiltersAndRender();
-                showToast(i18n.t('toast.item.deleted'), 'info');
+                showToast(i18n.t('toast.item.deleted') || 'Titre placé dans la corbeille (disponible 15 jours)', 'info');
             } else {
                 showToast(result.error || 'Erreur', 'error');
             }

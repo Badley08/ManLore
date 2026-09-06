@@ -1,8 +1,8 @@
 {
-  "version": 1,
+  "version": 3,
   "game": "ManLore",
   "lang": "es",
-  "description": "Sistema de misiones de XP diarias, semanales, mensuales, anuales y de progresión de rango.",
+  "description": "Sistema dinámico de misiones de XP v3 con Rango Z cósmico (350.000 XP) y progresión mejorada.",
   "xp_rules": {
     "daily_reset": "00:00",
     "weekly_reset": "Monday 00:00",
@@ -53,7 +53,7 @@
       },
       {
         "rank": "S",
-        "title": "Señor de ManLore",
+        "title": "Señor del ManLore",
         "xp_required": 25000,
         "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"></path></svg>",
         "color": "#e74c3c"
@@ -78,6 +78,14 @@
         "xp_required": 100000,
         "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2v20\"></path><path d=\"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6\"></path><circle cx=\"12\" cy=\"12\" r=\"9\"></circle></svg>",
         "color": "#ff007f"
+      },
+      {
+        "rank": "Z",
+        "title": "Trascendencia Cósmica",
+        "xp_required": 350000,
+        "badge_svg": "<svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 2L3 14h9l-1 8 10-12h-9l1-8z\"></path></svg>",
+        "color": "#a000ff",
+        "hidden": true
       }
     ],
     "rank_up_rewards": {
@@ -85,456 +93,513 @@
       "D_to_C": 500,
       "C_to_B": 650,
       "B_to_A": 850,
-      "A_to_S": 1100
+      "A_to_S": 1100,
+      "S_to_Splus": 2500,
+      "Splus_to_SS": 5000,
+      "SS_to_SSS": 10000,
+      "SSS_to_Z": 25000
     },
-    "design_note": "Progresión de rangos E -> S. Las recompensas aumentan en cada nivel de rango alcanzado."
+    "design_note": "Progresión de rangos E -> Z con Rango Z oculto hasta el rango SS."
   },
   "quests": {
     "daily": [
       {
         "id": "daily_001",
-        "title": "Primera conexión",
+        "title": "Primera Conexión",
         "description": "Abrir ManLore y permanecer activo al menos 5 minutos.",
-        "xp": 50,
+        "xp": 150,
         "target": { "type": "active_minutes", "value": 5 }
       },
       {
         "id": "daily_002",
-        "title": "Sesión prolongada",
-        "description": "Pasar al menos 10 minutos en ManLore.",
-        "xp": 75,
-        "target": { "type": "active_minutes", "value": 10 }
+        "title": "Sesión Prolongada",
+        "description": "Pasar al menos 15 minutos en ManLore.",
+        "xp": 250,
+        "target": { "type": "active_minutes", "value": 15 }
       },
       {
         "id": "daily_003",
-        "title": "Sesión larga",
-        "description": "Pasar al menos 20 minutos en ManLore.",
-        "xp": 125,
-        "target": { "type": "active_minutes", "value": 20 }
-      },
-      {
-        "id": "daily_004",
-        "title": "Sesión completa",
+        "title": "Sesión Larga",
         "description": "Pasar al menos 30 minutos en ManLore.",
-        "xp": 175,
+        "xp": 400,
         "target": { "type": "active_minutes", "value": 30 }
       },
       {
+        "id": "daily_004",
+        "title": "Lector Asiduo",
+        "description": "Leer al menos 5 capítulos hoy.",
+        "xp": 250,
+        "target": { "type": "chapters_read", "value": 5 }
+      },
+      {
         "id": "daily_005",
-        "title": "Editor",
-        "description": "Modificar el título o datos de un contenido.",
-        "xp": 60,
-        "target": { "type": "title_edit", "value": 1 }
+        "title": "Gran Devorador",
+        "description": "Leer al menos 15 capítulos hoy.",
+        "xp": 450,
+        "target": { "type": "chapters_read", "value": 15 }
       },
       {
         "id": "daily_006",
-        "title": "Limpieza",
-        "description": "Eliminar un título de tu colección.",
-        "xp": 60,
-        "target": { "type": "title_delete", "value": 1 }
+        "title": "Editor del Día",
+        "description": "Editar 2 títulos en tu colección.",
+        "xp": 200,
+        "target": { "type": "title_edit", "value": 2 }
       },
       {
         "id": "daily_007",
         "title": "Coleccionista",
         "description": "Añadir 1 nuevo título a tu colección.",
-        "xp": 60,
+        "xp": 200,
         "target": { "type": "title_add", "value": 1 }
       },
       {
         "id": "daily_008",
         "title": "Explorador",
         "description": "Consultar 5 títulos diferentes.",
-        "xp": 75,
+        "xp": 200,
         "target": { "type": "title_view", "value": 5 }
       },
       {
         "id": "daily_009",
-        "title": "Curioso",
-        "description": "Consultar 10 títulos diferentes.",
-        "xp": 120,
-        "target": { "type": "title_view", "value": 10 }
+        "title": "Mente Curiosa",
+        "description": "Consultar 15 títulos diferentes.",
+        "xp": 350,
+        "target": { "type": "title_view", "value": 15 }
       },
       {
         "id": "daily_010",
-        "title": "Organizador",
-        "description": "Modificar 3 títulos.",
-        "xp": 125,
-        "target": { "type": "title_edit", "value": 3 }
+        "title": "Evaluador",
+        "description": "Calificar 1 título en tu biblioteca.",
+        "xp": 250,
+        "target": { "type": "rating_given", "value": 1 }
       },
       {
         "id": "daily_011",
         "title": "Archivista",
-        "description": "Añadir 3 títulos a tu colección.",
-        "xp": 125,
+        "description": "Añadir 3 nuevos títulos a tu colección.",
+        "xp": 350,
         "target": { "type": "title_add", "value": 3 }
       },
       {
         "id": "daily_012",
-        "title": "Gran limpieza",
-        "description": "Eliminar 3 títulos de tu colección.",
-        "xp": 125,
-        "target": { "type": "title_delete", "value": 3 }
+        "title": "Crítico Exigente",
+        "description": "Calificar 3 títulos diferentes hoy.",
+        "xp": 400,
+        "target": { "type": "rating_given", "value": 3 }
       },
       {
         "id": "daily_013",
-        "title": "Mezcla perfecta",
+        "title": "Mezcla Perfecta",
         "description": "Añadir, editar y consultar al menos un título.",
-        "xp": 150,
-        "target": {
-          "type": "compound",
-          "conditions": ["title_add>=1", "title_edit>=1", "title_view>=1"]
-        }
+        "xp": 450,
+        "target": { "type": "compound", "conditions": ["title_add>=1", "title_edit>=1", "title_view>=1"] }
       },
       {
         "id": "daily_014",
-        "title": "Retorno diario",
-        "description": "Volver a ManLore tras un día previo de actividad.",
-        "xp": 50,
+        "title": "Leal al Lore",
+        "description": "Volver a ManLore tras un día anterior.",
+        "xp": 200,
         "target": { "type": "daily_return", "value": 1 }
       },
       {
         "id": "daily_015",
-        "title": "Rutina",
-        "description": "Realizar 3 interacciones distintas en la app.",
-        "xp": 100,
+        "title": "Rutina Dinámica",
+        "description": "Realizar 3 acciones diferentes con la aplicación.",
+        "xp": 300,
         "target": { "type": "unique_actions", "value": 3 }
       },
       {
         "id": "daily_016",
-        "title": "Biblioteca activa",
+        "title": "Biblioteca Activa",
         "description": "Interactuar con 5 títulos en total.",
-        "xp": 100,
+        "xp": 300,
         "target": { "type": "title_interactions", "value": 5 }
       },
       {
         "id": "daily_017",
-        "title": "Pequeño archivista",
-        "description": "Crear o añadir 2 títulos.",
-        "xp": 90,
-        "target": { "type": "title_add", "value": 2 }
+        "title": "Maratoniano del Día",
+        "description": "Pasar al menos 45 minutos en la app.",
+        "xp": 500,
+        "target": { "type": "active_minutes", "value": 45 }
       },
       {
         "id": "daily_018",
-        "title": "Revisión",
-        "description": "Modificar 5 títulos.",
-        "xp": 175,
-        "target": { "type": "title_edit", "value": 5 }
-      },
-      {
-        "id": "daily_019",
-        "title": "Descubrimiento",
-        "description": "Consultar 15 títulos diferentes.",
-        "xp": 175,
-        "target": { "type": "title_view", "value": 15 }
-      },
-      {
-        "id": "daily_020",
-        "title": "Presencia",
-        "description": "Pasar al menos 45 minutos en ManLore.",
-        "xp": 225,
-        "target": { "type": "active_minutes", "value": 45 }
+        "title": "Súper Lector",
+        "description": "Leer 30 capítulos hoy.",
+        "xp": 650,
+        "target": { "type": "chapters_read", "value": 30 }
       }
     ],
     "weekly": [
       {
         "id": "weekly_001",
-        "title": "Visitante habitual",
+        "title": "Visitante Habitual",
         "description": "Abrir ManLore al menos 3 días esta semana.",
-        "xp": 250,
+        "xp": 800,
         "target": { "type": "active_days", "value": 3 }
       },
       {
         "id": "weekly_002",
-        "title": "Lector constante",
+        "title": "Usuario Constante",
         "description": "Abrir ManLore al menos 5 días esta semana.",
-        "xp": 450,
+        "xp": 1400,
         "target": { "type": "active_days", "value": 5 }
       },
       {
         "id": "weekly_003",
-        "title": "Semana perfecta",
+        "title": "Semana Perfecta",
         "description": "Abrir ManLore los 7 días de la semana.",
-        "xp": 750,
+        "xp": 2500,
         "target": { "type": "active_days", "value": 7 }
       },
       {
         "id": "weekly_004",
-        "title": "Tiempo invertido",
+        "title": "Tiempo Invertido",
         "description": "Acumular 60 minutos de actividad esta semana.",
-        "xp": 300,
+        "xp": 900,
         "target": { "type": "active_minutes", "value": 60 }
       },
       {
         "id": "weekly_005",
-        "title": "Maratón de lectura",
+        "title": "Maratón Semanal",
         "description": "Acumular 180 minutos de actividad esta semana.",
-        "xp": 650,
+        "xp": 2000,
         "target": { "type": "active_minutes", "value": 180 }
       },
       {
         "id": "weekly_006",
-        "title": "Editor semanal",
-        "description": "Modificar 10 títulos esta semana.",
-        "xp": 350,
-        "target": { "type": "title_edit", "value": 10 }
+        "title": "Lector Apasionado",
+        "description": "Leer 35 capítulos esta semana.",
+        "xp": 1500,
+        "target": { "type": "chapters_read", "value": 35 }
       },
       {
         "id": "weekly_007",
-        "title": "Editor incansable",
-        "description": "Modificar 25 títulos esta semana.",
-        "xp": 700,
-        "target": { "type": "title_edit", "value": 25 }
+        "title": "Monstruo de la Lectura",
+        "description": "Leer 100 capítulos esta semana.",
+        "xp": 3000,
+        "target": { "type": "chapters_read", "value": 100 }
       },
       {
         "id": "weekly_008",
-        "title": "Colección semanal",
-        "description": "Añadir 10 títulos esta semana.",
-        "xp": 350,
-        "target": { "type": "title_add", "value": 10 }
+        "title": "Editor Regular",
+        "description": "Editar 10 títulos esta semana.",
+        "xp": 1000,
+        "target": { "type": "title_edit", "value": 10 }
       },
       {
         "id": "weekly_009",
-        "title": "Gran colección",
-        "description": "Añadir 25 títulos esta semana.",
-        "xp": 700,
-        "target": { "type": "title_add", "value": 25 }
+        "title": "Colección Semanal",
+        "description": "Añadir 10 nuevos títulos esta semana.",
+        "xp": 1200,
+        "target": { "type": "title_add", "value": 10 }
       },
       {
         "id": "weekly_010",
-        "title": "Depuración",
-        "description": "Eliminar 10 títulos esta semana.",
-        "xp": 350,
-        "target": { "type": "title_delete", "value": 10 }
-      },
-      {
-        "id": "weekly_011",
-        "title": "Exploración",
+        "title": "Gran Explorador",
         "description": "Consultar 50 títulos diferentes esta semana.",
-        "xp": 400,
+        "xp": 1500,
         "target": { "type": "title_view", "value": 50 }
       },
       {
+        "id": "weekly_011",
+        "title": "Juez de la Semana",
+        "description": "Calificar 5 títulos esta semana.",
+        "xp": 1200,
+        "target": { "type": "rating_given", "value": 5 }
+      },
+      {
         "id": "weekly_012",
-        "title": "Gran explorador",
-        "description": "Consultar 100 títulos diferentes esta semana.",
-        "xp": 800,
-        "target": { "type": "title_view", "value": 100 }
-      },
-      {
-        "id": "weekly_013",
-        "title": "Interacciones",
-        "description": "Realizar 50 interacciones con títulos.",
-        "xp": 400,
-        "target": { "type": "title_interactions", "value": 50 }
-      },
-      {
-        "id": "weekly_014",
-        "title": "Hábito sólido",
-        "description": "Realizar al menos 1 interacción cada día durante 7 días.",
-        "xp": 900,
+        "title": "Rutina de Hierro",
+        "description": "Mantener una racha de 7 días consecutivos.",
+        "xp": 2500,
         "target": { "type": "daily_activity_streak", "value": 7 }
       },
       {
-        "id": "weekly_015",
-        "title": "Polivalente",
-        "description": "Usar al menos 5 tipos de acciones diferentes.",
-        "xp": 350,
-        "target": { "type": "unique_actions", "value": 5 }
+        "id": "weekly_013",
+        "title": "Constancia en Misiones",
+        "description": "Completar 10 misiones diarias esta semana.",
+        "xp": 2000,
+        "target": { "type": "quests_completed_period", "value": 10 }
+      },
+      {
+        "id": "weekly_014",
+        "title": "Maestro de la Repetición",
+        "description": "Completar 5 veces la misma misión durante la semana.",
+        "xp": 1800,
+        "target": { "type": "quest_repetition", "value": 5 }
       }
     ],
     "monthly": [
       {
         "id": "monthly_001",
-        "title": "Miembro regular",
+        "title": "Miembro Regular",
         "description": "Estar activo al menos 15 días este mes.",
-        "xp": 900,
+        "xp": 3000,
         "target": { "type": "active_days", "value": 15 }
       },
       {
         "id": "monthly_002",
-        "title": "Mes completo",
+        "title": "Mes Completo",
         "description": "Estar activo al menos 25 días este mes.",
-        "xp": 1600,
+        "xp": 6000,
         "target": { "type": "active_days", "value": 25 }
       },
       {
         "id": "monthly_003",
-        "title": "Fidelidad",
-        "description": "Estar activo todos los 30 días del mes.",
-        "xp": 2500,
+        "title": "Lealtad Absoluta",
+        "description": "Estar activo todos los días del mes.",
+        "xp": 10000,
         "target": { "type": "active_days", "value": 30 }
       },
       {
         "id": "monthly_004",
-        "title": "Tiempo mensual",
+        "title": "Tiempo Mensual",
         "description": "Acumular 600 minutos de actividad este mes.",
-        "xp": 1200,
+        "xp": 4000,
         "target": { "type": "active_minutes", "value": 600 }
       },
       {
         "id": "monthly_005",
-        "title": "Gran presencia",
-        "description": "Acumular 1200 minutos de actividad este mes.",
-        "xp": 2200,
-        "target": { "type": "active_minutes", "value": 1200 }
+        "title": "Titán del Tiempo",
+        "description": "Acumular 1800 minutos de actividad este mes.",
+        "xp": 8000,
+        "target": { "type": "active_minutes", "value": 1800 }
       },
       {
         "id": "monthly_006",
-        "title": "Editor del mes",
-        "description": "Modificar 50 títulos este mes.",
-        "xp": 1200,
-        "target": { "type": "title_edit", "value": 50 }
+        "title": "Devorador del Mes",
+        "description": "Leer 150 capítulos este mes.",
+        "xp": 6000,
+        "target": { "type": "chapters_read", "value": 150 }
       },
       {
         "id": "monthly_007",
-        "title": "Archivista del mes",
-        "description": "Añadir 50 títulos este mes.",
-        "xp": 1200,
-        "target": { "type": "title_add", "value": 50 }
+        "title": "Leyenda de la Lectura",
+        "description": "Leer 500 capítulos este mes.",
+        "xp": 12000,
+        "target": { "type": "chapters_read", "value": 500 }
       },
       {
         "id": "monthly_008",
-        "title": "Limpiador del mes",
-        "description": "Eliminar 50 títulos este mes.",
-        "xp": 1200,
-        "target": { "type": "title_delete", "value": 50 }
+        "title": "Archivista del Mes",
+        "description": "Añadir 30 títulos este mes.",
+        "xp": 4000,
+        "target": { "type": "title_add", "value": 30 }
       },
       {
         "id": "monthly_009",
-        "title": "Explorador del mes",
-        "description": "Consultar 300 títulos diferentes este mes.",
-        "xp": 1500,
-        "target": { "type": "title_view", "value": 300 }
+        "title": "Explorador del Mes",
+        "description": "Consultar 200 títulos diferentes este mes.",
+        "xp": 5000,
+        "target": { "type": "title_view", "value": 200 }
       },
       {
         "id": "monthly_010",
-        "title": "Maestro de acciones",
-        "description": "Realizar 500 interacciones con títulos.",
-        "xp": 1800,
-        "target": { "type": "title_interactions", "value": 500 }
+        "title": "Juez Supremo",
+        "description": "Calificar 20 títulos durante el mes.",
+        "xp": 5000,
+        "target": { "type": "rating_given", "value": 20 }
       },
       {
         "id": "monthly_011",
-        "title": "Racha de dos semanas",
-        "description": "Mantener una racha de actividad de 14 días.",
-        "xp": 1400,
-        "target": { "type": "daily_activity_streak", "value": 14 }
+        "title": "Imparable",
+        "description": "Mantener una racha de actividad de 20 días.",
+        "xp": 7500,
+        "target": { "type": "daily_activity_streak", "value": 20 }
       },
       {
         "id": "monthly_012",
-        "title": "Polifacético",
-        "description": "Usar al menos 8 tipos de acciones diferentes en el mes.",
-        "xp": 1000,
-        "target": { "type": "unique_actions", "value": 8 }
+        "title": "Cazador de Misiones",
+        "description": "Completar 25 misiones diarias este mes.",
+        "xp": 6000,
+        "target": { "type": "quests_completed_period", "value": 25 }
+      },
+      {
+        "id": "monthly_013",
+        "title": "Maestro de la Perseverancia",
+        "description": "Completar 15 veces la misma misión este mes.",
+        "xp": 7000,
+        "target": { "type": "quest_repetition", "value": 15 }
       }
     ],
     "annual": [
       {
         "id": "annual_001",
-        "title": "Año del centenario",
+        "title": "Primer Paso Anual",
         "description": "Estar activo al menos 100 días este año.",
-        "xp": 5000,
+        "xp": 15000,
         "target": { "type": "active_days", "value": 100 }
       },
       {
         "id": "annual_002",
-        "title": "Año regular",
+        "title": "Año Constante",
         "description": "Estar activo al menos 200 días este año.",
-        "xp": 9000,
+        "xp": 30000,
         "target": { "type": "active_days", "value": 200 }
       },
       {
         "id": "annual_003",
-        "title": "Año legendario",
+        "title": "Año Legendario",
         "description": "Estar activo al menos 300 días este año.",
-        "xp": 15000,
+        "xp": 50000,
         "target": { "type": "active_days", "value": 300 }
       },
       {
         "id": "annual_004",
-        "title": "Devoto de ManLore",
-        "description": "Estar activo todos los 365 días del año.",
-        "xp": 25000,
+        "title": "Leal Absoluto",
+        "description": "Estar activo 365 días este año.",
+        "xp": 75000,
         "target": { "type": "active_days", "value": 365 }
       },
       {
         "id": "annual_005",
-        "title": "Club de 100 horas",
-        "description": "Acumular 100 horas de actividad en el año.",
-        "xp": 7000,
-        "target": { "type": "active_minutes", "value": 6000 }
+        "title": "Hito 10 Capítulos",
+        "description": "Leer al menos 10 capítulos en total.",
+        "xp": 300,
+        "target": { "type": "chapters_read_total", "value": 10 }
       },
       {
         "id": "annual_006",
-        "title": "Gran lector de Lore",
-        "description": "Consultar 2000 títulos diferentes a lo largo del año.",
-        "xp": 8000,
-        "target": { "type": "title_view", "value": 2000 }
+        "title": "Hito 50 Capítulos",
+        "description": "Leer al menos 50 capítulos en total.",
+        "xp": 800,
+        "target": { "type": "chapters_read_total", "value": 50 }
       },
       {
         "id": "annual_007",
-        "title": "Gran archivista anual",
-        "description": "Añadir 500 títulos durante el año.",
-        "xp": 7000,
-        "target": { "type": "title_add", "value": 500 }
+        "title": "Hito 100 Capítulos",
+        "description": "Leer al menos 100 capítulos en total.",
+        "xp": 1500,
+        "target": { "type": "chapters_read_total", "value": 100 }
       },
       {
         "id": "annual_008",
-        "title": "Gran editor anual",
-        "description": "Modificar 500 títulos durante el año.",
-        "xp": 7000,
-        "target": { "type": "title_edit", "value": 500 }
+        "title": "Hito 250 Capítulos",
+        "description": "Leer al menos 250 capítulos en total.",
+        "xp": 3000,
+        "target": { "type": "chapters_read_total", "value": 250 }
       },
       {
         "id": "annual_009",
-        "title": "Gran limpiador anual",
-        "description": "Eliminar 500 títulos durante el año.",
-        "xp": 7000,
-        "target": { "type": "title_delete", "value": 500 }
+        "title": "Hito 500 Capítulos",
+        "description": "Leer al menos 500 capítulos en total.",
+        "xp": 5000,
+        "target": { "type": "chapters_read_total", "value": 500 }
       },
       {
         "id": "annual_010",
-        "title": "Maestro de la constancia",
-        "description": "Conseguir al menos 30 rachas diarias completas.",
-        "xp": 10000,
-        "target": { "type": "completed_daily_streaks", "value": 30 }
+        "title": "Hito 1.000 Capítulos",
+        "description": "Leer al menos 1.000 capítulos en total.",
+        "xp": 8000,
+        "target": { "type": "chapters_read_total", "value": 1000 }
+      },
+      {
+        "id": "annual_011",
+        "title": "Hito 2.500 Capítulos",
+        "description": "Leer al menos 2.500 capítulos en total.",
+        "xp": 12000,
+        "target": { "type": "chapters_read_total", "value": 2500 }
+      },
+      {
+        "id": "annual_012",
+        "title": "Hito 5.000 Capítulos",
+        "description": "Leer al menos 5.000 capítulos en total.",
+        "xp": 25000,
+        "target": { "type": "chapters_read_total", "value": 5000 }
+      },
+      {
+        "id": "annual_013",
+        "title": "Hito 10.000 Capítulos",
+        "description": "Alcanzar la hazaña mítica de 10.000 capítulos leídos.",
+        "xp": 50000,
+        "target": { "type": "chapters_read_total", "value": 10000 }
+      },
+      {
+        "id": "annual_014",
+        "title": "Gran Archivista Anual",
+        "description": "Añadir 200 títulos durante el año.",
+        "xp": 20000,
+        "target": { "type": "title_add", "value": 200 }
+      },
+      {
+        "id": "annual_015",
+        "title": "Emperador de las Misiones",
+        "description": "Completar 50 misiones diarias.",
+        "xp": 25000,
+        "target": { "type": "quests_completed_period", "value": 50 }
+      },
+      {
+        "id": "annual_016",
+        "title": "Leyenda de la Constancia",
+        "description": "Completar 20 veces la misma misión.",
+        "xp": 20000,
+        "target": { "type": "quest_repetition", "value": 20 }
       }
     ],
     "rank": [
       {
         "id": "rank_E_to_D",
-        "title": "Paso a Rango D",
-        "description": "Avanzar de Rango E a Rango D.",
+        "title": "Alcanzar el Rango D",
+        "description": "Alcanzar el Rango D.",
         "xp": 350,
         "target": { "type": "rank", "from": "E", "to": "D" }
       },
       {
         "id": "rank_D_to_C",
-        "title": "Paso a Rango C",
-        "description": "Avanzar de Rango D a Rango C.",
+        "title": "Alcanzar el Rango C",
+        "description": "Alcanzar el Rango C.",
         "xp": 500,
         "target": { "type": "rank", "from": "D", "to": "C" }
       },
       {
         "id": "rank_C_to_B",
-        "title": "Paso a Rango B",
-        "description": "Avanzar de Rango C a Rango B.",
+        "title": "Alcanzar el Rango B",
+        "description": "Alcanzar el Rango B.",
         "xp": 650,
         "target": { "type": "rank", "from": "C", "to": "B" }
       },
       {
         "id": "rank_B_to_A",
-        "title": "Paso a Rango A",
-        "description": "Avanzar de Rango B a Rango A.",
+        "title": "Alcanzar el Rango A",
+        "description": "Alcanzar el Rango A.",
         "xp": 850,
         "target": { "type": "rank", "from": "B", "to": "A" }
       },
       {
         "id": "rank_A_to_S",
-        "title": "Paso a Rango S",
-        "description": "Avanzar de Rango A a Rango S.",
+        "title": "Alcanzar el Rango S",
+        "description": "Alcanzar el Rango S.",
         "xp": 1100,
         "target": { "type": "rank", "from": "A", "to": "S" }
+      },
+      {
+        "id": "rank_S_to_Splus",
+        "title": "Alcanzar el Rango S+",
+        "description": "Alcanzar el Rango S+ (Monarca Supremo).",
+        "xp": 2500,
+        "target": { "type": "rank", "from": "S", "to": "S+" }
+      },
+      {
+        "id": "rank_Splus_to_SS",
+        "title": "Alcanzar el Rango SS",
+        "description": "Alcanzar el Rango SS (Divinidad del Lore).",
+        "xp": 5000,
+        "target": { "type": "rank", "from": "S+", "to": "SS" }
+      },
+      {
+        "id": "rank_SS_to_SSS",
+        "title": "Alcanzar el Rango SSS",
+        "description": "Alcanzar el Rango SSS (Soberano Cósmico).",
+        "xp": 10000,
+        "target": { "type": "rank", "from": "SS", "to": "SSS" }
+      },
+      {
+        "id": "rank_SSS_to_Z",
+        "title": "Alcanzar el Rango Z",
+        "description": "Alcanzar el místico Rango Z (Trascendencia Cósmica).",
+        "xp": 25000,
+        "target": { "type": "rank", "from": "SSS", "to": "Z" }
       }
     ]
   }
