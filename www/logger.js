@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v7.0.0 - LOGGER.JS
+   MANLORE v8.0.0 - LOGGER.JS
    Console Interceptor, Error Logger, Crash Analytics
    & Performance Metric Tracker
    ============================================ */

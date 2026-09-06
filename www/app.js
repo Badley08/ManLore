@@ -1,6 +1,6 @@
 /* ============================================
-   MANLORE v7.0.0 - APP.JS
-   Main Application Logic
+   MANLORE v8.0.0 - APP.JS
+   Logique principale d'application, Gestionnaires d'événements & Navigation PWA
    ============================================ */
 
 'use strict';
@@ -73,7 +73,7 @@ async function showApp() {
     checkWhatsNewModal();
 }
 
-const WHATS_NEW_VERSION = 'v7.0.0';
+const WHATS_NEW_VERSION = 'v8.0.0';
 
 function checkWhatsNewModal() {
     const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
@@ -1323,11 +1323,33 @@ function setupEventListeners() {
     window.addEventListener('offline', () => updateJikanOfflineNotice());
 }
 
-// ============ ROULETTE DU DESTIN (RANDOM READ) ============
+// ============ ROULETTE DU DESTIN (RANDOM READ & DISCOVERY) ============
 let rouletteSelectedId = null;
+let rouletteMode = 'local'; // 'local' | 'global'
+let rouletteTypeFilter = 'all'; // 'all' | 'manga' | 'manhwa' | 'manhua'
+let rouletteGlobalItem = null;
+
+function setRouletteMode(mode) {
+    rouletteMode = mode;
+    document.getElementById('rouletteModeLocal')?.classList.toggle('active', mode === 'local');
+    document.getElementById('rouletteModeGlobal')?.classList.toggle('active', mode === 'global');
+    const typeBar = document.getElementById('rouletteGlobalTypeBar');
+    if (typeBar) typeBar.style.display = (mode === 'global') ? 'flex' : 'none';
+}
+window.setRouletteMode = setRouletteMode;
+
+function setRouletteTypeFilter(filter) {
+    rouletteTypeFilter = filter;
+    document.querySelectorAll('.roulette-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === filter);
+    });
+}
+window.setRouletteTypeFilter = setRouletteTypeFilter;
 
 function openRouletteModal() {
     rouletteSelectedId = null;
+    rouletteGlobalItem = null;
+    setRouletteMode('local');
     document.getElementById('rouletteTitle').textContent = 'Prêt à lancer ?';
     document.getElementById('rouletteSubtitle').textContent = 'Laissez le destin choisir votre prochaine lecture !';
     document.getElementById('rouletteMeta').textContent = '';
@@ -1340,15 +1362,7 @@ function openRouletteModal() {
     openModal('rouletteModal');
 }
 
-function spinRoulette() {
-    const pool = allItems.filter(i => i.status === 'À lire' || i.status === 'En cours');
-    const candidates = pool.length > 0 ? pool : allItems;
-
-    if (candidates.length === 0) {
-        showToast('Aucun titre disponible pour le tirage au sort', 'info');
-        return;
-    }
-
+async function spinRoulette() {
     const spinBtn = document.getElementById('spinRouletteBtn');
     const imgEl = document.getElementById('rouletteImage');
     const titleEl = document.getElementById('rouletteTitle');
@@ -1359,6 +1373,68 @@ function spinRoulette() {
     if (spinBtn) spinBtn.disabled = true;
     if (detailBtn) detailBtn.disabled = true;
     if (wrap) wrap.classList.add('roulette-spinning');
+
+    if (rouletteMode === 'global') {
+        titleEl.textContent = 'Recherche dans les étoiles...';
+        metaEl.textContent = 'Consultation des bases Jikan & AniList';
+        try {
+            const externalWinner = await window.jikan.getRandomDiscovery(rouletteTypeFilter);
+            if (wrap) wrap.classList.remove('roulette-spinning');
+            if (spinBtn) spinBtn.disabled = false;
+
+            if (!externalWinner) {
+                showToast('Aucun résultat trouvé pour ce filtre', 'warning');
+                return;
+            }
+            rouletteGlobalItem = externalWinner;
+            titleEl.textContent = externalWinner.title;
+            metaEl.textContent = `${externalWinner.type} • ★ ${externalWinner.score || 8.0} • ${externalWinner.status}`;
+            if (externalWinner.image) imgEl.src = externalWinner.image;
+
+            if (detailBtn) {
+                detailBtn.disabled = false;
+                detailBtn.innerHTML = '<i class="fas fa-plus"></i> Ajouter au Codex';
+                detailBtn.onclick = () => {
+                    closeModal('rouletteModal');
+                    if (typeof openAddModal === 'function') {
+                        openAddModal();
+                        setTimeout(() => {
+                            const titleInput = document.getElementById('itemTitle');
+                            const typeSelect = document.getElementById('itemType');
+                            const imageInput = document.getElementById('itemImageUrl');
+                            const remarksInput = document.getElementById('itemRemarks');
+                            if (titleInput) titleInput.value = externalWinner.title;
+                            if (typeSelect) typeSelect.value = externalWinner.type || 'Manga';
+                            if (imageInput) imageInput.value = externalWinner.image || '';
+                            if (remarksInput) remarksInput.value = externalWinner.synopsis || '';
+                        }, 200);
+                    }
+                };
+            }
+
+            if (window.questManager) {
+                window.questManager.addExp(25, 'Découverte de manga externe');
+                window.questManager.onCustomEvent('roulette_spin');
+            }
+            showToast('Nouveau manga découvert !', 'success');
+        } catch (e) {
+            if (wrap) wrap.classList.remove('roulette-spinning');
+            if (spinBtn) spinBtn.disabled = false;
+            showToast('Erreur lors du tirage externe', 'error');
+        }
+        return;
+    }
+
+    // Local pool
+    const pool = allItems.filter(i => i.status === 'À lire' || i.status === 'En cours');
+    const candidates = pool.length > 0 ? pool : allItems;
+
+    if (candidates.length === 0) {
+        if (wrap) wrap.classList.remove('roulette-spinning');
+        if (spinBtn) spinBtn.disabled = false;
+        showToast('Aucun titre disponible dans votre bibliothèque', 'info');
+        return;
+    }
 
     let counter = 0;
     const interval = setInterval(() => {
@@ -1379,6 +1455,7 @@ function spinRoulette() {
             if (spinBtn) spinBtn.disabled = false;
             if (detailBtn) {
                 detailBtn.disabled = false;
+                detailBtn.innerHTML = '<i class="fas fa-eye"></i> Voir la fiche';
                 detailBtn.onclick = () => {
                     closeModal('rouletteModal');
                     openViewModal(winner.id);
@@ -1387,6 +1464,7 @@ function spinRoulette() {
 
             if (window.questManager) {
                 window.questManager.addExp(10, 'Tirage au sort de lecture');
+                window.questManager.onCustomEvent('roulette_spin');
             }
             showToast('Destin scellé ! Bonne lecture !', 'success');
         }
@@ -1523,5 +1601,77 @@ async function markChapterUpToDate(itemId, targetChapter) {
 }
 window.markChapterUpToDate = markChapterUpToDate;
 
-console.log('[App v7.0.0] Module loaded');
+// ============ PRESS-AND-HOLD QUICK IMAGE PREVIEW ============
+let quickPreviewTimer = null;
+
+function initQuickPreviewListeners() {
+    const overlay = document.getElementById('quickPreviewOverlay');
+    const content = document.getElementById('quickPreviewContent');
+    if (!overlay || !content) return;
+
+    function hidePreview() {
+        if (quickPreviewTimer) {
+            clearTimeout(quickPreviewTimer);
+            quickPreviewTimer = null;
+        }
+        overlay.classList.remove('active');
+    }
+
+    function handlePressStart(e) {
+        const img = e.target.closest('.item-card img, .cover-img, .wishlist-card img');
+        if (!img) return;
+
+        const card = img.closest('.item-card, .wishlist-card');
+        let title = '', type = '', image = img.src, status = '', chapters = '', rating = '', synopsis = '';
+        if (card && card.dataset.id) {
+            const item = allItems.find(i => (i.id || i.objectId) === card.dataset.id);
+            if (item) {
+                title = item.title;
+                type = item.type || 'Manga';
+                status = item.status || 'En cours';
+                chapters = `Chap. ${item.chapters || 0}`;
+                rating = item.rating ? `★ ${item.rating}/10` : '';
+                synopsis = item.remarks || item.synopsis || 'Appuyez pour voir plus de détails.';
+            }
+        }
+        if (!title) {
+            title = img.alt || img.title || 'Aperçu Rapide';
+        }
+
+        quickPreviewTimer = setTimeout(() => {
+            content.innerHTML = `
+                <img src="${image}" style="max-height:220px; width:auto; border-radius:12px; margin-bottom:0.75rem; box-shadow:0 8px 24px rgba(0,0,0,0.5); object-fit:cover">
+                <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem">${escapeHtml(title)}</h3>
+                <div style="display:flex; gap:0.4rem; justify-content:center; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap">
+                    ${type ? `<span class="genre-tag" style="font-size:0.75rem">${escapeHtml(type)}</span>` : ''}
+                    ${status ? `<span class="badge badge-info" style="font-size:0.75rem">${escapeHtml(status)}</span>` : ''}
+                    ${chapters ? `<span class="text-xs text-muted">${escapeHtml(chapters)}</span>` : ''}
+                    ${rating ? `<span class="text-xs text-warning" style="font-weight:700">${escapeHtml(rating)}</span>` : ''}
+                </div>
+                <p class="text-xs text-secondary" style="line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden">${escapeHtml(synopsis)}</p>
+                <div class="text-xs text-muted" style="margin-top:0.75rem; font-style:italic">Relâchez pour fermer l'aperçu</div>
+            `;
+            overlay.classList.add('active');
+        }, 300);
+    }
+
+    document.addEventListener('pointerdown', handlePressStart, { passive: true });
+    document.addEventListener('touchstart', handlePressStart, { passive: true });
+
+    ['pointerup', 'pointercancel', 'pointerleave', 'touchend', 'touchcancel', 'mouseleave'].forEach(evt => {
+        document.addEventListener(evt, hidePreview, { passive: true });
+    });
+
+    document.addEventListener('contextmenu', (e) => {
+        if (e.target.closest('.item-card img, .cover-img, .wishlist-card img')) {
+            e.preventDefault();
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initQuickPreviewListeners();
+});
+
+console.log('[App v8.0.0] Module loaded');
 

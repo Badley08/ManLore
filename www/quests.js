@@ -1,8 +1,6 @@
 /* ============================================
-   MANLORE v7.0.0 - QUESTS.JS
-   Multi-period Quest System (Daily, Weekly, Monthly, Annual, Rank)
-   Interactive Quest Claiming & Real-Time XP Progression
-   Multi-language Support (FR, EN, ES) & Rank Overview Modal
+   MANLORE v8.0.0 - QUESTS.JS
+   Système de Quêtes XP & Progression de Rangs
    ============================================ */
 
 'use strict';
@@ -579,6 +577,10 @@ class QuestManager {
 
     onTitleAdded() {
         this.checkResets();
+        const hour = new Date().getHours();
+        if (hour >= 22 || hour < 4) {
+            this.data.vampireAddsToday = (this.data.vampireAddsToday || 0) + 1;
+        }
         this.data.titlesAddedToday = (this.data.titlesAddedToday || 0) + 1;
         this.data.titlesAddedWeek = (this.data.titlesAddedWeek || 0) + 1;
         this.data.titlesAddedMonth = (this.data.titlesAddedMonth || 0) + 1;
@@ -632,6 +634,10 @@ class QuestManager {
 
     onChapterRead(count = 1) {
         this.checkResets();
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 8) {
+            this.data.earlyBirdReadsToday = (this.data.earlyBirdReadsToday || 0) + count;
+        }
         this.data.chaptersReadToday = (this.data.chaptersReadToday || 0) + count;
         this.data.chaptersReadWeek = (this.data.chaptersReadWeek || 0) + count;
         this.data.chaptersReadMonth = (this.data.chaptersReadMonth || 0) + count;
@@ -640,6 +646,16 @@ class QuestManager {
         this.data.actionsWeek?.add('chapter_read');
         this.data.actionsMonth?.add('chapter_read');
         this.addExp(count * 5, `${count} chapitre(s) lu(s)`);
+        this.saveProgression();
+    }
+
+    onCustomEvent(eventName, count = 1) {
+        this.checkResets();
+        if (!this.data.customEvents) this.data.customEvents = {};
+        this.data.customEvents[eventName] = (this.data.customEvents[eventName] || 0) + count;
+        if (eventName === 'roulette_spin') {
+            this.data.rouletteSpinsTotal = (this.data.rouletteSpinsTotal || 0) + count;
+        }
         this.saveProgression();
     }
 
@@ -789,6 +805,23 @@ class QuestManager {
                 });
                 current = allMet ? 1 : 0;
                 target = 1;
+                break;
+            case 'vampire_add':
+                current = this.data.vampireAddsToday || 0;
+                break;
+            case 'early_bird_read':
+                current = this.data.earlyBirdReadsToday || 0;
+                break;
+            case 'roulette_spin':
+                current = this.data.rouletteSpinsTotal || 0;
+                break;
+            case 'collection_types':
+                if (typeof allItems !== 'undefined' && Array.isArray(allItems)) {
+                    const types = new Set(allItems.map(i => i.type || 'Manga'));
+                    current = types.size;
+                } else {
+                    current = 1;
+                }
                 break;
             case 'rank':
                 const currentRankInfo = this.getCurrentRankInfo();
@@ -1072,5 +1105,5 @@ window.addEventListener('languageChanged', () => {
     window.questManager?.loadQuestDefinitions();
 });
 
-console.log('[Quests v7.0.0] Multi-period System loaded');
+console.log('[Quests v8.0.0] Multi-period System loaded');
 

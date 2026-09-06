@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v7.0.0 - JIKAN.JS
+   MANLORE v8.0.0 - JIKAN.JS
    Jikan v4 + Kitsu + AniList + MangaDex Multi-Search + Auto-Translate + NSFW Filter
    ============================================ */
 
@@ -692,7 +692,53 @@ class JikanAPI {
 
         return results;
     }
+
+    /**
+     * Tirage de manga externe / Découverte Globale pour la Roulette du Destin
+     * @param {string} typeFilter 'all' | 'manga' | 'manhwa' | 'manhua'
+     */
+    async getRandomDiscovery(typeFilter = 'all') {
+        const page = Math.floor(Math.random() * 5) + 1;
+        let url = `${JIKAN_BASE}/top/manga?page=${page}&limit=25`;
+        if (typeFilter && typeFilter !== 'all') {
+            url += `&type=${typeFilter}`;
+        }
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`);
+            const data = await res.json();
+            const list = (data.data || []).filter(item => {
+                const title = (item.title || item.title_japanese || '').toLowerCase();
+                const genres = (item.genres || []).map(g => g.name.toLowerCase());
+                return !genres.includes('hentai') && !genres.includes('erotica');
+            });
+            if (list.length === 0) return null;
+            const chosen = list[Math.floor(Math.random() * list.length)];
+            return {
+                id: 'external_' + (chosen.mal_id || Date.now()),
+                title: chosen.title_english || chosen.title || 'Titre inconnu',
+                type: chosen.type || (typeFilter !== 'all' ? typeFilter.toUpperCase() : 'Manga'),
+                image: chosen.images?.jpg?.large_image_url || chosen.images?.jpg?.image_url || '',
+                synopsis: chosen.synopsis || 'Aucun synopsis disponible.',
+                score: chosen.score || 8.0,
+                chapters: chosen.chapters || 0,
+                status: chosen.status || 'En cours',
+                link: chosen.url || ''
+            };
+        } catch (err) {
+            console.warn('[Jikan] getRandomDiscovery fallback:', err);
+            // Fallback hardcoded list if offline or rate limited
+            const fallbacks = [
+                { title: "Solo Leveling", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/3/222234.jpg", score: 8.7, synopsis: "Dans un monde où des chasseurs s'éveillent, Sung Jin-Woo est le plus faible de tous...", link: "https://myanimelist.net/manga/121496" },
+                { title: "Omniscient Reader's Viewpoint", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/2/232497.jpg", score: 8.8, synopsis: "Kim Dokja est le seul lecteur à avoir fini le roman des trois manières d'exister...", link: "https://myanimelist.net/manga/127398" },
+                { title: "Chainsaw Man", type: "Manga", image: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", score: 8.6, synopsis: "Denji vit une vie de misère avec son démon-tronçonneuse Pochita...", link: "https://myanimelist.net/manga/116778" },
+                { title: "Tower of God", type: "Manhwa", image: "https://cdn.myanimelist.net/images/manga/2/178550.jpg", score: 8.4, synopsis: "Que désires-tu ? La gloire, la fortune, le pouvoir ? Tout se trouve au sommet de la Tour...", link: "https://myanimelist.net/manga/122663" },
+                { title: "Tales of Demons and Gods", type: "Manhua", image: "https://cdn.myanimelist.net/images/manga/3/178009.jpg", score: 7.9, synopsis: "Nie Li renaît dans son passé avec toutes les connaissances de sa vie antérieure...", link: "https://myanimelist.net/manga/93557" }
+            ];
+            return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        }
+    }
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v7.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');
+console.log('[Jikan v8.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');

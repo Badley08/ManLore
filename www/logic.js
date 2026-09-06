@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v5.0.1 - LOGIC.JS
+   MANLORE v8.0.0 - LOGIC.JS
    Clean Dedicated Server Architecture (Server A)
    Universal Multi-App Export & Archive (com.karlitodev.manlore/exported)
    Diagnostic Logs Storage (com.karlitodev.manlore/logs)
@@ -1332,4 +1332,4 @@ async function sendServerAnnouncementNotification(payload) {
 }
 window.sendServerAnnouncementNotification = sendServerAnnouncementNotification;
 
-console.log('[Logic v6.0.1] Dedicated Cloud Engine & Universal Exporter loaded');
+console.log('[Logic v8.0.0] Dedicated Cloud Engine & Universal Exporter loaded');

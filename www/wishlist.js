@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v7.0.0 - WISHLIST.JS
+   MANLORE v8.0.0 - WISHLIST.JS
    Liste de souhaits interactive & Vote communautaire
    ============================================ */
 
@@ -734,4 +734,4 @@ function openWishlistModal(prefill = null) {
     openModal('wishlistModal');
 }
 
-console.log('[Wishlist v5.0.1] Module loaded');
+console.log('[Wishlist v8.0.0] Module loaded');

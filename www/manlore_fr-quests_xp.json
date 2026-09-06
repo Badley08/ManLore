@@ -228,6 +228,27 @@
         "description": "Lire 30 chapitres aujourd'hui.",
         "xp": 650,
         "target": { "type": "chapters_read", "value": 30 }
+      },
+      {
+        "id": "daily_vampire",
+        "title": "Vampire du Lore",
+        "description": "Ajouter ou lire un chapitre entre 22h00 et 04h00 du matin.",
+        "xp": 500,
+        "target": { "type": "vampire_add", "value": 1 }
+      },
+      {
+        "id": "daily_earlybird",
+        "title": "Lève-Tôt du Chapitre",
+        "description": "Lire au moins 1 chapitre entre 05h00 et 08h00 du matin.",
+        "xp": 300,
+        "target": { "type": "early_bird_read", "value": 1 }
+      },
+      {
+        "id": "daily_roulette",
+        "title": "L'Appel du Destin",
+        "description": "Lancer la Roulette du Destin aujourd'hui.",
+        "xp": 250,
+        "target": { "type": "roulette_spin", "value": 1 }
       }
     ],
     "weekly": [

@@ -1,6 +1,6 @@
 /* ============================================
-   MANLORE v7.0.0 - STYLES.CSS
-   Design System & Main Application Theme
+   MANLORE v8.0.0 - STYLES.CSS
+   Styles Globaux, Design System, Thèmes Visuels & Micro-Animations
    ============================================ */
 
 /* ============ FONTS ============ */
@@ -186,6 +186,102 @@
     --bg-accent: #0f3460;
     --bg-card: rgba(22, 33, 62, 0.75);
     --bg-input: rgba(15, 52, 96, 0.5);
+}
+
+/* ============ THEME: NORDIC FROST (GIVRE NORDIQUE) ============ */
+[data-theme="nordic-frost"] {
+    --bg-primary: #2E3440;
+    --bg-secondary: #0A1010;
+    --bg-accent: #506276;
+    --bg-card: #434A4B;
+    --bg-input: rgba(10, 16, 16, 0.6);
+    --bg-glass: rgba(46, 52, 64, 0.85);
+    --bg-header: rgba(10, 16, 16, 0.95);
+    --bg-sidebar: rgba(10, 16, 16, 0.99);
+    --bg-modal-content: #2E3440;
+    --color-primary: #88C0CE;
+    --color-primary-rgb: 136, 192, 206;
+    --color-secondary: #81A1C1;
+    --color-accent: #506276;
+    --gradient-primary: linear-gradient(135deg, #88C0CE 0%, #81A1C1 100%);
+    --gradient-card: linear-gradient(145deg, #434A4B 0%, #2E3440 100%);
+    --border-color: rgba(136, 192, 206, 0.3);
+    --border-card: rgba(136, 192, 206, 0.25);
+    --border-input: rgba(136, 192, 206, 0.4);
+    --shadow-card: 0 8px 32px rgba(10, 16, 16, 0.6);
+    --shadow-hover: 0 12px 40px rgba(136, 192, 206, 0.25);
+    --shadow-btn: 0 6px 20px rgba(136, 192, 206, 0.3);
+    --text-primary: #ECEFF4;
+    --text-secondary: #D8DEE9;
+    --text-muted: #4C566A;
+}
+
+[data-theme="nordic-frost"] .btn-primary {
+    background: linear-gradient(135deg, #88C0CE, #81A1C1);
+    color: #0A1010;
+    font-weight: 700;
+}
+
+[data-theme="nordic-frost"] .item-card:hover {
+    border-color: #88C0CE;
+    box-shadow: 0 0 20px rgba(136, 192, 206, 0.3);
+}
+
+[data-theme="nordic-frost"] .nav-item.active,
+[data-theme="nordic-frost"] .bottom-nav-item.active {
+    color: #88C0CE;
+}
+
+/* Disable default context menu & callouts on manga covers */
+.item-card img, .cover-img, .wishlist-card img, .preview-target-img {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    pointer-events: auto;
+}
+
+/* Floating Quick Preview Overlay */
+#quickPreviewOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#quickPreviewOverlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.quick-preview-box {
+    background: var(--bg-modal-content);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.2s ease-out;
+}
+
+#quickPreviewOverlay.active .quick-preview-box {
+    transform: scale(1);
 }
 
 /* ============ RESET & BASE ============ */

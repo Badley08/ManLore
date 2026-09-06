@@ -1,9 +1,9 @@
 /* ============================================
-   MANLORE v7.0.0 - SERVICE WORKER
+   MANLORE v8.0.0 - SERVICE WORKER
    Offline PWA Support & Relative Scope Routing
    ============================================ */
 
-const CACHE_NAME = 'manlore-v7.0.0-cache';
+const CACHE_NAME = 'manlore-v8.0.0-cache';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -38,7 +38,7 @@ const STATIC_ASSETS = [
 
 // Install
 self.addEventListener('install', event => {
-    console.log('[SW] Installing v7.0.0...');
+    console.log('[SW] Installing v8.0.0...');
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return Promise.allSettled(
@@ -50,7 +50,7 @@ self.addEventListener('install', event => {
 
 // Activate — clean old caches
 self.addEventListener('activate', event => {
-    console.log('[SW] Activating v7.0.0...');
+    console.log('[SW] Activating v8.0.0...');
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => {
@@ -188,4 +188,4 @@ self.addEventListener('message', event => {
     }
 });
 
-console.log('[SW] Service Worker v7.0.0 loaded with Push Notification support');
+console.log('[SW] Service Worker v8.0.0 loaded with Push Notification support');

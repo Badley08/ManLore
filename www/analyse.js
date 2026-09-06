@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v7.0.0 - ANALYSE.JS
+   MANLORE v8.0.0 - ANALYSE.JS
    Analytics Avancés + Intégration Quêtes & Rangs
    ============================================ */
 
@@ -455,4 +455,4 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-console.log('[Analyse v7.0.0] Module loaded');
+console.log('[Analyse v8.0.0] Module loaded');
