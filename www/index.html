@@ -36,7 +36,7 @@
             <img src="manlore-logo.png" alt="ManLore" class="auth-logo">
             <h1 class="auth-app-name">ManLore</h1>
             <p class="auth-tagline" data-i18n="app.tagline">Ton Univers de collection de BD</p>
-            <p class="auth-version">v5.0.1</p>
+            <p class="auth-version">v7.0.0</p>
         </div>
 
         <!-- Mode Switcher Tabs Prominents -->
@@ -138,6 +138,9 @@
             </a>
             <a href="#" class="nav-item" data-page="wishlist" id="navWishlist">
                 <i class="fas fa-heart"></i><span data-i18n="nav.wishlist">Liste de souhaits</span>
+            </a>
+            <a href="#" class="nav-item" onclick="openReleaseTrackerModal(); return false;" id="navReleaseTracker">
+                <i class="fas fa-rss" style="color:#00f2fe"></i><span data-i18n="release.title">Suivi des Sorties</span>
             </a>
             <a href="#" class="nav-item" data-page="data" id="navData">
                 <i class="fas fa-database"></i><span data-i18n="nav.data">Données</span>
@@ -552,7 +555,7 @@
                 <div class="about-info">
                     <div class="about-row">
                         <span class="about-key" data-i18n="settings.about.version">Version</span>
-                        <span class="about-val">6.0.1</span>
+                        <span class="about-val">7.0.0</span>
                     </div>
                     <div class="about-row">
                         <span class="about-key" data-i18n="settings.about.creator">Créateur</span>
@@ -957,14 +960,33 @@
     </div>
 </div>
 
+<!-- Release Tracker Modal -->
+<div id="releaseTrackerModal" class="modal">
+    <div class="modal-content" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column">
+        <div class="modal-header" style="background:linear-gradient(135deg, rgba(0,242,254,0.12), rgba(116,185,255,0.12)); border-bottom:1px solid var(--border-color);">
+            <h2 class="modal-title"><i class="fas fa-rss" style="color:#00f2fe"></i> <span data-i18n="release.title">Suivi des Sorties & Chapitres</span></h2>
+            <button class="modal-close" onclick="closeModal('releaseTrackerModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="releaseTrackerModalBody" class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem"></div>
+    </div>
+</div>
+
 <!-- What's New Release Notes Modal -->
 <div id="whatsNewModal" class="modal">
     <div class="modal-content" style="max-width:520px; max-height:90vh; display:flex; flex-direction:column">
         <div class="modal-header" style="background:linear-gradient(135deg, rgba(160,0,255,0.15), rgba(0,242,254,0.15)); border-bottom:1px solid var(--border-color);">
-            <h2 class="modal-title" data-i18n="whatsnew.title"><i class="fas fa-sparkles" style="color:#ffd32a"></i> Nouveautés de ManLore v5.1</h2>
+            <h2 class="modal-title" data-i18n="whatsnew.title"><i class="fas fa-sparkles" style="color:#ffd32a"></i> Nouveautés de ManLore v7.0</h2>
             <button class="modal-close" onclick="closeWhatsNewModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem; font-size:0.9rem; line-height:1.6;">
+            <div style="margin-bottom:1rem; padding:0.75rem; border-radius:8px; background:linear-gradient(135deg, rgba(0,242,254,0.12), rgba(160,0,255,0.12)); border:1px solid #00f2fe44; display:flex; align-items:center; gap:0.75rem;">
+                <i class="fas fa-satellite-dish" style="font-size:1.8rem; color:#00f2fe;"></i>
+                <div>
+                    <strong style="color:#00f2fe; display:block;">Suivi des Sorties & Chapitres (Jikan API)</strong>
+                    <span class="text-xs text-muted">Alerte automatique sur les derniers chapitres parus pour chaque titre de votre bibliothèque !</span>
+                </div>
+            </div>
+
             <div style="margin-bottom:1rem; padding:0.75rem; border-radius:8px; background:rgba(160,0,255,0.1); border:1px solid #a000ff44; display:flex; align-items:center; gap:0.75rem;">
                 <i class="fas fa-bolt" style="font-size:1.8rem; color:#a000ff;"></i>
                 <div>
@@ -985,8 +1007,8 @@
                 <div style="display:flex; gap:0.75rem;">
                     <i class="fas fa-sync" style="color:#2ecc71; margin-top:0.25rem;"></i>
                     <div>
-                        <strong>Quêtes Dynamiques & Rotation Quotidienne</strong>
-                        <p class="text-xs text-muted" style="margin:0;">10 quêtes visibles maximum. Dés qu'une quête est réclamée, la suivante apparaît immédiatement !</p>
+                        <strong>Quêtes Dynamiques & Rotation (10 Quêtes max)</strong>
+                        <p class="text-xs text-muted" style="margin:0;">Affichage dynamique : dès qu'une quête est réclamée, la suivante prend automatiquement sa place !</p>
                     </div>
                 </div>
 
@@ -994,15 +1016,15 @@
                     <i class="fas fa-trash-restore" style="color:#e74c3c; margin-top:0.25rem;"></i>
                     <div>
                         <strong>Corbeille de Restauration (15 jours)</strong>
-                        <p class="text-xs text-muted" style="margin:0;">Vos titres supprimés sont conservés en sécurité pendant 15 jours. Restaurez-les à tout moment dans les Statistiques.</p>
+                        <p class="text-xs text-muted" style="margin:0;">Vos titres supprimés sont conservés 15 jours. Restaurez-les à tout moment dans les Statistiques.</p>
                     </div>
                 </div>
 
                 <div style="display:flex; gap:0.75rem;">
                     <i class="fas fa-tachometer-alt" style="color:#f39c12; margin-top:0.25rem;"></i>
                     <div>
-                        <strong>Lancement PWA Instantané</strong>
-                        <p class="text-xs text-muted" style="margin:0;">Interface et données rechargées instantanément en cache local pour une vitesse maximale.</p>
+                        <strong>Lancement PWA Instantané & V7.0</strong>
+                        <p class="text-xs text-muted" style="margin:0;">Passage de tous les fichiers en v7.0.0 et optimisation majeure du temps de chargement.</p>
                     </div>
                 </div>
             </div>

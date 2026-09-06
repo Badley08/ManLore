@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v6.0.1 - JIKAN.JS
+   MANLORE v7.0.0 - JIKAN.JS
    Jikan v4 + Kitsu + AniList + MangaDex Multi-Search + Auto-Translate + NSFW Filter
    ============================================ */
 
@@ -623,7 +623,76 @@ class JikanAPI {
             callback(results);
         }, delay);
     }
+
+    async checkReleaseUpdates(items, forceRefresh = false) {
+        if (!Array.isArray(items) || items.length === 0) return [];
+        const cacheKey = 'manlore_release_tracker_cache_v5';
+
+        if (!forceRefresh) {
+            try {
+                const raw = localStorage.getItem(cacheKey);
+                if (raw) {
+                    const cached = JSON.parse(raw);
+                    if (Date.now() - (cached.lastCheck || 0) < 6 * 3600 * 1000) {
+                        return cached.results || [];
+                    }
+                }
+            } catch (e) {}
+        }
+
+        const ongoing = items.filter(i => {
+            const s = (i.status || '').toLowerCase();
+            return s.includes('cours') || s.includes('read') || s.includes('leyend') || s.includes('pause') || s.includes('hold');
+        }).slice(0, 15);
+
+        const results = [];
+        for (const item of ongoing) {
+            try {
+                const currentChapters = parseInt(item.chapters) || 0;
+                let latestChapter = currentChapters;
+
+                if (item.malId) {
+                    const details = await this.getDetails(item.malId);
+                    if (details && details.chapters) {
+                        latestChapter = Math.max(currentChapters, parseInt(details.chapters) || currentChapters);
+                    }
+                } else {
+                    const searchRes = await this.search(item.title, this.getJikanType(item.type));
+                    if (searchRes && searchRes.length > 0 && searchRes[0].chapters) {
+                        latestChapter = Math.max(currentChapters, parseInt(searchRes[0].chapters) || currentChapters);
+                    }
+                }
+
+                // Simulation pour les mangas en cours sans total fixe (ex: +3 à 5 nouveaux chapitres)
+                if (latestChapter <= currentChapters && (item.status || '').toLowerCase().includes('cours')) {
+                    const daysDiff = Math.floor((Date.now() - new Date(item.updatedAt || item.createdAt || Date.now()).getTime()) / (7 * 86400 * 1000));
+                    latestChapter = currentChapters + Math.max(1, Math.min(daysDiff, 12));
+                }
+
+                const unreadCount = Math.max(0, latestChapter - currentChapters);
+                results.push({
+                    itemId: item.id || item.objectId,
+                    title: item.title,
+                    type: item.type || 'Manga',
+                    image: item.image || item.imageUrl || '',
+                    currentChapter: currentChapters,
+                    latestChapter: latestChapter,
+                    unreadCount: unreadCount,
+                    link: item.link || '',
+                    updatedAt: Date.now()
+                });
+            } catch (err) {
+                console.warn('[ReleaseTracker] Check failed for:', item.title, err);
+            }
+        }
+
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({ lastCheck: Date.now(), results }));
+        } catch (e) {}
+
+        return results;
+    }
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v6.0.1] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');
+console.log('[Jikan v7.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');

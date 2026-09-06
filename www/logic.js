@@ -287,9 +287,10 @@ window.Parse.Query = class {
     }
 };
 
-// ============================================
-// INITIALISATION DU BACKEND
-// ============================================
+/* ============================================
+   MANLORE v7.0.0 - LOGIC.JS
+   Data Layer & CRUD Management
+   ============================================ */
 
 function generateUniqueUserToken(username) {
     const randomPart = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
@@ -1010,7 +1011,7 @@ async function exportData(items, filename) {
         // 1. Structure de sauvegarde complète et enrichie
         const exportPayload = {
             app: 'ManLore',
-            version: '5.0.1',
+            version: '7.0.0',
             package: 'com.karlitodev.manlore',
             exportedAt: new Date().toISOString(),
             itemsCount: items ? items.length : 0,

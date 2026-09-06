@@ -1,6 +1,7 @@
 /* ============================================
-   MANLORE v5.0.1 - LOGGER.JS
-   Telemetry & Diagnostic Logging Engine (Back4App)
+   MANLORE v7.0.0 - LOGGER.JS
+   Console Interceptor, Error Logger, Crash Analytics
+   & Performance Metric Tracker
    ============================================ */
 
 'use strict';
@@ -39,7 +40,7 @@ class AppLogger {
         const entry = {
             id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             timestamp: new Date().toISOString(),
-            version: '5.0.1',
+            version: '7.0.0',
             type, // 'network', 'jikan_missing', 'auth', 'error', 'perf'
             message,
             details,

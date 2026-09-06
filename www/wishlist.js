@@ -1,6 +1,6 @@
 /* ============================================
-   MANLORE v5.0.1 - WISHLIST.JS
-   Liste de souhaits personnelle + Vote & Proposition de features
+   MANLORE v7.0.0 - WISHLIST.JS
+   Liste de souhaits interactive & Vote communautaire
    ============================================ */
 
 'use strict';

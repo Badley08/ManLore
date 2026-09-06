@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v5.0.1 - QUESTS.JS
+   MANLORE v7.0.0 - QUESTS.JS
    Multi-period Quest System (Daily, Weekly, Monthly, Annual, Rank)
    Interactive Quest Claiming & Real-Time XP Progression
    Multi-language Support (FR, EN, ES) & Rank Overview Modal
@@ -1072,5 +1072,5 @@ window.addEventListener('languageChanged', () => {
     window.questManager?.loadQuestDefinitions();
 });
 
-console.log('[Quests v5.0.1] Multi-period System loaded');
+console.log('[Quests v7.0.0] Multi-period System loaded');
 

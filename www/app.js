@@ -1,5 +1,5 @@
 /* ============================================
-   MANLORE v2.0.12 - APP.JS
+   MANLORE v7.0.0 - APP.JS
    Main Application Logic
    ============================================ */
 
@@ -73,7 +73,7 @@ async function showApp() {
     checkWhatsNewModal();
 }
 
-const WHATS_NEW_VERSION = 'v5.1.0';
+const WHATS_NEW_VERSION = 'v7.0.0';
 
 function checkWhatsNewModal() {
     const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
@@ -1415,7 +1415,113 @@ function openExternalLink(url) {
     a.click();
     a.remove();
 }
-window.openExternalLink = openExternalLink;
+// ============ SUIVI DES SORTIES & CHAPITRES ============
+async function openReleaseTrackerModal(forceRefresh = false) {
+    if (typeof openModal === 'function') openModal('releaseTrackerModal');
+    await renderReleaseTracker(forceRefresh);
+}
+window.openReleaseTrackerModal = openReleaseTrackerModal;
 
-console.log('[App v5.0.1] Module loaded');
+async function renderReleaseTracker(forceRefresh = false) {
+    const container = document.getElementById('releaseTrackerModalBody');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="padding:2rem; text-align:center; color:var(--text-muted);">
+            <i class="fas fa-spinner fa-spin" style="font-size:2rem; color:var(--color-primary); margin-bottom:0.5rem;"></i>
+            <p>${i18n.t('release.checking') || 'Recherche des mises à jour...'}</p>
+        </div>
+    `;
+
+    try {
+        const releases = await window.jikan.checkReleaseUpdates(allItems, forceRefresh);
+        if (!releases || releases.length === 0) {
+            container.innerHTML = `
+                <div style="padding:2.5rem; text-align:center; color:var(--text-muted);">
+                    <i class="fas fa-rss" style="font-size:2.5rem; opacity:0.4; margin-bottom:0.75rem; display:block;"></i>
+                    <p style="font-weight:600;">${i18n.t('release.noReleases') || 'Aucune série en cours pour le moment.'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        const unreadTotal = releases.reduce((sum, r) => sum + (r.unreadCount || 0), 0);
+
+        container.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
+                <div>
+                    <span class="badge badge-primary" style="font-size:0.85rem; padding:0.35rem 0.75rem;">
+                        <i class="fas fa-book"></i> ${releases.length} séries suivies
+                    </span>
+                    ${unreadTotal > 0 ? `<span class="badge badge-success" style="margin-left:0.5rem; font-size:0.85rem; padding:0.35rem 0.75rem;">+${unreadTotal} nouveaux chapitres</span>` : ''}
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="openReleaseTrackerModal(true)">
+                    <i class="fas fa-sync-alt"></i> ${i18n.t('release.refreshBtn') || 'Actualiser'}
+                </button>
+            </div>
+            <div class="space-y">
+                ${releases.map(r => {
+                    const isUpToDate = r.unreadCount === 0;
+                    return `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem; border-radius:10px; background:var(--bg-card); border:1px solid var(--border-color); gap:0.85rem;">
+                            <div style="display:flex; align-items:center; gap:0.85rem; min-width:0;">
+                                ${r.image ? `<img src="${escapeHtml(r.image)}" style="width:40px; height:54px; object-fit:cover; border-radius:6px; flex-shrink:0;">` : `<div style="width:40px; height:54px; background:var(--border-color); border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fas fa-book text-muted"></i></div>`}
+                                <div style="min-width:0;">
+                                    <div style="font-weight:700; color:var(--text-primary); font-size:0.95rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(r.title)}</div>
+                                    <div class="text-xs text-muted" style="margin-top:0.15rem;">
+                                        Lu : <strong>Chap. ${r.currentChapter}</strong> • Paru : <strong style="color:var(--color-primary);">Chap. ${r.latestChapter}</strong>
+                                    </div>
+                                    ${!isUpToDate ? `<span class="badge badge-success" style="font-size:0.75rem; margin-top:0.35rem; display:inline-block;"><i class="fas fa-plus-circle"></i> +${r.unreadCount} chapitres parus</span>` : `<span class="badge badge-secondary" style="font-size:0.75rem; margin-top:0.35rem; display:inline-block;"><i class="fas fa-check"></i> ${i18n.t('release.upToDate') || 'À jour'}</span>`}
+                                </div>
+                            </div>
+                            <div style="flex-shrink:0;">
+                                ${!isUpToDate ? `
+                                    <button class="btn btn-primary btn-sm" onclick="markChapterUpToDate('${r.itemId}', ${r.latestChapter})" style="font-size:0.8rem; padding:0.45rem 0.75rem;">
+                                        <i class="fas fa-check-double"></i> ${i18n.t('release.markUpToDate', { chapter: r.latestChapter }) || `Marquer lu (${r.latestChapter})`}
+                                    </button>
+                                ` : `
+                                    <button class="btn btn-secondary btn-sm" onclick="openViewModal('${r.itemId}')" style="font-size:0.8rem;">
+                                        <i class="fas fa-eye"></i> Voir
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `
+            <div style="padding:2rem; text-align:center; color:var(--color-danger);">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
+                <p>Erreur lors de la récupération des sorties.</p>
+            </div>
+        `;
+    }
+}
+window.renderReleaseTracker = renderReleaseTracker;
+
+async function markChapterUpToDate(itemId, targetChapter) {
+    const item = allItems.find(i => String(i.id) === String(itemId) || String(i.objectId) === String(itemId));
+    if (!item) return;
+
+    const oldChapters = parseInt(item.chapters) || 0;
+    const diff = Math.max(0, targetChapter - oldChapters);
+
+    item.chapters = targetChapter;
+    if (typeof updateInLocalStorage === 'function') {
+        updateInLocalStorage(itemId, { chapters: targetChapter });
+    }
+
+    if (window.questManager && diff > 0) {
+        window.questManager.onChapterRead(diff);
+    }
+
+    if (typeof applyFiltersAndRender === 'function') applyFiltersAndRender();
+    showToast(`Mis à jour au Chapitre ${targetChapter} (+${diff * 5} EXP)`, 'success');
+    await renderReleaseTracker(true);
+}
+window.markChapterUpToDate = markChapterUpToDate;
+
+console.log('[App v7.0.0] Module loaded');
 
