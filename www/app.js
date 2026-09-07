@@ -713,7 +713,36 @@ function applyStoredTheme() {
 }
 
 // ============ TITLE & UI FONT ============
+// Font name map
+const FONT_MAP = {
+    'orbitron':     "'Orbitron', sans-serif",
+    'archivo-black': "'Archivo Black', sans-serif"
+};
+
+function _applyFontCssVar(fontValue) {
+    // style.setProperty = inline style = highest CSS specificity, beats all rules
+    const root = document.documentElement;
+    const body = document.body;
+    root.style.setProperty('--font-app', fontValue);
+    root.style.setProperty('--font-title', fontValue);
+    if (body) {
+        body.style.setProperty('--font-app', fontValue);
+        body.style.setProperty('--font-title', fontValue);
+        body.style.fontFamily = fontValue;
+    }
+    // Force-apply to common high-specificity elements
+    document.querySelectorAll(
+        'h1, h2, h3, h4, h5, h6, button:not(.modal-close), ' +
+        '.page-title, .section-title, .modal-title, .stat-value, ' +
+        '.auth-app-name, .header-title, .nav-label'
+    ).forEach(el => {
+        el.style.fontFamily = fontValue;
+    });
+}
+
 function applyTitleFont(font) {
+    const fontValue = FONT_MAP[font] || FONT_MAP['orbitron'];
+    _applyFontCssVar(fontValue);
     document.documentElement.setAttribute('data-app-font', font);
     document.documentElement.setAttribute('data-title-font', font);
     localStorage.setItem('manlore_app_font', font);
@@ -721,9 +750,6 @@ function applyTitleFont(font) {
     document.querySelectorAll('.font-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.titleFont === font);
     });
-    if (typeof i18n !== 'undefined' && i18n.applyAll) {
-        i18n.applyAll();
-    }
     showToast(i18n.t('toast.font.changed'), 'info');
     if (typeof saveUserSettingsToCloud === 'function') {
         saveUserSettingsToCloud('titleFont', font);
@@ -732,6 +758,8 @@ function applyTitleFont(font) {
 
 function applyStoredTitleFont() {
     const saved = localStorage.getItem('manlore_app_font') || localStorage.getItem('manlore_title_font') || 'orbitron';
+    const fontValue = FONT_MAP[saved] || FONT_MAP['orbitron'];
+    _applyFontCssVar(fontValue);
     document.documentElement.setAttribute('data-app-font', saved);
     document.documentElement.setAttribute('data-title-font', saved);
     document.querySelectorAll('.font-btn').forEach(btn => {
