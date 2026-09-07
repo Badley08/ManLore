@@ -36,7 +36,7 @@
             <img src="manlore-logo.png" alt="ManLore" class="auth-logo">
             <h1 class="auth-app-name">ManLore</h1>
             <p class="auth-tagline" data-i18n="app.tagline">Ton Univers de collection de BD</p>
-            <p class="auth-version">v9.0.0</p>
+            <p class="auth-version">v9.0.1</p>
         </div>
 
         <!-- Mode Switcher Tabs Prominents -->
@@ -558,7 +558,7 @@
                 <div class="about-info">
                     <div class="about-row">
                         <span class="about-key" data-i18n="settings.about.version">Version</span>
-                        <span class="about-val">9.0.0</span>
+                        <span class="about-val">9.0.1</span>
                     </div>
                     <div class="about-row">
                         <span class="about-key" data-i18n="settings.about.creator">Créateur</span>
@@ -684,7 +684,7 @@
                     </div>
                 </div>
                 <div class="form-group col-span-2">
-                    <label class="form-label" data-i18n="modal.form.notes">Note</label>
+                    <label class="form-label" data-i18n="modal.form.notes">Description</label>
                     <textarea id="itemNotes" class="input-field" rows="3"></textarea>
                 </div>
             </div>
@@ -857,7 +857,7 @@
                     <i class="fas fa-book"></i> Ma Bibliothèque
                 </button>
                 <button type="button" id="rouletteModeGlobal" class="btn btn-xs" style="flex:1; border-radius:8px; font-weight:600; padding:0.4rem; font-size:0.8rem;" onclick="setRouletteMode('global')">
-                    <i class="fas fa-globe"></i> Découverte Globale
+                    <i class="fas fa-random"></i> <span data-i18n="roulette.mode.global">Découverte Random</span>
                 </button>
             </div>
 
@@ -999,7 +999,7 @@
 <div id="whatsNewModal" class="modal">
     <div class="modal-content" style="max-width:520px; max-height:90vh; display:flex; flex-direction:column">
         <div class="modal-header" style="background:linear-gradient(135deg, rgba(136,192,206,0.2), rgba(160,0,255,0.2)); border-bottom:1px solid var(--border-color);">
-            <h2 class="modal-title"><i class="fas fa-sparkles" style="color:#00d2ff"></i> <span data-i18n="whatsnew.title">Nouveautés de ManLore v9.0</span></h2>
+            <h2 class="modal-title"><i class="fas fa-sparkles" style="color:#00d2ff"></i> <span data-i18n="whatsnew.title">Nouveautés de ManLore v9.0.1</span></h2>
             <button class="modal-close" onclick="closeWhatsNewModal()"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem; font-size:0.9rem; line-height:1.6;">
@@ -1061,6 +1061,11 @@
         </div>
         <div class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem">
             <div class="space-y" style="gap:1rem">
+                <!-- v9.0.1 -->
+                <div style="padding:0.85rem; border-radius:10px; background:rgba(0,210,255,0.15); border:1px solid #00d2ff55">
+                    <strong style="color:#00d2ff; font-size:0.95rem; display:block" data-i18n="changelog.v901.title">Version 9.0.1 — Roulette Random Jikan API, Aperçu 3s &amp; Thèmes UI</strong>
+                    <p class="text-xs text-muted" style="margin-top:0.3rem; line-height:1.5" data-i18n="changelog.v901.desc">Tirage aléatoire Jikan API (random/manga), préremplissage score MAL, aperçu appui-long 3s, édition restreinte au crayon et harmonisation des thèmes.</p>
+                </div>
                 <!-- v9 -->
                 <div style="padding:0.85rem; border-radius:10px; background:rgba(0,210,255,0.12); border:1px solid #00d2ff44">
                     <strong style="color:#00d2ff; font-size:0.95rem; display:block" data-i18n="changelog.v9.title">Version 9.0.0 — Givre Arctique, Roulette API &amp; Sécurité UI</strong>

@@ -697,36 +697,88 @@ class JikanAPI {
      * Tirage de manga externe / Découverte Globale pour la Roulette du Destin
      * @param {string} typeFilter 'all' | 'manga' | 'manhwa' | 'manhua'
      */
+    /**
+     * Tirage de manga externe / Découverte Globale pour la Roulette du Destin
+     * Utilise l'endpoint officiel /random/manga et /manga avec pagination aléatoire pour éviter la répétition des classements
+     * @param {string} typeFilter 'all' | 'manga' | 'manhwa' | 'manhua'
+     */
     async getRandomDiscovery(typeFilter = 'all') {
-        const page = Math.floor(Math.random() * 8) + 1;
-        let url = `${JIKAN_BASE}/top/manga?page=${page}&limit=25`;
-        if (typeFilter && typeFilter !== 'all') {
-            url += `&type=${typeFilter}`;
-        }
         try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`);
-            const data = await res.json();
-            const list = (data.data || []).filter(item => {
-                const genres = (item.genres || []).map(g => g.name.toLowerCase());
-                return !genres.includes('hentai') && !genres.includes('erotica');
-            });
-            if (list.length === 0) throw new Error('Empty discovery list');
-            const chosen = list[Math.floor(Math.random() * list.length)];
+            let chosen = null;
+            if (typeFilter === 'all') {
+                const res = await fetch(`${JIKAN_BASE}/random/manga`);
+                if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`);
+                const data = await res.json();
+                chosen = data.data;
+            } else if (typeFilter === 'manhua') {
+                // Jikan API indexing for Manhua is limited; attempt query or fallback
+                try {
+                    const page = Math.floor(Math.random() * 3) + 1;
+                    const res = await fetch(`${JIKAN_BASE}/manga?q=manhua&page=${page}&limit=25`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const list = (data.data || []).filter(item => {
+                            const g = (item.genres || []).map(x => x.name.toLowerCase());
+                            return !g.includes('hentai') && !g.includes('erotica');
+                        });
+                        if (list.length > 0) chosen = list[Math.floor(Math.random() * list.length)];
+                    }
+                } catch (e) {
+                    console.warn('[Jikan] Manhua fetch attempt fallback:', e.message);
+                }
+            } else {
+                const page = Math.floor(Math.random() * 40) + 1;
+                const url = `${JIKAN_BASE}/manga?type=${typeFilter}&page=${page}&limit=25&order_by=popularity&sort=asc`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`);
+                const data = await res.json();
+                const list = (data.data || []).filter(item => {
+                    const genres = (item.genres || []).map(g => g.name.toLowerCase());
+                    return !genres.includes('hentai') && !genres.includes('erotica');
+                });
+                if (list.length > 0) {
+                    chosen = list[Math.floor(Math.random() * list.length)];
+                }
+            }
+
+            if (!chosen) {
+                const res = await fetch(`${JIKAN_BASE}/random/manga`);
+                if (res.ok) {
+                    const data = await res.json();
+                    chosen = data.data;
+                }
+            }
+
+            if (!chosen) throw new Error('No manga data returned');
+
             const rawGenres = (chosen.genres || []).map(g => g.name);
-            const genreStr = rawGenres.length > 0 ? rawGenres.join(', ') : (chosen.type || 'Manga');
-            const mainGenre = rawGenres[0] || chosen.type || 'Manga';
+            const explicitGenres = (chosen.explicit_genres || []).map(g => g.name);
+            const themes = (chosen.themes || []).map(g => g.name);
+            const demographics = (chosen.demographics || []).map(g => g.name);
+            const allGenresList = [...new Set([...rawGenres, ...themes, ...demographics])].filter(g => !explicitGenres.includes(g));
+
+            const genreStr = allGenresList.length > 0 ? allGenresList.join(', ') : (chosen.type || 'Manga');
+            const mainGenre = allGenresList[0] || chosen.type || 'Manga';
             const cleanSynopsis = chosen.synopsis ? chosen.synopsis.replace(/\[Written by MAL Rewrite\]/g, '').trim() : 'Aucun synopsis disponible.';
+
+            let imgUrl = chosen.images?.webp?.large_image_url || chosen.images?.webp?.image_url || chosen.images?.jpg?.large_image_url || chosen.images?.jpg?.image_url || '';
+            if (imgUrl && imgUrl.startsWith('http://')) {
+                imgUrl = imgUrl.replace('http://', 'https://');
+            }
+
+            const malScore = chosen.score ? parseFloat(chosen.score).toFixed(1) : '8.0';
 
             return {
                 id: 'external_' + (chosen.mal_id || Date.now()),
+                mal_id: chosen.mal_id,
                 title: chosen.title_english || chosen.title || 'Titre inconnu',
+                title_japanese: chosen.title_japanese || '',
                 type: chosen.type || (typeFilter !== 'all' ? typeFilter.toUpperCase() : 'Manga'),
                 genre: mainGenre,
                 genres: genreStr,
-                image: chosen.images?.webp?.large_image_url || chosen.images?.jpg?.large_image_url || chosen.images?.jpg?.image_url || '',
+                image: imgUrl,
                 synopsis: cleanSynopsis,
-                score: chosen.score || 8.2,
+                score: malScore,
                 chapters: chosen.chapters || 0,
                 status: chosen.status || 'En cours',
                 link: chosen.url || ''
@@ -734,18 +786,24 @@ class JikanAPI {
         } catch (err) {
             console.warn('[Jikan] getRandomDiscovery fallback:', err);
             const fallbacks = [
-                { title: "Solo Leveling", type: "Manhwa", genre: "Action", genres: "Action, Fantasy, Superpower", image: "https://cdn.myanimelist.net/images/manga/3/222234.jpg", score: 8.7, synopsis: "Dans un monde où des chasseurs s'éveillent aux capacités magiques, Sung Jin-Woo est le plus faible de tous jusqu'au jour où une double donjon mystérieuse lui offre une seconde chance...", link: "https://myanimelist.net/manga/121496" },
-                { title: "Omniscient Reader's Viewpoint", type: "Manhwa", genre: "Action", genres: "Action, Drama, Fantasy", image: "https://cdn.myanimelist.net/images/manga/2/232497.jpg", score: 8.8, synopsis: "Kim Dokja est le seul lecteur à avoir terminé le roman apocalypse des trois manières d'exister. Soudain, le monde réel se transforme en le monde exact du roman...", link: "https://myanimelist.net/manga/127398" },
-                { title: "Chainsaw Man", type: "Manga", genre: "Action", genres: "Action, Supernatural, Gore", image: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", score: 8.6, synopsis: "Denji vit une vie de misère avec son démon-tronçonneuse Pochita, accumulant les dettes de son père. Après une trahison, Denji ressuscite sous la forme d'un hybride démon-tronçonneuse...", link: "https://myanimelist.net/manga/116778" },
-                { title: "Tower of God", type: "Manhwa", genre: "Fantasy", genres: "Action, Adventure, Drama", image: "https://cdn.myanimelist.net/images/manga/2/178550.jpg", score: 8.4, synopsis: "Que désires-tu ? La gloire, la fortune, le pouvoir ? Tout ce que tu peux imaginer se trouve au sommet de la Tour. Bam part à l'ascension de la tour pour retrouver son amie Rachel...", link: "https://myanimelist.net/manga/122663" },
-                { title: "Tales of Demons and Gods", type: "Manhua", genre: "Fantasy", genres: "Action, Adventure, Martial Arts", image: "https://cdn.myanimelist.net/images/manga/3/178009.jpg", score: 7.9, synopsis: "Nie Li renaît dans son enfance avec toutes ses connaissances de sa vie antérieure pour protéger sa cité céleste d'un destin tragique...", link: "https://myanimelist.net/manga/93557" },
-                { title: "Kingdom", type: "Manga", genre: "Historique", genres: "Action, Historical, Military", image: "https://cdn.myanimelist.net/images/manga/2/171872.jpg", score: 9.0, synopsis: "Dans la Chine ancienne de la période des Royaumes combattants, Shin et Hyo sont deux orphelins de guerre rêvant de devenir de grands généraux sous les cieux...", link: "https://myanimelist.net/manga/16765" },
-                { title: "Berserk", type: "Manga", genre: "Dark Fantasy", genres: "Action, Adventure, Dark Fantasy", image: "https://cdn.myanimelist.net/images/manga/1/157897.jpg", score: 9.4, synopsis: "Guts, le Chevalier Noir, parcourt un monde médiéval sombre et impitoyable à la recherche de vengeance contre la troupe du Faucon et la God Hand...", link: "https://myanimelist.net/manga/2" }
+                { title: "Solo Leveling", type: "Manhwa", genre: "Action", genres: "Action, Fantasy, Superpower", image: "https://cdn.myanimelist.net/images/manga/3/222234.jpg", score: "8.7", synopsis: "Dans un monde où des chasseurs s'éveillent aux capacités magiques, Sung Jin-Woo est le plus faible de tous...", link: "https://myanimelist.net/manga/121496" },
+                { title: "Omniscient Reader's Viewpoint", type: "Manhwa", genre: "Action", genres: "Action, Drama, Fantasy", image: "https://cdn.myanimelist.net/images/manga/2/232497.jpg", score: "8.8", synopsis: "Kim Dokja est le seul lecteur à avoir terminé le roman apocalypse...", link: "https://myanimelist.net/manga/127398" },
+                { title: "Chainsaw Man", type: "Manga", genre: "Action", genres: "Action, Supernatural, Gore", image: "https://cdn.myanimelist.net/images/manga/3/216464.jpg", score: "8.6", synopsis: "Denji vit une vie de misère avec son démon-tronçonneuse Pochita...", link: "https://myanimelist.net/manga/116778" },
+                { title: "Tower of God", type: "Manhwa", genre: "Fantasy", genres: "Action, Adventure, Drama", image: "https://cdn.myanimelist.net/images/manga/2/178550.jpg", score: "8.4", synopsis: "Que désires-tu ? La gloire, la fortune, le pouvoir ?", link: "https://myanimelist.net/manga/122663" },
+                { title: "Tales of Demons and Gods", type: "Manhua", genre: "Fantasy", genres: "Action, Adventure, Martial Arts", image: "https://cdn.myanimelist.net/images/manga/3/178009.jpg", score: "7.9", synopsis: "Nie Li renaît dans son enfance avec toutes ses connaissances de sa vie antérieure...", link: "https://myanimelist.net/manga/93557" },
+                { title: "Battle Through the Heavens", type: "Manhua", genre: "Martial Arts", genres: "Action, Adventure, Fantasy, Martial Arts", image: "https://cdn.myanimelist.net/images/manga/3/159495.jpg", score: "7.8", synopsis: "Dans une terre où la magie n'existe pas mais où la puissance des Arts Martiaux règne en maître...", link: "https://myanimelist.net/manga/89659" },
+                { title: "Martial Peak", type: "Manhua", genre: "Martial Arts", genres: "Action, Adventure, Fantasy, Martial Arts", image: "https://cdn.myanimelist.net/images/manga/1/224594.jpg", score: "7.7", synopsis: "Le chemin vers le sommet des arts martiaux est long et solitaire. Yang Kai est un balayeur qui découvre un livre noir mystérieux...", link: "https://myanimelist.net/manga/120937" },
+                { title: "Kingdom", type: "Manga", genre: "Historique", genres: "Action, Historical, Military", image: "https://cdn.myanimelist.net/images/manga/2/171872.jpg", score: "9.0", synopsis: "Dans la Chine ancienne de la période des Royaumes combattants...", link: "https://myanimelist.net/manga/16765" },
+                { title: "Berserk", type: "Manga", genre: "Dark Fantasy", genres: "Action, Adventure, Dark Fantasy", image: "https://cdn.myanimelist.net/images/manga/1/157897.jpg", score: "9.4", synopsis: "Guts, le Chevalier Noir, parcourt un monde médiéval sombre...", link: "https://myanimelist.net/manga/2" }
             ];
+            if (typeFilter && typeFilter !== 'all') {
+                const filtered = fallbacks.filter(f => f.type.toLowerCase() === typeFilter.toLowerCase());
+                if (filtered.length > 0) return filtered[Math.floor(Math.random() * filtered.length)];
+            }
             return fallbacks[Math.floor(Math.random() * fallbacks.length)];
         }
     }
 }
 
 window.jikan = new JikanAPI();
-console.log('[Jikan v9.0.0] Module loaded — Sources: Jikan (MAL) + Kitsu + AniList + MangaDex');
+console.log('[Jikan v9.0.1] Module loaded — Sources: Jikan (MAL) Random & Search');

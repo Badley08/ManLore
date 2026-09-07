@@ -73,7 +73,7 @@ async function showApp() {
     checkWhatsNewModal();
 }
 
-const WHATS_NEW_VERSION = 'v9.0.0';
+const WHATS_NEW_VERSION = 'v9.0.1';
 
 function checkWhatsNewModal() {
     const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
@@ -407,10 +407,10 @@ function openViewModal(itemId) {
                     }
                 </div>
                 <div style="margin-top:1rem;display:flex;gap:0.5rem">
-                    <button class="btn-primary" style="flex:1;font-size:0.8rem" onclick="closeModal('viewModal');openEditModal('${item.id}')">
-                        <i class="fas fa-pen"></i> ${escapeHtml(i18n.t('view.btn.edit'))}
+                    <button class="btn-secondary" style="flex:1;font-size:0.8rem" onclick="closeModal('viewModal')">
+                        <i class="fas fa-times"></i> ${escapeHtml(i18n.t('modal.form.cancel'))}
                     </button>
-                    <button class="btn-secondary" style="flex:1;font-size:0.8rem" onclick="closeModal('viewModal');handleDeleteItem('${item.id}')">
+                    <button class="btn-secondary danger" style="flex:1;font-size:0.8rem" onclick="closeModal('viewModal');handleDeleteItem('${item.id}')">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
@@ -1393,7 +1393,7 @@ async function spinRoulette() {
             }
             rouletteGlobalItem = externalWinner;
             titleEl.textContent = externalWinner.title;
-            metaEl.textContent = `${externalWinner.type} • ★ ${externalWinner.score || 8.0} • ${externalWinner.status}`;
+            metaEl.textContent = `${externalWinner.type} • Score MAL: ★ ${externalWinner.score || '8.0'} • ${externalWinner.genres || externalWinner.genre || ''}`;
             if (externalWinner.image) imgEl.src = externalWinner.image;
 
             if (detailBtn) {
@@ -1409,11 +1409,18 @@ async function spinRoulette() {
                             const genresInput = document.getElementById('itemGenres');
                             const imageInput = document.getElementById('itemImageUrl');
                             const remarksInput = document.getElementById('itemRemarks');
+                            
                             if (titleInput) titleInput.value = externalWinner.title;
                             if (typeSelect) typeSelect.value = externalWinner.type || 'Manga';
                             if (genresInput) genresInput.value = externalWinner.genres || externalWinner.genre || '';
                             if (imageInput) imageInput.value = externalWinner.image || '';
-                            if (remarksInput) remarksInput.value = externalWinner.synopsis || '';
+                            if (remarksInput) {
+                                const malScoreText = externalWinner.score ? `[Score MyAnimeList: ★ ${externalWinner.score}/10]\n\n` : '';
+                                remarksInput.value = malScoreText + (externalWinner.synopsis || '');
+                            }
+                            if (externalWinner.image && typeof showImagePreview === 'function') {
+                                showImagePreview(externalWinner.image);
+                            }
                         }, 200);
                     }
                 };
@@ -1665,7 +1672,7 @@ function initQuickPreviewListeners() {
                 <div class="text-xs text-muted" style="margin-top:0.75rem; font-style:italic">Relâchez pour fermer l'aperçu</div>
             `;
             overlay.classList.add('active');
-        }, 350);
+        }, 3000);
     }
 
     function handlePressMove(e) {
@@ -1698,5 +1705,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuickPreviewListeners();
 });
 
-console.log('[App v9.0.0] Module loaded');
+console.log('[App v9.0.1] Module loaded');
 

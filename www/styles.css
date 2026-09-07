@@ -1526,3 +1526,72 @@ option:checked, option:hover {
     background: rgba(var(--color-primary-rgb), 0.15);
     color: var(--color-primary);
 }
+
+/* ============ ROULETTE & LIBRARY THEME INTEGRATION ============ */
+#rouletteModal .modal-content {
+    background: var(--bg-modal-content) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+#rouletteModeLocal, #rouletteModeGlobal {
+    background: var(--bg-input) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    transition: all var(--transition-fast) !important;
+}
+
+#rouletteModeLocal:hover, #rouletteModeGlobal:hover {
+    border-color: var(--color-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+#rouletteModeLocal.active, #rouletteModeGlobal.active {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary, var(--color-primary))) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.45) !important;
+    font-weight: 700 !important;
+}
+
+.roulette-type-btn {
+    background: var(--bg-input) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-sm) !important;
+    transition: all var(--transition-fast) !important;
+}
+
+.roulette-type-btn:hover {
+    border-color: var(--color-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+.roulette-type-btn.active {
+    background: var(--color-primary) !important;
+    color: #ffffff !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.35) !important;
+}
+
+.roulette-cover-wrap {
+    background: var(--bg-secondary) !important;
+    border: 2px dashed var(--border-color) !important;
+}
+
+.item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    color: var(--text-primary);
+}
+
+.item-card .item-title {
+    color: var(--text-primary);
+}
+
+.item-card .item-chapters {
+    color: var(--text-secondary);
+}
+
