@@ -386,12 +386,8 @@
                         <i class="fas fa-sync"></i>
                         <span data-i18n="data.sync.now">Synchroniser maintenant</span>
                     </button>
-                    <button id="clearAppCacheBtn" class="btn-primary full-width" style="background:linear-gradient(135deg, #ff7675, #d63031); border:none;">
+                    <button id="clearCacheBtn" class="btn-primary full-width" style="background:linear-gradient(135deg, #ff7675, #d63031); border:none;">
                         <i class="fas fa-trash-alt"></i>
-                        <span data-i18n="data.cache.clearApp">Supprimer le cache de l'app</span>
-                    </button>
-                    <button id="clearCacheBtn" class="btn-secondary full-width">
-                        <i class="fas fa-broom"></i>
                         <span data-i18n="data.cache.clear">Vider le cache local</span>
                     </button>
                 </div>
@@ -883,29 +879,34 @@
         </div>
         <div class="modal-body roulette-modal-content" style="padding:1.25rem">
             <!-- Mode Toggle Tabs -->
-            <div style="display:flex; background:rgba(0,0,0,0.25); border-radius:10px; padding:3px; margin-bottom:0.75rem; border:1px solid var(--border-color)">
-                <button type="button" id="rouletteModeLocal" class="btn btn-xs active" style="flex:1; border-radius:8px; font-weight:600; padding:0.4rem; font-size:0.8rem;" onclick="setRouletteMode('local')">
-                    <i class="fas fa-book"></i> Ma Bibliothèque
+            <div class="roulette-mode-bar">
+                <button type="button" id="rouletteModeLocal" class="active" onclick="setRouletteMode('local')">
+                    <i class="fas fa-book"></i> <span>Ma Bibliothèque</span>
                 </button>
-                <button type="button" id="rouletteModeGlobal" class="btn btn-xs" style="flex:1; border-radius:8px; font-weight:600; padding:0.4rem; font-size:0.8rem;" onclick="setRouletteMode('global')">
+                <button type="button" id="rouletteModeGlobal" onclick="setRouletteMode('global')">
                     <i class="fas fa-random"></i> <span data-i18n="roulette.mode.global">Découverte Random</span>
                 </button>
             </div>
 
             <!-- Global Type Filter Bar (Hidden when mode == local) -->
-            <div id="rouletteGlobalTypeBar" style="display:none; gap:0.35rem; justify-content:center; margin-bottom:0.75rem">
-                <button type="button" class="btn btn-xs roulette-type-btn active" data-type="all" onclick="setRouletteTypeFilter('all')">Tous</button>
-                <button type="button" class="btn btn-xs roulette-type-btn" data-type="manga" onclick="setRouletteTypeFilter('manga')">Manga</button>
-                <button type="button" class="btn btn-xs roulette-type-btn" data-type="manhwa" onclick="setRouletteTypeFilter('manhwa')">Manhwa</button>
-                <button type="button" class="btn btn-xs roulette-type-btn" data-type="manhua" onclick="setRouletteTypeFilter('manhua')">Manhua</button>
+            <div id="rouletteGlobalTypeBar" class="roulette-type-bar" style="display:none">
+                <button type="button" class="roulette-type-btn active" data-type="all" onclick="setRouletteTypeFilter('all')">Tous</button>
+                <button type="button" class="roulette-type-btn" data-type="manga" onclick="setRouletteTypeFilter('manga')">Manga</button>
+                <button type="button" class="roulette-type-btn" data-type="manhwa" onclick="setRouletteTypeFilter('manhwa')">Manhwa</button>
+                <button type="button" class="roulette-type-btn" data-type="manhua" onclick="setRouletteTypeFilter('manhua')">Manhua</button>
             </div>
 
-            <p class="text-xs text-secondary" id="rouletteSubtitle">Laissez le destin choisir votre prochaine lecture !</p>
+            <p class="text-xs" id="rouletteSubtitle" style="color:var(--text-secondary,#b8b8d1)">Laissez le destin choisir votre prochaine lecture !</p>
+            
             <div id="rouletteCoverContainer" class="roulette-cover-wrap">
                 <img id="rouletteImage" src="manlore-logo.png" alt="Couverture">
             </div>
-            <h3 id="rouletteTitle" style="font-size:1.1rem; margin-top:0.75rem; font-weight:700">Prêt à lancer ?</h3>
-            <p id="rouletteMeta" class="text-xs text-muted" style="margin-top:0.25rem"></p>
+
+            <div class="roulette-result-box">
+                <h3 id="rouletteTitle" style="font-size:1.15rem; font-weight:700; color:#ffffff">Prêt à lancer ?</h3>
+                <p id="rouletteMeta" style="font-size:0.8rem; color:#00f2fe; margin-top:0.25rem; font-weight:600"></p>
+            </div>
+
             <div style="display:flex; gap:0.5rem; margin-top:1.25rem">
                 <button type="button" class="btn-primary" id="spinRouletteBtn" style="flex:1; font-size:0.85rem">
                     <i class="fas fa-random"></i> Tirer au sort

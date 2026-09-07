@@ -712,13 +712,18 @@ function applyStoredTheme() {
     });
 }
 
-// ============ TITLE FONT ============
+// ============ TITLE & UI FONT ============
 function applyTitleFont(font) {
+    document.documentElement.setAttribute('data-app-font', font);
     document.documentElement.setAttribute('data-title-font', font);
+    localStorage.setItem('manlore_app_font', font);
     localStorage.setItem('manlore_title_font', font);
     document.querySelectorAll('.font-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.titleFont === font);
     });
+    if (typeof i18n !== 'undefined' && i18n.applyAll) {
+        i18n.applyAll();
+    }
     showToast(i18n.t('toast.font.changed'), 'info');
     if (typeof saveUserSettingsToCloud === 'function') {
         saveUserSettingsToCloud('titleFont', font);
@@ -726,13 +731,15 @@ function applyTitleFont(font) {
 }
 
 function applyStoredTitleFont() {
-    const saved = localStorage.getItem('manlore_title_font') || 'orbitron';
+    const saved = localStorage.getItem('manlore_app_font') || localStorage.getItem('manlore_title_font') || 'orbitron';
+    document.documentElement.setAttribute('data-app-font', saved);
     document.documentElement.setAttribute('data-title-font', saved);
     document.querySelectorAll('.font-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.titleFont === saved);
     });
 }
 window.applyTitleFont = applyTitleFont;
+window.applyAppFont = applyTitleFont;
 
 // ============ LANGUAGE ============
 function applyLanguage(lang) {
@@ -1020,6 +1027,16 @@ function closeModal(id) {
 function showToast(message, type = 'info', duration = 3500) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
+
+    // Enforce max 5 visible toasts
+    const visibleToasts = container.querySelectorAll('.toast:not(.leaving)');
+    if (visibleToasts.length >= 5) {
+        const oldest = visibleToasts[0];
+        if (oldest && oldest.parentElement) {
+            oldest.parentElement.removeChild(oldest);
+        }
+    }
+
     const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -1322,14 +1339,37 @@ function setupEventListeners() {
     });
 
     document.getElementById('clearCacheBtn')?.addEventListener('click', () => {
-        showConfirmDialog('Vider le cache', 'Vider le cache local (les données cloud restent intactes) ?',
-            'Vider', i18n.t('modal.form.cancel'), 'warning',
-            () => {
+        showConfirmDialog('Vider le cache', 'Purger le cache local et recharger la PWA ? (Vos données cloud restent intactes)',
+            'Purger & Recharger', i18n.t('modal.form.cancel'), 'warning',
+            async () => {
+                showLoading(true, 'Purge du cache & rechargement...');
                 localStorage.removeItem('manlore_items');
                 localStorage.removeItem('manlore_jikan_cache');
                 allItems = [];
-                applyFiltersAndRender();
-                showToast(i18n.t('toast.cache.cleared'), 'success');
+
+                if ('caches' in window) {
+                    try {
+                        const names = await caches.keys();
+                        await Promise.all(names.map(name => caches.delete(name)));
+                    } catch (err) {
+                        console.warn('[Cache] Erreur purge CacheStorage:', err);
+                    }
+                }
+
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for (const reg of regs) {
+                            await reg.unregister();
+                        }
+                    } catch (err) {
+                        console.warn('[Cache] Erreur unregister SW:', err);
+                    }
+                }
+
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 400);
             }
         );
     });
@@ -1457,13 +1497,24 @@ async function spinRoulette() {
 
     if (rouletteMode === 'global') {
         titleEl.textContent = 'Recherche dans les étoiles...';
-        metaEl.textContent = 'Consultation des bases Jikan & AniList';
+        metaEl.textContent = 'Consultation des bases Jikan...';
+
+        let spinCount = 0;
+        const spinInterval = setInterval(() => {
+            spinCount++;
+            titleEl.textContent = ['Solo Leveling', 'Tower of God', 'The Beginning After The End', 'Omniscient Reader', 'Eleceed', 'Nano Machine'][spinCount % 6];
+            metaEl.textContent = 'Recherche de pépites...';
+        }, 120);
+
         try {
             const externalWinner = await window.jikan.getRandomDiscovery(rouletteTypeFilter);
+            clearInterval(spinInterval);
             if (wrap) wrap.classList.remove('roulette-spinning');
             if (spinBtn) spinBtn.disabled = false;
 
             if (!externalWinner) {
+                titleEl.textContent = 'Aucune pépite trouvée';
+                metaEl.textContent = 'Essayez un autre filtre ou relancez';
                 showToast('Aucun résultat trouvé pour ce filtre', 'warning');
                 return;
             }
