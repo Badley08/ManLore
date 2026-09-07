@@ -17,7 +17,7 @@
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Styles -->
@@ -380,11 +380,15 @@
             </div>
 
             <div class="section-card">
-                <h3 class="section-title"><i class="fas fa-sync"></i> <span data-i18n="data.sync.title">Synchronisation</span></h3>
+                <h3 class="section-title"><i class="fas fa-sync"></i> <span data-i18n="data.sync.title">Synchronisation &amp; Cache</span></h3>
                 <div class="space-y">
                     <button id="syncNowBtn" class="btn-secondary full-width">
                         <i class="fas fa-sync"></i>
                         <span data-i18n="data.sync.now">Synchroniser maintenant</span>
+                    </button>
+                    <button id="clearAppCacheBtn" class="btn-primary full-width" style="background:linear-gradient(135deg, #ff7675, #d63031); border:none;">
+                        <i class="fas fa-trash-alt"></i>
+                        <span data-i18n="data.cache.clearApp">Supprimer le cache de l'app</span>
                     </button>
                     <button id="clearCacheBtn" class="btn-secondary full-width">
                         <i class="fas fa-broom"></i>
@@ -421,6 +425,33 @@
                     </button>
                     <button class="theme-btn" data-theme="frost">
                         <i class="fas fa-snowflake"></i><span data-i18n="settings.theme.frost">Givre Arctique</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Title Font Selection -->
+            <div class="section-card">
+                <h3 class="section-title"><i class="fas fa-font"></i> <span data-i18n="settings.font.title">Police des Titres</span></h3>
+                <div class="font-selector-grid">
+                    <button type="button" class="font-btn" data-title-font="orbitron" onclick="applyTitleFont('orbitron')">
+                        <div class="font-preview font-orbitron-preview">
+                            <span class="preview-text">MANLORE</span>
+                            <span class="preview-sub">ORBITRON ABC 123</span>
+                        </div>
+                        <div class="font-btn-info">
+                            <span class="font-name">Orbitron</span>
+                            <span class="font-badge" data-i18n="settings.font.orbitron">Futuriste &amp; Sci-Fi</span>
+                        </div>
+                    </button>
+                    <button type="button" class="font-btn" data-title-font="archivo-black" onclick="applyTitleFont('archivo-black')">
+                        <div class="font-preview font-archivo-preview">
+                            <span class="preview-text">MANLORE</span>
+                            <span class="preview-sub">ARCHIVO BLACK 123</span>
+                        </div>
+                        <div class="font-btn-info">
+                            <span class="font-name">Archivo Black</span>
+                            <span class="font-badge" data-i18n="settings.font.archivoBlack">Audacieux &amp; Impactant</span>
+                        </div>
                     </button>
                 </div>
             </div>
@@ -1041,6 +1072,10 @@
                 <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.85rem;" class="text-muted">
                     <input type="checkbox" id="dontShowWhatsNewCheck" checked>
                     <span data-i18n="whatsnew.dontShowAgain">Ne plus afficher pour cette version</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.85rem;" class="text-muted">
+                    <input type="checkbox" id="neverShowWhatsNewCheck">
+                    <span data-i18n="whatsnew.neverShow">Ne plus jamais afficher les pop-ups de mise à jour</span>
                 </label>
             </div>
         </div>

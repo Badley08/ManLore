@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     i18n.applyAll();
     applyStoredTheme();
+    applyStoredTitleFont();
     applyStoredSettings();
     setupEventListeners();
 
@@ -76,6 +77,8 @@ async function showApp() {
 const WHATS_NEW_VERSION = 'v9.0.1';
 
 function checkWhatsNewModal() {
+    const neverShow = localStorage.getItem('manlore_disable_all_whatsnew');
+    if (neverShow === 'true') return;
     const dismissed = localStorage.getItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`);
     if (!dismissed) {
         setTimeout(() => {
@@ -86,6 +89,10 @@ function checkWhatsNewModal() {
 
 function closeWhatsNewModal() {
     const check = document.getElementById('dontShowWhatsNewCheck');
+    const neverCheck = document.getElementById('neverShowWhatsNewCheck');
+    if (neverCheck && neverCheck.checked) {
+        localStorage.setItem('manlore_disable_all_whatsnew', 'true');
+    }
     if (check && check.checked) {
         localStorage.setItem(`manlore_whats_new_dismissed_${WHATS_NEW_VERSION}`, 'true');
         try {
@@ -96,7 +103,8 @@ function closeWhatsNewModal() {
             }
         } catch (e) {}
     }
-    if (typeof closeModal === 'function') closeModal('whatsNewModal');
+    const modalEl = document.getElementById('whatsNewModal');
+    if (modalEl) modalEl.classList.remove('active');
 }
 window.closeWhatsNewModal = closeWhatsNewModal;
 
@@ -704,6 +712,28 @@ function applyStoredTheme() {
     });
 }
 
+// ============ TITLE FONT ============
+function applyTitleFont(font) {
+    document.documentElement.setAttribute('data-title-font', font);
+    localStorage.setItem('manlore_title_font', font);
+    document.querySelectorAll('.font-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.titleFont === font);
+    });
+    showToast(i18n.t('toast.font.changed'), 'info');
+    if (typeof saveUserSettingsToCloud === 'function') {
+        saveUserSettingsToCloud('titleFont', font);
+    }
+}
+
+function applyStoredTitleFont() {
+    const saved = localStorage.getItem('manlore_title_font') || 'orbitron';
+    document.documentElement.setAttribute('data-title-font', saved);
+    document.querySelectorAll('.font-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.titleFont === saved);
+    });
+}
+window.applyTitleFont = applyTitleFont;
+
 // ============ LANGUAGE ============
 function applyLanguage(lang) {
     i18n.setLang(lang);
@@ -978,7 +1008,12 @@ function openModal(id) {
 }
 
 function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
+    if (id === 'whatsNewModal') {
+        closeWhatsNewModal();
+        return;
+    }
+    const modalEl = document.getElementById(id);
+    if (modalEl) modalEl.classList.remove('active');
 }
 
 // ============ TOAST ============
@@ -1243,6 +1278,47 @@ function setupEventListeners() {
         await loadAndRenderItems();
         showLoading(false);
         showToast(i18n.t('toast.sync.done'), 'success');
+    });
+
+    document.getElementById('clearAppCacheBtn')?.addEventListener('click', () => {
+        showConfirmDialog(
+            'Supprimer le cache de l\'application',
+            'Voulez-vous supprimer l\'intégralité du cache présent (cache PWA Service Worker, requêtes API et stockage temporaire) ? L\'application sera rechargée.',
+            'Supprimer', i18n.t('modal.form.cancel'), 'danger',
+            async () => {
+                try {
+                    showLoading(true, 'Suppression du cache...');
+                    if ('caches' in window) {
+                        const cacheKeys = await caches.keys();
+                        await Promise.all(cacheKeys.map(k => caches.delete(k)));
+                    }
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && (k.includes('cache') || k.includes('jikan') || k.includes('whats_new') || k.includes('release_tracker'))) {
+                            keysToRemove.push(k);
+                        }
+                    }
+                    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (let reg of registrations) {
+                            await reg.unregister();
+                        }
+                    }
+
+                    showLoading(false);
+                    showToast('Cache de l\'application intégralement supprimé !', 'success');
+                    setTimeout(() => {
+                        window.location.reload(true);
+                    }, 1200);
+                } catch (e) {
+                    showLoading(false);
+                    showToast('Erreur lors de la suppression du cache', 'error');
+                }
+            }
+        );
     });
 
     document.getElementById('clearCacheBtn')?.addEventListener('click', () => {

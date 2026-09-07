@@ -64,7 +64,7 @@
     font-size: 1.75rem;
     font-weight: 800;
     color: var(--text-primary);
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     line-height: 1;
 }
 
@@ -495,7 +495,7 @@
     font-size: 1.6rem;
     font-weight: 800;
     color: var(--color-primary);
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     line-height: 1;
     margin-bottom: 0.3rem;
 }
@@ -546,7 +546,7 @@
     font-size: 2rem;
     font-weight: 800;
     color: var(--color-primary);
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     line-height: 1;
 }
 
@@ -692,7 +692,7 @@
     font-weight: 800;
     color: var(--color-primary);
     min-width: 30px;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
 }
 
 .top-title { flex: 1; font-size: 0.875rem; font-weight: 500; }
@@ -815,7 +815,7 @@
 }
 
 .vote-btn i { font-size: 1rem; }
-.vote-count { font-weight: 800; font-size: 0.95rem; font-family: 'Orbitron', sans-serif; }
+.vote-count { font-weight: 800; font-size: 0.95rem; font-family: var(--font-title); }
 
 .feature-info { flex: 1; min-width: 0; }
 .feature-title { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.2rem; }
@@ -910,7 +910,7 @@
 .confirm-icon.info { color: var(--color-primary); }
 
 .confirm-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -972,7 +972,7 @@
 }
 
 .prompt-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 0.95rem;
     font-weight: 700;
     margin-bottom: 0.25rem;
@@ -1123,7 +1123,7 @@
 }
 
 .quest-rank-level {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.1rem;
     font-weight: 800;
     letter-spacing: 1px;
@@ -1140,7 +1140,7 @@
 }
 
 .quest-exp-number {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.5rem;
     font-weight: 700;
     color: #00f2fe;
@@ -1252,7 +1252,7 @@
 }
 
 .quest-status-count {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--text-secondary, #a4b0be);
@@ -1388,7 +1388,7 @@
     background: #00f2fe;
     color: #1a1a2e;
     font-size: 0.7rem;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-weight: 800;
     padding: 0.2rem 0.55rem;
     border-radius: 99px;
@@ -1439,7 +1439,7 @@
     border: 1px solid rgba(243, 156, 18, 0.55);
     color: #ffd32a;
     font-size: 0.72rem;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-weight: 800;
     padding: 0.22rem 0.65rem;
     border-radius: 99px;
@@ -1504,7 +1504,7 @@
     border: none;
     border-radius: var(--radius-md, 8px);
     font-size: 0.75rem;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-weight: 800;
     padding: 0.4rem 0.75rem;
     cursor: pointer;
@@ -1526,7 +1526,7 @@
     border: 1px solid rgba(46, 204, 113, 0.4);
     color: #2ecc71;
     font-size: 0.72rem;
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-weight: 700;
     padding: 0.25rem 0.6rem;
     border-radius: 99px;
@@ -1616,7 +1616,7 @@
 }
 
 .import-progress-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.2rem;
     font-weight: 800;
     color: #ffffff;
@@ -1672,7 +1672,7 @@
 }
 
 .import-stat-val {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 0.95rem;
     font-weight: 800;
     color: #ffd32a;

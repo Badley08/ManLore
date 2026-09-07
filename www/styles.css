@@ -1,13 +1,16 @@
 /* ============================================
-   MANLORE v9.0.0 - STYLES.CSS
+   MANLORE v9.0.1 - STYLES.CSS
    Styles Globaux, Design System, Thèmes Visuels & Micro-Animations
    ============================================ */
 
-/* ============ FONTS ============ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;800;900&display=swap');
+/* Fonts are preloaded directly in index.html <head> for fast rendering */
 
 /* ============ CSS VARIABLES — THEME DARK (default) ============ */
 :root {
+    /* Fonts */
+    --font-title: 'Orbitron', sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
     /* Backgrounds */
     --bg-primary: #1a1a2e;
     --bg-secondary: #16213e;
@@ -421,7 +424,7 @@ body::before {
 }
 
 .header-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.5rem;
     font-weight: 800;
     background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
@@ -1112,7 +1115,7 @@ option:checked, option:hover {
 }
 
 .modal-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -1278,7 +1281,7 @@ option:checked, option:hover {
 }
 
 .auth-app-name {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 2rem;
     font-weight: 800;
     background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
@@ -1300,7 +1303,7 @@ option:checked, option:hover {
 }
 
 .auth-form-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.1rem;
     font-weight: 700;
     text-align: center;
@@ -1370,7 +1373,7 @@ option:checked, option:hover {
 }
 
 .page-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-title);
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -1465,6 +1468,116 @@ option:checked, option:hover {
 .text-primary-color { color: var(--color-primary); }
 .font-bold { font-weight: 700; }
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
+.font-archivo { font-family: 'Archivo Black', sans-serif; }
+
+/* ============ FONT SELECTOR ============ */
+[data-title-font="archivo-black"] {
+    --font-title: 'Archivo Black', sans-serif;
+}
+
+[data-title-font="orbitron"] {
+    --font-title: 'Orbitron', sans-serif;
+}
+
+.font-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.font-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--bg-input);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: center;
+    color: var(--text-primary);
+    width: 100%;
+}
+
+.font-btn:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.font-btn.active {
+    border-color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.18);
+    box-shadow: 0 0 15px rgba(var(--color-primary-rgb), 0.35);
+}
+
+.font-preview {
+    width: 100%;
+    padding: 1rem 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.font-orbitron-preview .preview-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+}
+
+.font-orbitron-preview .preview-sub {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    letter-spacing: 0.5px;
+}
+
+.font-archivo-preview .preview-text {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0px;
+}
+
+.font-archivo-preview .preview-sub {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.font-btn-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.font-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.font-badge {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
 .mt-3 { margin-top: 1.5rem; }
