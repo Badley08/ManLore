@@ -1996,3 +1996,35 @@ body, button, input, select, textarea, .page-title, .section-title, .modal-title
     color: var(--text-secondary);
 }
 
+/* ============ CATALOG SHARE & BATTLE MODE ============ */
+.btn-tab {
+    transition: all 0.2s ease;
+}
+
+.btn-tab.active {
+    background: linear-gradient(135deg, rgba(168,85,247,0.35), rgba(108,92,231,0.35)) !important;
+    border-color: #a855f7 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(168,85,247,0.3);
+}
+
+.btn-danger-sm {
+    background: rgba(255,118,117,0.15);
+    border: 1px solid rgba(255,118,117,0.4);
+    color: #ff7675;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger-sm:hover {
+    background: rgba(255,118,117,0.3);
+    color: #ffffff;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.015); opacity: 0.92; }
+}
+
+
