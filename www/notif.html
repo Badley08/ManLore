@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="www/notif.css">
+    <title>Notification Panel</title>
+</head>
+<body>
+    
+    <!-- ==================== AUTH SCREEN ==================== -->
+    
+    <div id="authScreen" class="auth-screen">
+         <div class="auth-card">
+        <div class="auth-logo-section">
+            <img src="manlore-logo.png" alt="ManLore" class="auth-logo">
+            <h1 class="auth-app-name">ManLore</h1>
+            <p class="auth-tagline" data-i18n="app.tagline">Ton Univers de collection de BD</p>
+            <p class="auth-version">v1.0.1</p>
+        </div>
+    </div>
+     <!-- Login Form -->
+          <form id="loginForm">
+            <h2 class="auth-form-title" data-i18n="auth.login.title">Connexion</h2>
+            <div class="form-group" style="margin-bottom:1rem">
+                <label class="form-label" data-i18n="auth.login.username">Nom d'utilisateur ou Email</label>
+                <input type="text" id="loginUsername" class="input-field" autocomplete="username" required>
+            </div>
+            <div class="form-group" style="margin-bottom:1.25rem">
+                <label class="form-label" data-i18n="auth.login.password">Mot de passe</label>
+                <input type="password" id="loginPassword" class="input-field" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn-primary full-width" id="loginSubmitBtn" style="padding:0.85rem; font-size:1rem; font-weight:700; box-shadow:0 4px 15px rgba(var(--color-primary-rgb),0.4);">
+                <i class="fas fa-sign-in-alt"></i>
+                <span data-i18n="auth.login.submit">Se connecter</span>
+        </form>
+
+        <!-- ==================== APP CONTAINER ==================== -->
+         <div id="appContainer" class="hidden app-wrapper">
+            <!-- ================= NOTIFICATION SENDER SYSTEM TO WWW/INDEX.HTML ==================== -->
+             <!-- ===== THIS SYSTEM ALLOWS TO THE ADMINS TO PUSH NOTIFICATION TO ALL USERS OF MANLORE (WWW/INDEX.HTML) ===== -->
+            
+            <select id="notificationType" class="input-field">
+                <option value="success">Success</option>
+                <option value="warning">Warning</option>
+                <option value="info">Info</option>
+                <option value="error">Error</option>
+                <option value="update">Update</option>
+            </select>
+            <select id="notificationType" class="input-field">
+                <option value="success">Success</option>
+                <option value="warning">Warning</option>
+                <option value="info">Info</option>
+                <option value="error">Error</option>
+                <option value="update">Update</option>
+            </select>
+            <input type="text" id="notificationMessage" class="input-field" placeholder="Message" required>
+            <button type="button" id="sendNotificationBtn" class="btn-primary full-width" style="padding:0.85rem; font-size:1rem; font-weight:700; box-shadow:0 4px 15px rgba(var(--color-primary-rgb),0.4);">
+
+
+         </div>
+         <script>
+            //NOTIFICATION LOGIC SENDING VERSION 1.0.1
+            'use strict';
+
+            // ============ BACK4APP CONFIGURATION (SERVEUR OFFICIEL) ============
+                const BACK4APP_CONFIG = {
+            name: 'Serveur ManLore Cloud',
+            appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
+            clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
+            url: 'https://parseapi.back4app.com'
+                };
+
+            //CLIENT REST HTTP BACK4APP ULTRA-REsilIENT
+            async function back4appApiCall(endpoint, method = 'GET', data = null, sessionToken = null) {
+                const url = BACK4APP_CONFIG.url + endpoint;
+                const headers = {
+                    'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
+                    'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+                    'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
+                    'X-Parse-Revocable-Session': '1',
+                    'Content-Type': 'application/json'
+                };
+
+                if (sessionToken) {
+                    headers['X-Parse-Session-Token'] = sessionToken;
+                }
+
+                const options = {
+                    method,
+                    headers,
+                    mode: 'cors'
+                };
+
+                if (data && (method === 'POST' || method === 'PUT')) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                options.signal = controller.signal;
+
+                try {
+                    const response = await fetch(url, options);
+                    clearTimeout(timeoutId);
+
+                    let json = null;
+                    try {
+                        json = await response.json();
+                    } catch {
+                        json = {};
+                    }
+
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: json
+                    };
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    return {
+                        ok: false,
+                        status: 0,
+                        error: err.name === 'AbortError' ? 'Délai d\'attente dépassé (timeout 10s)' : err.message
+                    };
+                }
+            }
+
+
+      </script>
+</body>
+</html>
