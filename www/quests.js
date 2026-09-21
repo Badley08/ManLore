@@ -119,9 +119,30 @@ class QuestManager {
         this.loadQuestDefinitions();
     }
 
+    getStorageKey() {
+        try {
+            if (typeof Parse !== 'undefined' && Parse.User) {
+                const u = Parse.User.current();
+                if (u && u.id) return `manlore_quest_progression_usr_${u.id}`;
+            }
+            if (window.currentUser && window.currentUser.id) {
+                return `manlore_quest_progression_usr_${window.currentUser.id}`;
+            }
+        } catch(e){}
+        return QUESTS_STORAGE_KEY;
+    }
+
     loadProgression() {
         try {
-            const raw = localStorage.getItem(QUESTS_STORAGE_KEY);
+            const key = this.getStorageKey();
+            let raw = localStorage.getItem(key);
+            if (!raw) {
+                const legacy = localStorage.getItem(QUESTS_STORAGE_KEY);
+                if (legacy && key !== QUESTS_STORAGE_KEY) {
+                    localStorage.setItem(key, legacy);
+                    raw = legacy;
+                }
+            }
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (!parsed.claimedQuests) parsed.claimedQuests = {};
@@ -183,11 +204,16 @@ class QuestManager {
                 activeDaysThisYear: Array.from(this.data.activeDaysThisYear || []),
                 claimedQuests: this.data.claimedQuests || {}
             };
-            localStorage.setItem(QUESTS_STORAGE_KEY, JSON.stringify(serializable));
+            localStorage.setItem(this.getStorageKey(), JSON.stringify(serializable));
             this.syncToCloud(serializable, immediateCloud);
         } catch (e) {
             console.warn('[Quests] Erreur sauvegarde', e);
         }
+    }
+
+    onLogout() {
+        if (this._cloudTimer) clearTimeout(this._cloudTimer);
+        this.data = this.getDefaultProgression();
     }
 
     syncToCloud(serializable, immediate = false) {

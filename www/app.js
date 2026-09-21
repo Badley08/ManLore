@@ -53,6 +53,14 @@ async function showApp() {
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('appContainer').classList.remove('hidden');
 
+    // Réinitialiser les données en mémoire pour éviter d'afficher le cache de l'utilisateur précédent
+    allItems = [];
+    filteredItems = [];
+    ['statTotal','statInProgress','statCompleted','statToRead'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+    });
+
     const user = !isGuestMode ? Parse.User.current() : null;
 
     // Update header
@@ -74,7 +82,7 @@ async function showApp() {
     checkWhatsNewModal();
 }
 
-const WHATS_NEW_VERSION = 'v9.0.1';
+const WHATS_NEW_VERSION = 'v9.1.0';
 
 function checkWhatsNewModal() {
     const neverShow = localStorage.getItem('manlore_disable_all_whatsnew');
@@ -1207,6 +1215,11 @@ function setupEventListeners() {
                 await logOut();
                 allItems = [];
                 filteredItems = [];
+                ['statTotal','statInProgress','statCompleted','statToRead'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = '0';
+                });
+                if (typeof renderStats === 'function') renderStats([]);
                 showToast(i18n.t('toast.logout.success'), 'info');
                 showAuth();
             }

@@ -580,7 +580,7 @@ async function fetchFromCloud() {
                 updatedAt: r.updatedAt || new Date().toISOString()
             }));
 
-            localStorage.setItem('manlore_items', JSON.stringify(parsedItems));
+            localStorage.setItem(getUserItemsStorageKey(), JSON.stringify(parsedItems));
             return { success: true, items: parsedItems };
         }
         return { success: true, items: loadFromLocalStorage(), offline: true };
@@ -1133,11 +1133,37 @@ async function importDataFromFile(file) {
     }
 }
 
-// ============ GESTION DU STOCKAGE LOCAL ============
+// ============ GESTION DU STOCKAGE LOCAL (ISOLÉ PAR UTILISATEUR) ============
+
+function getUserItemsStorageKey() {
+    if (currentUser && currentUser.id) {
+        return 'manlore_items_usr_' + currentUser.id;
+    }
+    if (typeof Parse !== 'undefined' && Parse.User && Parse.User.current()) {
+        const u = Parse.User.current();
+        if (u && u.id) return 'manlore_items_usr_' + u.id;
+    }
+    if (localStorage.getItem('manlore_guest_mode') === 'true') {
+        return 'manlore_items_guest';
+    }
+    return 'manlore_items_temp';
+}
 
 function loadFromLocalStorage() {
     try {
-        const data = localStorage.getItem('manlore_items');
+        const key = getUserItemsStorageKey();
+        let data = localStorage.getItem(key);
+        // Migration depuis l'ancienne clé globale non isolée si nécessaire
+        if (!data) {
+            const legacy = localStorage.getItem('manlore_items');
+            if (legacy) {
+                if (key.startsWith('manlore_items_usr_')) {
+                    localStorage.setItem(key, legacy);
+                    data = legacy;
+                }
+                localStorage.removeItem('manlore_items');
+            }
+        }
         return data ? JSON.parse(data) : [];
     } catch (e) {
         return [];
@@ -1152,7 +1178,7 @@ function saveToLocalStorage(item) {
     } else {
         items.unshift(item);
     }
-    localStorage.setItem('manlore_items', JSON.stringify(items));
+    localStorage.setItem(getUserItemsStorageKey(), JSON.stringify(items));
 }
 
 function updateInLocalStorage(itemId, updates) {
@@ -1160,14 +1186,14 @@ function updateInLocalStorage(itemId, updates) {
     const index = items.findIndex(i => String(i.id) === String(itemId));
     if (index >= 0) {
         items[index] = { ...items[index], ...updates, updatedAt: new Date().toISOString() };
-        localStorage.setItem('manlore_items', JSON.stringify(items));
+        localStorage.setItem(getUserItemsStorageKey(), JSON.stringify(items));
     }
 }
 
 function deleteFromLocalStorage(itemId) {
     const items = loadFromLocalStorage();
     const filtered = items.filter(i => String(i.id) !== String(itemId));
-    localStorage.setItem('manlore_items', JSON.stringify(filtered));
+    localStorage.setItem(getUserItemsStorageKey(), JSON.stringify(filtered));
 }
 
 // ============ CORBEILLE DE SUPPRESSION (15 JOURS) ============

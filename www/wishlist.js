@@ -8,18 +8,37 @@
 const WISHLIST_KEY = 'manlore_wishlist_v5';
 const DELETED_FEATURES_KEY = 'manlore_deleted_features_v5';
 
-// ============ WISHLIST LOCALE ============
+function getWishlistStorageKey() {
+    try {
+        if (typeof Parse !== 'undefined' && Parse.User) {
+            const u = Parse.User.current();
+            if (u && u.id) return `manlore_wishlist_usr_${u.id}`;
+        }
+        if (window.currentUser && window.currentUser.id) {
+            return `manlore_wishlist_usr_${window.currentUser.id}`;
+        }
+    } catch(e){}
+    return WISHLIST_KEY;
+}
 
 function loadWishlist() {
     try {
-        const raw = localStorage.getItem(WISHLIST_KEY);
+        const key = getWishlistStorageKey();
+        let raw = localStorage.getItem(key);
+        if (!raw) {
+            const legacy = localStorage.getItem(WISHLIST_KEY);
+            if (legacy && key !== WISHLIST_KEY) {
+                localStorage.setItem(key, legacy);
+                raw = legacy;
+            }
+        }
         return raw ? JSON.parse(raw) : [];
     } catch { return []; }
 }
 
 function saveWishlist(items) {
     try { 
-        localStorage.setItem(WISHLIST_KEY, JSON.stringify(items)); 
+        localStorage.setItem(getWishlistStorageKey(), JSON.stringify(items)); 
     } catch (e) {
         console.warn('[Wishlist] Erreur sauvegarde locale', e);
     }
