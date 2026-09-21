@@ -1,32 +1,26 @@
-# Bilan des Modifications — Système de Notifications Admin & Client v2.1
+# Bilan des Modifications — Correction de l'Affichage & Analyse du Message Utilisateur
 
-## 📊 Récapitulatif des Fonctionnalités
-- Intégration de la véritable clé **Back4App REST API Key** (`qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW`) et **Webhook Key** (`K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH`) [X]
-- Résolution définitive et complète des erreurs "Unauthorized / 403 Forbidden" lors de l'authentification et de l'envoi de notifications [X]
-- Ajout de 4 nouveaux types de notifications : **Ban** (Bannissement), **Alerte Urgente**, **Événement** et **Maintenance** [X]
-- Système de Traduction Automatique via l'API Google Translate pour les utilisateurs en Anglais (`en`) et Espagnol (`es`) [X]
-- Sélecteur de langue bilingue (Français FR / Anglais EN) dans l'en-tête du Notif Center Admin avec basculement dynamique [X]
-- Récupération du Nom d'Utilisateur & Email associé lors des recherches et de l'envoi [X]
-- Intégration du Panneau Expéditeur Admin dans les Paramètres de l'application (`index.html`) [X]
-- Restriction d'accès exclusive aux deux e-mails administrateurs (`karlluberisse1308@gmail.com`, `karlito2best@gmail.com`) [X]
-- Design 100% Responsive sur mobile [X]
+## 📊 Récapitulatif des Actions
+- Décodage et traduction du message reçu de l'utilisateur **Day** [X]
+- Correction des règles CSS (`notif.css`) pour restaurer la barre de défilement et éviter le tronquage des messages dans l'historique [X]
 
 ---
 
-## 🛠️ Détails des Améliorations Apportées
+## 📩 Explication du Message de l'Utilisateur "Day"
 
-### 1. Configuration des Clés REST API & Webhook Back4App (`[X]`)
-- Mise à jour de `BACK4APP_CONFIG` dans `logic.js` et `notif.html` avec les clés officielles fournies :
-  - `restApiKey`: `qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW`
-  - `clientKey`: `0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj`
-  - `webhookKey`: `K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH`
-- Envoi systématique de la clé REST dans l'en-tête `X-Parse-REST-API-Key` pour valider les requêtes auprès des serveurs Back4App.
+- **Notification concernée** : *"Avertissement a Day"*
+- **Expéditeur** : `Day` (`daysael1308@gmail.com`)
+- **Date** : 21/09/2026 à 22:48:55
+- **Message Original (Espagnol)** :
+  > *"Bueno, estaba comprobando si había algún error en la aplicación, y me sorprende no haber encontrado ninguno todavía."*
 
-### 2. Nouveaux Types de Notifications (`[X]`)
-- Support complet des 9 types dans l'UI, CSS et aperçu : `Info`, `Succès`, `Warning`, `Erreur`, `MAJ`, `Ban`, `Alerte Urgente`, `Événement` et `Maintenance`.
+- **Traduction en Français** :
+  > *"Eh bien, j'étais en train de vérifier s'il y avait des erreurs dans l'application, et je suis surpris(e) de n'en avoir encore trouvé aucune."*
 
-### 3. Traduction Automatique Multilingue (`[X]`)
-- Traduction à la volée des titres et messages en Anglais ou Espagnol selon la langue du client via l'API Google Translate.
+- **Explication** : L'utilisateur testait simplement la stabilité de votre application ManLore et vous informe avec satisfaction qu'il/elle n'a décelé aucun bug !
 
-### 4. Panneau Admin Bilingue (FR / EN) (`[X]`)
-- Basculement instantané des libellés du Notif Center avec le bouton `🌐 FR / EN`.
+---
+
+## 🛠️ Correction UI / CSS (`notif.css`)
+- **Correction du défilement (`.notif-list`)** : Remplacement du calcul rigide par un flex dynamique avec `min-height: 0`, `overflow-y: auto` et barre de défilement violette stylisée visible.
+- **Affichage complet des messages (`.reply-text` & `.notif-card-message`)** : Ajout des propriétés `white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;` pour garantir que les textes longs s'adaptent sur plusieurs lignes sans jamais être coupés.
