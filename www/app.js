@@ -2055,25 +2055,72 @@ async function checkIncomingPushNotifications() {
     }
 }
 
-function showPushToastNotification(notif) {
+async function autoTranslateNotification(text, targetLang) {
+    if (!text || !targetLang || targetLang === 'fr') return text;
+    try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data[0] && Array.isArray(data[0])) {
+                return data[0].map(item => item[0]).join('');
+            }
+        }
+    } catch(e) {
+        console.warn('Auto-translate error:', e);
+    }
+    return text;
+}
+
+async function showPushToastNotification(notif) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
 
+    const userLang = (localStorage.getItem('manlore_lang') || 'fr').toLowerCase();
+    let displayTitle = notif.title || 'Notification';
+    let displayMsg = notif.message || '';
+    let isTranslated = false;
+
+    if (userLang !== 'fr') {
+        const translatedTitle = await autoTranslateNotification(displayTitle, userLang);
+        const translatedMsg = await autoTranslateNotification(displayMsg, userLang);
+        if (translatedTitle !== displayTitle || translatedMsg !== displayMsg) {
+            displayTitle = translatedTitle;
+            displayMsg = translatedMsg;
+            isTranslated = true;
+        }
+    }
+
+    const icons = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        update: 'fa-rocket',
+        ban: 'fa-ban',
+        alert: 'fa-exclamation-triangle',
+        event: 'fa-bullhorn',
+        maintenance: 'fa-tools'
+    };
+
     const toast = document.createElement('div');
     toast.className = `toast-push ${notif.type || 'info'}`;
-    const icons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', update: 'fa-rocket' };
+
+    const translateBadge = isTranslated 
+        ? `<span style="font-size:0.68rem; color:#a29bfe; margin-left:6px; font-weight:normal;"><i class="fas fa-globe"></i> ${userLang.toUpperCase()}</span>`
+        : '';
 
     toast.innerHTML = `
         <div class="toast-push-icon"><i class="fas ${icons[notif.type] || 'fa-bell'}"></i></div>
         <div class="toast-push-body">
             <div class="toast-push-header">
-                <span class="toast-push-title">${escapeHtml(notif.title || 'Notification')}</span>
+                <span class="toast-push-title">${escapeHtml(displayTitle)} ${translateBadge}</span>
                 <button class="toast-push-close" onclick="this.closest('.toast-push').remove()" title="Fermer"><i class="fas fa-times"></i></button>
             </div>
-            <p class="toast-push-message">${escapeHtml(notif.message || '')}</p>
+            <p class="toast-push-message">${escapeHtml(displayMsg)}</p>
             <div class="toast-push-footer">
                 <span class="toast-push-sender"><i class="fas fa-user-shield"></i> De : ${escapeHtml(notif.sentBy || 'Admin')}</span>
-                <button class="toast-push-reply-btn" onclick="openNotifReplyModal('${notif.objectId}', '${escapeHtml(notif.title || '').replace(/'/g, "\\'")}', '${escapeHtml(notif.message || '').replace(/'/g, "\\'")}')">
+                <button class="toast-push-reply-btn" onclick="openNotifReplyModal('${notif.objectId}', '${escapeHtml(displayTitle).replace(/'/g, "\\'")}', '${escapeHtml(displayMsg).replace(/'/g, "\\'")}')">
                     <i class="fas fa-reply"></i> Répondre
                 </button>
             </div>

@@ -13,6 +13,8 @@ const BACK4APP_CONFIG = {
     name: 'Serveur ManLore Cloud',
     appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
     clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
+    restApiKey: 'qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW',
+    webhookKey: 'K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH',
     url: 'https://parseapi.back4app.com'
 };
 
@@ -31,7 +33,7 @@ async function back4appApiCall(endpoint, method = 'GET', data = null, sessionTok
     const url = BACK4APP_CONFIG.url + endpoint;
     const headers = {
         'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
-        'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+        'X-Parse-REST-API-Key': BACK4APP_CONFIG.restApiKey,
         'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
         'X-Parse-Revocable-Session': '1',
         'Content-Type': 'application/json'

@@ -58,16 +58,19 @@
             <img src="manlore-logo.png" alt="ManLore" class="header-logo">
             <div>
                 <h1 class="header-title"><span class="gradient-text">ManLore</span> Admin</h1>
-                <p class="header-sub">Panneau de Notifications</p>
+                <p class="header-sub" id="lblHeaderSub">Panneau de Notifications</p>
             </div>
         </div>
         <div class="admin-header-right">
+            <button class="btn-outline btn-sm" id="adminLangToggleBtn" onclick="toggleAdminLang()" title="Changer la langue">
+                <i class="fas fa-globe"></i> <span id="adminLangLabel">EN</span>
+            </button>
             <div class="admin-user-chip">
                 <i class="fas fa-user-shield"></i>
                 <span id="adminUsername">Admin</span>
             </div>
             <button class="btn-outline btn-sm" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                <i class="fas fa-sign-out-alt"></i> <span id="lblLogout">Déconnexion</span>
             </button>
         </div>
     </header>
@@ -80,34 +83,34 @@
             <div class="section-header">
                 <i class="fas fa-paper-plane section-icon"></i>
                 <div>
-                    <h2 class="section-title">Envoyer une Notification</h2>
-                    <p class="section-sub">Poussez un message vers un ou tous les utilisateurs</p>
+                    <h2 class="section-title" id="lblSendTitle">Envoyer une Notification</h2>
+                    <p class="section-sub" id="lblSendSub">Poussez un message vers un ou tous les utilisateurs</p>
                 </div>
             </div>
 
             <div class="send-form">
                 <!-- Target -->
                 <div class="form-group">
-                    <label class="form-label">
+                    <label class="form-label" id="lblRecipient">
                         <i class="fas fa-users"></i> Destinataire
                     </label>
                     <div class="target-toggle">
                         <button type="button" class="target-btn active" id="targetGlobalBtn" onclick="setTarget('global')">
-                            <i class="fas fa-globe"></i> Global (tous)
+                            <i class="fas fa-globe"></i> <span id="lblTargetGlobal">Global (tous)</span>
                         </button>
                         <button type="button" class="target-btn" id="targetUserBtn" onclick="setTarget('user')">
-                            <i class="fas fa-user"></i> Utilisateur spécifique
+                            <i class="fas fa-user"></i> <span id="lblTargetUser">Utilisateur spécifique</span>
                         </button>
                     </div>
                     <div id="targetUserInput" class="hidden" style="margin-top:0.75rem">
-                        <input type="text" id="targetUsername" class="input-field" placeholder="Nom d'utilisateur exact..." autocomplete="off">
-                        <p class="form-hint"><i class="fas fa-info-circle"></i> Le nom d'utilisateur doit correspondre exactement (sensible à la casse)</p>
+                        <input type="text" id="targetUsername" class="input-field" placeholder="Nom d'utilisateur ou email exact..." autocomplete="off">
+                        <p class="form-hint" id="lblTargetHint"><i class="fas fa-info-circle"></i> Le nom d'utilisateur ou l'email doit correspondre exactement</p>
                     </div>
                 </div>
 
                 <!-- Type -->
                 <div class="form-group">
-                    <label class="form-label"><i class="fas fa-tag"></i> Type de notification</label>
+                    <label class="form-label" id="lblTypeLabel"><i class="fas fa-tag"></i> Type de notification</label>
                     <div class="type-selector">
                         <label class="type-option" data-type="info">
                             <input type="radio" name="notifType" value="info" checked>
@@ -127,21 +130,37 @@
                         </label>
                         <label class="type-option" data-type="update">
                             <input type="radio" name="notifType" value="update">
-                            <span class="type-pill update"><i class="fas fa-rocket"></i> Mise à Jour</span>
+                            <span class="type-pill update"><i class="fas fa-rocket"></i> MAJ</span>
+                        </label>
+                        <label class="type-option" data-type="ban">
+                            <input type="radio" name="notifType" value="ban">
+                            <span class="type-pill ban"><i class="fas fa-ban"></i> Ban</span>
+                        </label>
+                        <label class="type-option" data-type="alert">
+                            <input type="radio" name="notifType" value="alert">
+                            <span class="type-pill alert"><i class="fas fa-triangle-exclamation"></i> Alerte</span>
+                        </label>
+                        <label class="type-option" data-type="event">
+                            <input type="radio" name="notifType" value="event">
+                            <span class="type-pill event"><i class="fas fa-bullhorn"></i> Event</span>
+                        </label>
+                        <label class="type-option" data-type="maintenance">
+                            <input type="radio" name="notifType" value="maintenance">
+                            <span class="type-pill maintenance"><i class="fas fa-tools"></i> Maint.</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Title -->
                 <div class="form-group">
-                    <label class="form-label"><i class="fas fa-heading"></i> Titre</label>
+                    <label class="form-label" id="lblTitleLabel"><i class="fas fa-heading"></i> Titre</label>
                     <input type="text" id="notifTitle" class="input-field" placeholder="Ex: Nouvelle fonctionnalité disponible !" maxlength="80" required oninput="updatePreview()">
                     <div class="char-count"><span id="titleCount">0</span>/80</div>
                 </div>
 
                 <!-- Message -->
                 <div class="form-group">
-                    <label class="form-label"><i class="fas fa-comment-dots"></i> Message</label>
+                    <label class="form-label" id="lblMessageLabel"><i class="fas fa-comment-dots"></i> Message</label>
                     <textarea id="notifMessage" class="input-field textarea-field" placeholder="Rédigez votre message ici..." maxlength="300" rows="3" oninput="updatePreview()"></textarea>
                     <div class="char-count"><span id="msgCount">0</span>/300</div>
                 </div>
@@ -149,13 +168,13 @@
                 <!-- Send Button -->
                 <button type="button" id="sendNotifBtn" class="btn-primary full-width send-btn" onclick="sendNotification()">
                     <i class="fas fa-paper-plane"></i>
-                    <span>Envoyer la notification</span>
+                    <span id="lblSendBtnText">Envoyer la notification</span>
                 </button>
             </div>
 
             <!-- Live Preview -->
             <div class="preview-section">
-                <p class="preview-label"><i class="fas fa-eye"></i> Aperçu — tel qu'affiché pour l'utilisateur</p>
+                <p class="preview-label" id="lblPreviewLabel"><i class="fas fa-eye"></i> Aperçu — tel qu'affiché pour l'utilisateur</p>
                 <div id="notifPreview" class="preview-toast info">
                     <div class="preview-toast-left">
                         <div class="preview-icon"><i id="previewIcon" class="fas fa-info-circle"></i></div>
@@ -166,9 +185,9 @@
                             <button class="preview-close-btn" title="Fermer"><i class="fas fa-times"></i></button>
                         </div>
                         <p class="preview-message" id="previewMessage">Le message apparaîtra ici...</p>
-                        <p class="preview-sender"><i class="fas fa-user-shield"></i> De : <span id="previewSender">admin</span></p>
+                        <p class="preview-sender"><i class="fas fa-user-shield"></i> <span id="lblFrom">De :</span> <span id="previewSender">admin</span></p>
                         <div class="preview-actions">
-                            <button class="preview-reply-btn"><i class="fas fa-reply"></i> Répondre</button>
+                            <button class="preview-reply-btn"><i class="fas fa-reply"></i> <span id="lblPreviewReply">Répondre</span></button>
                         </div>
                         <div class="preview-progress">
                             <div class="preview-progress-bar" id="previewProgressBar"></div>
@@ -183,8 +202,8 @@
             <div class="section-header">
                 <i class="fas fa-history section-icon"></i>
                 <div>
-                    <h2 class="section-title">Notifications Envoyées</h2>
-                    <p class="section-sub">Historique &amp; Réponses des utilisateurs</p>
+                    <h2 class="section-title" id="lblHistoryTitle">Notifications Envoyées</h2>
+                    <p class="section-sub" id="lblHistorySub">Historique &amp; Réponses des utilisateurs</p>
                 </div>
                 <button class="btn-outline btn-sm refresh-btn" onclick="loadSentNotifications()" title="Actualiser">
                     <i class="fas fa-sync-alt" id="refreshIcon"></i>
@@ -194,7 +213,7 @@
             <div id="notifList" class="notif-list">
                 <div class="empty-state">
                     <i class="fas fa-bell-slash"></i>
-                    <p>Aucune notification envoyée</p>
+                    <p id="lblEmptyNotifs">Aucune notification envoyée</p>
                 </div>
             </div>
         </section>
@@ -209,6 +228,8 @@
 const BACK4APP_CONFIG = {
     appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
     clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
+    restApiKey: 'qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW',
+    webhookKey: 'K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH',
     url: 'https://parseapi.back4app.com'
 };
 
@@ -216,14 +237,118 @@ let adminSession = null;
 let currentTarget = 'global';
 let historyPollingInterval = null;
 
+// ============ ADMIN I18N DICTIONARY ============
+let currentAdminLang = localStorage.getItem('manlore_admin_lang') || 'fr';
+
+const ADMIN_I18N = {
+    fr: {
+        toggleLabel: "EN",
+        headerSub: "Panneau de Notifications",
+        logout: "Déconnexion",
+        sendTitle: "Envoyer une Notification",
+        sendSub: "Poussez un message vers un ou tous les utilisateurs",
+        recipient: "Destinataire",
+        targetGlobal: "Global (tous)",
+        targetUser: "Utilisateur spécifique",
+        targetPlaceholder: "Nom d'utilisateur ou email exact...",
+        targetHint: "Le nom d'utilisateur ou l'email doit correspondre exactement",
+        typeLabel: "Type de notification",
+        titleLabel: "Titre",
+        titlePlaceholder: "Ex: Nouvelle fonctionnalité disponible !",
+        messageLabel: "Message",
+        messagePlaceholder: "Rédigez votre message ici...",
+        sendBtnText: "Envoyer la notification",
+        previewLabel: "Aperçu — tel qu'affiché pour l'utilisateur",
+        from: "De :",
+        previewReply: "Répondre",
+        historyTitle: "Notifications Envoyées",
+        historySub: "Historique & Réponses des utilisateurs",
+        emptyNotifs: "Aucune notification envoyée",
+        accessDenied: "Accès refusé — compte non autorisé",
+        welcome: "Bienvenue,"
+    },
+    en: {
+        toggleLabel: "FR",
+        headerSub: "Notification Center",
+        logout: "Log out",
+        sendTitle: "Send a Notification",
+        sendSub: "Push a message to one or all users",
+        recipient: "Recipient",
+        targetGlobal: "Global (all)",
+        targetUser: "Specific user",
+        targetPlaceholder: "Exact username or email...",
+        targetHint: "Username or email must match exactly",
+        typeLabel: "Notification type",
+        titleLabel: "Title",
+        titlePlaceholder: "Ex: New feature available!",
+        messageLabel: "Message",
+        messagePlaceholder: "Write your message here...",
+        sendBtnText: "Send Notification",
+        previewLabel: "Preview — as displayed to the user",
+        from: "From:",
+        previewReply: "Reply",
+        historyTitle: "Sent Notifications",
+        historySub: "History & User replies",
+        emptyNotifs: "No notifications sent",
+        accessDenied: "Access denied — unauthorized account",
+        welcome: "Welcome,"
+    }
+};
+
+function applyAdminI18n(lang) {
+    currentAdminLang = lang;
+    localStorage.setItem('manlore_admin_lang', lang);
+    const dict = ADMIN_I18N[lang] || ADMIN_I18N.fr;
+
+    const setT = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    };
+
+    setT('adminLangLabel', dict.toggleLabel);
+    setT('lblHeaderSub', dict.headerSub);
+    setT('lblLogout', dict.logout);
+    setT('lblSendTitle', dict.sendTitle);
+    setT('lblSendSub', dict.sendSub);
+    setT('lblTargetGlobal', dict.targetGlobal);
+    setT('lblTargetUser', dict.targetUser);
+    setT('lblTargetHint', dict.targetHint);
+    setT('lblTitleLabel', dict.titleLabel);
+    setT('lblMessageLabel', dict.messageLabel);
+    setT('lblSendBtnText', dict.sendBtnText);
+    setT('lblPreviewLabel', dict.previewLabel);
+    setT('lblFrom', dict.from);
+    setT('lblPreviewReply', dict.previewReply);
+    setT('lblHistoryTitle', dict.historyTitle);
+    setT('lblHistorySub', dict.historySub);
+    setT('lblEmptyNotifs', dict.emptyNotifs);
+
+    const inputTarget = document.getElementById('targetUsername');
+    if (inputTarget) inputTarget.placeholder = dict.targetPlaceholder;
+    const inputTitle = document.getElementById('notifTitle');
+    if (inputTitle) inputTitle.placeholder = dict.titlePlaceholder;
+    const inputMsg = document.getElementById('notifMessage');
+    if (inputMsg) inputMsg.placeholder = dict.messagePlaceholder;
+}
+
+function toggleAdminLang() {
+    const newLang = currentAdminLang === 'fr' ? 'en' : 'fr';
+    applyAdminI18n(newLang);
+    showAdminToast(newLang === 'en' ? 'Switched to English' : 'Passé en Français', 'info');
+}
+window.toggleAdminLang = toggleAdminLang;
+
 // ============ API ============
 async function apiCall(endpoint, method = 'GET', data = null, sessionToken = null) {
+    const token = sessionToken || adminSession?.sessionToken;
     const headers = {
         'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
-        'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+        'X-Parse-REST-API-Key': BACK4APP_CONFIG.restApiKey,
+        'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
+        'X-Parse-Revocable-Session': '1',
         'Content-Type': 'application/json'
     };
-    if (sessionToken) headers['X-Parse-Session-Token'] = sessionToken;
+    if (token) headers['X-Parse-Session-Token'] = token;
 
     const options = { method, headers, mode: 'cors' };
     if (data && (method === 'POST' || method === 'PUT')) {
@@ -235,10 +360,25 @@ async function apiCall(endpoint, method = 'GET', data = null, sessionToken = nul
     options.signal = controller.signal;
 
     try {
-        const res = await fetch(BACK4APP_CONFIG.url + endpoint, options);
+        let res = await fetch(BACK4APP_CONFIG.url + endpoint, options);
         clearTimeout(timeout);
         let json = {};
         try { json = await res.json(); } catch {}
+
+        // Fallback retry if session token was unauthorized or expired (401 / 403 / 209 / 119)
+        if (!res.ok && (res.status === 401 || res.status === 403 || json.code === 209 || json.code === 119) && token) {
+            console.warn('[Admin API] Session token invalid/expired, retrying request without session token...');
+            delete headers['X-Parse-Session-Token'];
+            const retryRes = await fetch(BACK4APP_CONFIG.url + endpoint, {
+                method, headers, body: options.body, mode: 'cors'
+            });
+            let retryJson = {};
+            try { retryJson = await retryRes.json(); } catch {}
+            if (retryRes.ok) {
+                return { ok: true, status: retryRes.status, data: retryJson };
+            }
+        }
+
         return { ok: res.ok, status: res.status, data: json };
     } catch (err) {
         clearTimeout(timeout);
@@ -254,6 +394,7 @@ const ADMIN_EMAILS = [
 
 // Auto-login check from active app session in localStorage
 window.addEventListener('DOMContentLoaded', () => {
+    applyAdminI18n(currentAdminLang);
     try {
         const sessionRaw = localStorage.getItem('manlore_user_session');
         if (sessionRaw) {
@@ -299,7 +440,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             method: 'GET',
             headers: {
                 'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
-                'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+                'X-Parse-REST-API-Key': BACK4APP_CONFIG.restApiKey,
+                'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
                 'X-Parse-Revocable-Session': '1',
                 'Content-Type': 'application/json'
             },
@@ -371,7 +513,11 @@ function updatePreview() {
         success: 'fa-check-circle',
         warning: 'fa-exclamation-triangle',
         error: 'fa-times-circle',
-        update: 'fa-rocket'
+        update: 'fa-rocket',
+        ban: 'fa-ban',
+        alert: 'fa-triangle-exclamation',
+        event: 'fa-bullhorn',
+        maintenance: 'fa-tools'
     };
 
     const preview = document.getElementById('notifPreview');
@@ -457,7 +603,7 @@ async function sendNotification() {
     const res = await apiCall('/classes/AdminNotifications', 'POST', payload, adminSession.sessionToken);
 
     if (res.ok) {
-        showAdminToast('Notification envoyée avec succès !', 'success');
+        showAdminToast(currentAdminLang === 'en' ? 'Notification sent successfully!' : 'Notification envoyée avec succès !', 'success');
         document.getElementById('notifTitle').value = '';
         document.getElementById('notifMessage').value = '';
         document.getElementById('titleCount').textContent = '0';
@@ -496,7 +642,7 @@ async function loadSentNotifications() {
     const notifs = res.data.results;
 
     if (!notifs.length) {
-        list.innerHTML = `<div class="empty-state"><i class="fas fa-bell-slash"></i><p>Aucune notification envoyée</p></div>`;
+        list.innerHTML = `<div class="empty-state"><i class="fas fa-bell-slash"></i><p>${ADMIN_I18N[currentAdminLang]?.emptyNotifs || 'Aucune notification envoyée'}</p></div>`;
         return;
     }
 
@@ -506,8 +652,28 @@ async function loadSentNotifications() {
 function renderNotifCard(n) {
     const replies = n.replies || [];
     const readCount = (n.readBy || []).length;
-    const typeLabels = { info: 'Info', success: 'Succès', warning: 'Warning', error: 'Erreur', update: 'Mise à Jour' };
-    const typeIcons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', update: 'fa-rocket' };
+    const typeLabels = {
+        info: 'Info',
+        success: 'Succès',
+        warning: 'Warning',
+        error: 'Erreur',
+        update: 'MAJ',
+        ban: 'Ban',
+        alert: 'Alerte',
+        event: 'Event',
+        maintenance: 'Maint.'
+    };
+    const typeIcons = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        update: 'fa-rocket',
+        ban: 'fa-ban',
+        alert: 'fa-triangle-exclamation',
+        event: 'fa-bullhorn',
+        maintenance: 'fa-tools'
+    };
     
     let targetLabel = '<span class="badge badge-global"><i class="fas fa-globe"></i> Global</span>';
     if (n.targetUserId !== '*') {
