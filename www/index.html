@@ -1189,6 +1189,35 @@
 <!-- ==================== TOAST CONTAINER ==================== -->
 <div id="toastContainer"></div>
 
+<!-- ==================== PUSH NOTIF REPLY MODAL ==================== -->
+<div id="notifReplyModal">
+    <div class="notif-reply-box">
+        <div class="notif-reply-header">
+            <span class="notif-reply-title"><i class="fas fa-reply"></i> Répondre à la notification</span>
+            <button class="notif-reply-close" onclick="closeNotifReplyModal()" title="Fermer"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="notif-reply-context">
+            <p class="notif-reply-context-title" id="replyContextTitle">Titre de la notification</p>
+            <p class="notif-reply-context-msg" id="replyContextMsg">Message de la notification</p>
+        </div>
+        <textarea
+            id="replyTextarea"
+            class="notif-reply-textarea"
+            placeholder="Votre réponse..."
+            maxlength="500"
+            rows="3"
+        ></textarea>
+        <div class="notif-reply-actions">
+            <button class="notif-reply-send-btn" id="replySendBtn" onclick="submitNotifReply()">
+                <i class="fas fa-paper-plane"></i> Envoyer
+            </button>
+            <button class="notif-reply-cancel-btn" onclick="closeNotifReplyModal()">
+                <i class="fas fa-times"></i> Annuler
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== IMPORT PROGRESS OVERLAY ==================== -->
 <div id="importProgressModal" class="import-progress-overlay hidden">
     <div class="import-progress-card">

@@ -1,132 +1,558 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="www/notif.css">
-    <title>Notification Panel</title>
+    <title>ManLore — Admin Notifications</title>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Luckiest+Guy&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="manlore-logo.png">
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="notif.css">
+    <!-- FA spinner for buttons -->
+    <style>.fa-spin { animation: spin 0.8s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }</style>
 </head>
 <body>
-    
-    <!-- ==================== AUTH SCREEN ==================== -->
-    
-    <div id="authScreen" class="auth-screen">
-         <div class="auth-card">
+
+<!-- ==================== TOAST CONTAINER ==================== -->
+<div id="adminToastContainer"></div>
+
+<!-- ==================== AUTH SCREEN ==================== -->
+<div id="authScreen" class="auth-screen">
+    <div class="auth-card">
         <div class="auth-logo-section">
             <img src="manlore-logo.png" alt="ManLore" class="auth-logo">
             <h1 class="auth-app-name">ManLore</h1>
-            <p class="auth-tagline" data-i18n="app.tagline">Ton Univers de collection de BD</p>
-            <p class="auth-version">v1.0.1</p>
+            <p class="auth-tagline">Panneau d'Administration — Notifications</p>
+            <span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin Only</span>
         </div>
-    </div>
-     <!-- Login Form -->
-          <form id="loginForm">
-            <h2 class="auth-form-title" data-i18n="auth.login.title">Connexion</h2>
-            <div class="form-group" style="margin-bottom:1rem">
-                <label class="form-label" data-i18n="auth.login.username">Nom d'utilisateur ou Email</label>
-                <input type="text" id="loginUsername" class="input-field" autocomplete="username" required>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-user"></i> Nom d'utilisateur</label>
+                <input type="text" id="loginUsername" class="input-field" autocomplete="username" placeholder="admin" required>
             </div>
-            <div class="form-group" style="margin-bottom:1.25rem">
-                <label class="form-label" data-i18n="auth.login.password">Mot de passe</label>
-                <input type="password" id="loginPassword" class="input-field" autocomplete="current-password" required>
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-lock"></i> Mot de passe</label>
+                <input type="password" id="loginPassword" class="input-field" autocomplete="current-password" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn-primary full-width" id="loginSubmitBtn" style="padding:0.85rem; font-size:1rem; font-weight:700; box-shadow:0 4px 15px rgba(var(--color-primary-rgb),0.4);">
+            <button type="submit" id="loginSubmitBtn" class="btn-primary full-width">
                 <i class="fas fa-sign-in-alt"></i>
-                <span data-i18n="auth.login.submit">Se connecter</span>
+                <span>Accéder au panneau</span>
+            </button>
         </form>
+    </div>
+</div>
 
-        <!-- ==================== APP CONTAINER ==================== -->
-         <div id="appContainer" class="hidden app-wrapper">
-            <!-- ================= NOTIFICATION SENDER SYSTEM TO WWW/INDEX.HTML ==================== -->
-             <!-- ===== THIS SYSTEM ALLOWS TO THE ADMINS TO PUSH NOTIFICATION TO ALL USERS OF MANLORE (WWW/INDEX.HTML) ===== -->
-            
-            <select id="notificationType" class="input-field">
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="info">Info</option>
-                <option value="error">Error</option>
-                <option value="update">Update</option>
-            </select>
-            <select id="notificationType" class="input-field">
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="info">Info</option>
-                <option value="error">Error</option>
-                <option value="update">Update</option>
-            </select>
-            <input type="text" id="notificationMessage" class="input-field" placeholder="Message" required>
-            <button type="button" id="sendNotificationBtn" class="btn-primary full-width" style="padding:0.85rem; font-size:1rem; font-weight:700; box-shadow:0 4px 15px rgba(var(--color-primary-rgb),0.4);">
+<!-- ==================== ADMIN PANEL ==================== -->
+<div id="appContainer" class="hidden">
 
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="admin-header-left">
+            <img src="manlore-logo.png" alt="ManLore" class="header-logo">
+            <div>
+                <h1 class="header-title"><span class="gradient-text">ManLore</span> Admin</h1>
+                <p class="header-sub">Panneau de Notifications</p>
+            </div>
+        </div>
+        <div class="admin-header-right">
+            <div class="admin-user-chip">
+                <i class="fas fa-user-shield"></i>
+                <span id="adminUsername">Admin</span>
+            </div>
+            <button class="btn-outline btn-sm" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Déconnexion
+            </button>
+        </div>
+    </header>
 
-         </div>
-         <script>
-            //NOTIFICATION LOGIC SENDING VERSION 1.0.1
-            'use strict';
+    <!-- Main Content -->
+    <main class="admin-main">
 
-            // ============ BACK4APP CONFIGURATION (SERVEUR OFFICIEL) ============
-                const BACK4APP_CONFIG = {
-            name: 'Serveur ManLore Cloud',
-            appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
-            clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
-            url: 'https://parseapi.back4app.com'
-                };
+        <!-- Left Column: Send Form -->
+        <section class="admin-section send-section">
+            <div class="section-header">
+                <i class="fas fa-paper-plane section-icon"></i>
+                <div>
+                    <h2 class="section-title">Envoyer une Notification</h2>
+                    <p class="section-sub">Poussez un message vers un ou tous les utilisateurs</p>
+                </div>
+            </div>
 
-            //CLIENT REST HTTP BACK4APP ULTRA-REsilIENT
-            async function back4appApiCall(endpoint, method = 'GET', data = null, sessionToken = null) {
-                const url = BACK4APP_CONFIG.url + endpoint;
-                const headers = {
-                    'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
-                    'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
-                    'X-Parse-Client-Key': BACK4APP_CONFIG.clientKey,
-                    'X-Parse-Revocable-Session': '1',
-                    'Content-Type': 'application/json'
-                };
+            <div class="send-form">
+                <!-- Target -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-users"></i> Destinataire
+                    </label>
+                    <div class="target-toggle">
+                        <button type="button" class="target-btn active" id="targetGlobalBtn" onclick="setTarget('global')">
+                            <i class="fas fa-globe"></i> Global (tous)
+                        </button>
+                        <button type="button" class="target-btn" id="targetUserBtn" onclick="setTarget('user')">
+                            <i class="fas fa-user"></i> Utilisateur spécifique
+                        </button>
+                    </div>
+                    <div id="targetUserInput" class="hidden" style="margin-top:0.75rem">
+                        <input type="text" id="targetUsername" class="input-field" placeholder="Nom d'utilisateur exact..." autocomplete="off">
+                        <p class="form-hint"><i class="fas fa-info-circle"></i> Le nom d'utilisateur doit correspondre exactement (sensible à la casse)</p>
+                    </div>
+                </div>
 
-                if (sessionToken) {
-                    headers['X-Parse-Session-Token'] = sessionToken;
-                }
+                <!-- Type -->
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-tag"></i> Type de notification</label>
+                    <div class="type-selector">
+                        <label class="type-option" data-type="info">
+                            <input type="radio" name="notifType" value="info" checked>
+                            <span class="type-pill info"><i class="fas fa-info-circle"></i> Info</span>
+                        </label>
+                        <label class="type-option" data-type="success">
+                            <input type="radio" name="notifType" value="success">
+                            <span class="type-pill success"><i class="fas fa-check-circle"></i> Succès</span>
+                        </label>
+                        <label class="type-option" data-type="warning">
+                            <input type="radio" name="notifType" value="warning">
+                            <span class="type-pill warning"><i class="fas fa-exclamation-triangle"></i> Warning</span>
+                        </label>
+                        <label class="type-option" data-type="error">
+                            <input type="radio" name="notifType" value="error">
+                            <span class="type-pill error"><i class="fas fa-times-circle"></i> Erreur</span>
+                        </label>
+                        <label class="type-option" data-type="update">
+                            <input type="radio" name="notifType" value="update">
+                            <span class="type-pill update"><i class="fas fa-rocket"></i> Mise à Jour</span>
+                        </label>
+                    </div>
+                </div>
 
-                const options = {
-                    method,
-                    headers,
-                    mode: 'cors'
-                };
+                <!-- Title -->
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-heading"></i> Titre</label>
+                    <input type="text" id="notifTitle" class="input-field" placeholder="Ex: Nouvelle fonctionnalité disponible !" maxlength="80" required oninput="updatePreview()">
+                    <div class="char-count"><span id="titleCount">0</span>/80</div>
+                </div>
 
-                if (data && (method === 'POST' || method === 'PUT')) {
-                    options.body = JSON.stringify(data);
-                }
+                <!-- Message -->
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-comment-dots"></i> Message</label>
+                    <textarea id="notifMessage" class="input-field textarea-field" placeholder="Rédigez votre message ici..." maxlength="300" rows="3" oninput="updatePreview()"></textarea>
+                    <div class="char-count"><span id="msgCount">0</span>/300</div>
+                </div>
 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                options.signal = controller.signal;
+                <!-- Send Button -->
+                <button type="button" id="sendNotifBtn" class="btn-primary full-width send-btn" onclick="sendNotification()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Envoyer la notification</span>
+                </button>
+            </div>
 
-                try {
-                    const response = await fetch(url, options);
-                    clearTimeout(timeoutId);
+            <!-- Live Preview -->
+            <div class="preview-section">
+                <p class="preview-label"><i class="fas fa-eye"></i> Aperçu — tel qu'affiché pour l'utilisateur</p>
+                <div id="notifPreview" class="preview-toast info">
+                    <div class="preview-toast-left">
+                        <div class="preview-icon"><i id="previewIcon" class="fas fa-info-circle"></i></div>
+                    </div>
+                    <div class="preview-toast-body">
+                        <div class="preview-toast-header">
+                            <span class="preview-title" id="previewTitle">Titre de la notification</span>
+                            <button class="preview-close-btn" title="Fermer"><i class="fas fa-times"></i></button>
+                        </div>
+                        <p class="preview-message" id="previewMessage">Le message apparaîtra ici...</p>
+                        <p class="preview-sender"><i class="fas fa-user-shield"></i> De : <span id="previewSender">admin</span></p>
+                        <div class="preview-actions">
+                            <button class="preview-reply-btn"><i class="fas fa-reply"></i> Répondre</button>
+                        </div>
+                        <div class="preview-progress">
+                            <div class="preview-progress-bar" id="previewProgressBar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                    let json = null;
-                    try {
-                        json = await response.json();
-                    } catch {
-                        json = {};
-                    }
+        <!-- Right Column: Sent Notifications -->
+        <section class="admin-section history-section">
+            <div class="section-header">
+                <i class="fas fa-history section-icon"></i>
+                <div>
+                    <h2 class="section-title">Notifications Envoyées</h2>
+                    <p class="section-sub">Historique &amp; Réponses des utilisateurs</p>
+                </div>
+                <button class="btn-outline btn-sm refresh-btn" onclick="loadSentNotifications()" title="Actualiser">
+                    <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                </button>
+            </div>
 
-                    return {
-                        ok: response.ok,
-                        status: response.status,
-                        data: json
-                    };
-                } catch (err) {
-                    clearTimeout(timeoutId);
-                    return {
-                        ok: false,
-                        status: 0,
-                        error: err.name === 'AbortError' ? 'Délai d\'attente dépassé (timeout 10s)' : err.message
-                    };
-                }
-            }
+            <div id="notifList" class="notif-list">
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>Aucune notification envoyée</p>
+                </div>
+            </div>
+        </section>
 
+    </main>
+</div>
 
-      </script>
+<script>
+'use strict';
+
+// ============ BACK4APP CONFIG ============
+const BACK4APP_CONFIG = {
+    appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
+    clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
+    url: 'https://parseapi.back4app.com'
+};
+
+let adminSession = null;
+let currentTarget = 'global';
+let historyPollingInterval = null;
+
+// ============ API ============
+async function apiCall(endpoint, method = 'GET', data = null, sessionToken = null) {
+    const headers = {
+        'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
+        'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+        'Content-Type': 'application/json'
+    };
+    if (sessionToken) headers['X-Parse-Session-Token'] = sessionToken;
+
+    const options = { method, headers, mode: 'cors' };
+    if (data && (method === 'POST' || method === 'PUT')) {
+        options.body = JSON.stringify(data);
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    options.signal = controller.signal;
+
+    try {
+        const res = await fetch(BACK4APP_CONFIG.url + endpoint, options);
+        clearTimeout(timeout);
+        let json = {};
+        try { json = await res.json(); } catch {}
+        return { ok: res.ok, status: res.status, data: json };
+    } catch (err) {
+        clearTimeout(timeout);
+        return { ok: false, status: 0, error: err.message };
+    }
+}
+
+// ============ AUTH ============
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginSubmitBtn');
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
+
+    const res = await apiCall('/login', 'GET', null, null);
+    // Use query params for login
+    const loginRes = await fetch(
+        `${BACK4APP_CONFIG.url}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        {
+            method: 'GET',
+            headers: {
+                'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
+                'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+                'Content-Type': 'application/json'
+            },
+            mode: 'cors'
+        }
+    );
+
+    const loginData = await loginRes.json();
+
+    // ===== ADMIN EMAIL WHITELIST =====
+    const ADMIN_EMAILS = [
+        'karlluberisse1308@gmail.com',
+        'karlito2best@gmail.com'
+    ];
+
+    if (loginRes.ok && loginData.sessionToken) {
+        const userEmail = loginData.email || '';
+        if (!ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
+            showAdminToast('Accès refusé — compte non autorisé', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Accéder au panneau</span>';
+            return;
+        }
+
+        adminSession = loginData;
+        document.getElementById('adminUsername').textContent = loginData.username || username;
+        document.getElementById('previewSender').textContent = loginData.username || username;
+
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('appContainer').classList.remove('hidden');
+
+        showAdminToast(`Bienvenue, ${loginData.username} !`, 'success');
+        loadSentNotifications();
+        startHistoryPolling();
+    } else {
+        showAdminToast(loginData.error || 'Identifiants incorrects', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Accéder au panneau</span>';
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    adminSession = null;
+    clearInterval(historyPollingInterval);
+    document.getElementById('appContainer').classList.add('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+});
+
+// ============ TARGET ============
+function setTarget(type) {
+    currentTarget = type;
+    document.getElementById('targetGlobalBtn').classList.toggle('active', type === 'global');
+    document.getElementById('targetUserBtn').classList.toggle('active', type === 'user');
+    document.getElementById('targetUserInput').classList.toggle('hidden', type !== 'user');
+    updatePreview();
+}
+
+// ============ PREVIEW ============
+function updatePreview() {
+    const title = document.getElementById('notifTitle').value || 'Titre de la notification';
+    const message = document.getElementById('notifMessage').value || 'Le message apparaîtra ici...';
+    const type = document.querySelector('input[name="notifType"]:checked')?.value || 'info';
+    const titleCount = document.getElementById('notifTitle').value.length;
+    const msgCount = document.getElementById('notifMessage').value.length;
+
+    document.getElementById('titleCount').textContent = titleCount;
+    document.getElementById('msgCount').textContent = msgCount;
+
+    const icons = {
+        info: 'fa-info-circle',
+        success: 'fa-check-circle',
+        warning: 'fa-exclamation-triangle',
+        error: 'fa-times-circle',
+        update: 'fa-rocket'
+    };
+
+    const preview = document.getElementById('notifPreview');
+    preview.className = `preview-toast ${type}`;
+    document.getElementById('previewIcon').className = `fas ${icons[type] || 'fa-info-circle'}`;
+    document.getElementById('previewTitle').textContent = title;
+    document.getElementById('previewMessage').textContent = message;
+
+    // Animate progress bar
+    const bar = document.getElementById('previewProgressBar');
+    bar.style.animation = 'none';
+    bar.offsetHeight; // reflow
+    bar.style.animation = 'previewProgress 5s linear forwards';
+}
+
+// Listen to radio changes
+document.querySelectorAll('input[name="notifType"]').forEach(r => {
+    r.addEventListener('change', updatePreview);
+});
+
+// ============ SEND NOTIFICATION ============
+async function sendNotification() {
+    if (!adminSession) return;
+
+    const title = document.getElementById('notifTitle').value.trim();
+    const message = document.getElementById('notifMessage').value.trim();
+    const type = document.querySelector('input[name="notifType"]:checked')?.value || 'info';
+    const targetUsername = currentTarget === 'user' ? document.getElementById('targetUsername').value.trim() : null;
+
+    if (!title) { showAdminToast('Veuillez saisir un titre', 'warning'); return; }
+    if (!message) { showAdminToast('Veuillez saisir un message', 'warning'); return; }
+    if (currentTarget === 'user' && !targetUsername) {
+        showAdminToast('Veuillez saisir un nom d\'utilisateur', 'warning'); return;
+    }
+
+    const btn = document.getElementById('sendNotifBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Envoi en cours...</span>';
+
+    // Resolve targetUserId if specific user
+    let targetUserId = currentTarget === 'global' ? '*' : null;
+    let resolvedUsername = currentTarget === 'global' ? null : targetUsername;
+
+    if (currentTarget === 'user') {
+        // Look up user by username
+        const lookupRes = await apiCall(
+            `/users?where=${encodeURIComponent(JSON.stringify({ username: targetUsername }))}`,
+            'GET', null, adminSession.sessionToken
+        );
+        if (!lookupRes.ok || !lookupRes.data?.results?.length) {
+            showAdminToast(`Utilisateur "${targetUsername}" introuvable`, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Envoyer la notification</span>';
+            return;
+        }
+        targetUserId = lookupRes.data.results[0].objectId;
+    }
+
+    const payload = {
+        type,
+        title,
+        message,
+        targetUserId,
+        targetUsername: resolvedUsername,
+        sentBy: adminSession.username,
+        readBy: [],
+        replies: [],
+        expiresAt: { __type: 'Date', iso: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }
+    };
+
+    const res = await apiCall('/classes/AdminNotifications', 'POST', payload, adminSession.sessionToken);
+
+    if (res.ok) {
+        showAdminToast('Notification envoyée avec succès !', 'success');
+        document.getElementById('notifTitle').value = '';
+        document.getElementById('notifMessage').value = '';
+        document.getElementById('titleCount').textContent = '0';
+        document.getElementById('msgCount').textContent = '0';
+        updatePreview();
+        await loadSentNotifications();
+    } else {
+        showAdminToast(res.data?.error || 'Erreur lors de l\'envoi', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Envoyer la notification</span>';
+}
+
+// ============ LOAD NOTIFICATIONS ============
+async function loadSentNotifications() {
+    if (!adminSession) return;
+
+    const icon = document.getElementById('refreshIcon');
+    icon.classList.add('fa-spin');
+
+    const res = await apiCall(
+        `/classes/AdminNotifications?order=-createdAt&limit=30`,
+        'GET', null, adminSession.sessionToken
+    );
+
+    icon.classList.remove('fa-spin');
+
+    const list = document.getElementById('notifList');
+
+    if (!res.ok || !res.data?.results) {
+        list.innerHTML = `<div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>Erreur de chargement</p></div>`;
+        return;
+    }
+
+    const notifs = res.data.results;
+
+    if (!notifs.length) {
+        list.innerHTML = `<div class="empty-state"><i class="fas fa-bell-slash"></i><p>Aucune notification envoyée</p></div>`;
+        return;
+    }
+
+    list.innerHTML = notifs.map(n => renderNotifCard(n)).join('');
+}
+
+function renderNotifCard(n) {
+    const replies = n.replies || [];
+    const readCount = (n.readBy || []).length;
+    const typeLabels = { info: 'Info', success: 'Succès', warning: 'Warning', error: 'Erreur', update: 'Mise à Jour' };
+    const typeIcons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', update: 'fa-rocket' };
+    const targetLabel = n.targetUserId === '*' ? '<span class="badge badge-global"><i class="fas fa-globe"></i> Global</span>' : `<span class="badge badge-user"><i class="fas fa-user"></i> ${escapeHtml(n.targetUsername || n.targetUserId)}</span>`;
+    const createdAt = new Date(n.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+    const repliesHtml = replies.length ? `
+        <div class="replies-container">
+            <div class="replies-header"><i class="fas fa-comments"></i> ${replies.length} réponse${replies.length > 1 ? 's' : ''}</div>
+            ${replies.map(r => `
+                <div class="reply-item">
+                    <div class="reply-meta">
+                        <span class="reply-user"><i class="fas fa-user"></i> ${escapeHtml(r.username)}</span>
+                        <span class="reply-time">${new Date(r.createdAt).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <p class="reply-text">${escapeHtml(r.text)}</p>
+                </div>
+            `).join('')}
+        </div>
+    ` : '';
+
+    return `
+    <div class="notif-card ${n.type}">
+        <div class="notif-card-header">
+            <div class="notif-card-type">
+                <span class="type-dot ${n.type}"></span>
+                <span class="type-label">${typeLabels[n.type] || n.type}</span>
+            </div>
+            <div class="notif-card-meta">
+                ${targetLabel}
+                <span class="notif-time"><i class="fas fa-clock"></i> ${createdAt}</span>
+            </div>
+        </div>
+        <div class="notif-card-body">
+            <p class="notif-card-title"><i class="fas ${typeIcons[n.type] || 'fa-bell'}"></i> ${escapeHtml(n.title)}</p>
+            <p class="notif-card-message">${escapeHtml(n.message)}</p>
+        </div>
+        <div class="notif-card-footer">
+            <span class="read-count"><i class="fas fa-eye"></i> Lu par ${readCount} utilisateur${readCount > 1 ? 's' : ''}</span>
+            <button class="btn-danger-sm" onclick="deleteNotification('${n.objectId}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        ${repliesHtml}
+    </div>`;
+}
+
+// ============ DELETE ============
+async function deleteNotification(id) {
+    if (!confirm('Supprimer cette notification ?')) return;
+    const res = await apiCall(`/classes/AdminNotifications/${id}`, 'DELETE', null, adminSession.sessionToken);
+    if (res.ok) {
+        showAdminToast('Notification supprimée', 'info');
+        loadSentNotifications();
+    } else {
+        showAdminToast('Erreur de suppression', 'error');
+    }
+}
+
+// ============ POLLING HISTORIQUE (ADMIN) ============
+function startHistoryPolling() {
+    clearInterval(historyPollingInterval);
+    historyPollingInterval = setInterval(() => {
+        loadSentNotifications();
+    }, 15000);
+}
+
+// ============ ADMIN TOAST ============
+function showAdminToast(message, type = 'info') {
+    const container = document.getElementById('adminToastContainer');
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+    const toast = document.createElement('div');
+    toast.className = `admin-toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i><span>${escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('leaving');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+// ============ UTILS ============
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Init preview on load
+updatePreview();
+</script>
 </body>
 </html>
