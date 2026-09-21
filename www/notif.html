@@ -246,6 +246,42 @@ async function apiCall(endpoint, method = 'GET', data = null, sessionToken = nul
     }
 }
 
+// ===== ADMIN EMAIL WHITELIST =====
+const ADMIN_EMAILS = [
+    'karlluberisse1308@gmail.com',
+    'karlito2best@gmail.com'
+];
+
+// Auto-login check from active app session in localStorage
+window.addEventListener('DOMContentLoaded', () => {
+    try {
+        const sessionRaw = localStorage.getItem('manlore_user_session');
+        if (sessionRaw) {
+            const parsed = JSON.parse(sessionRaw);
+            const userEmail = (parsed.attributes?.email || '').toLowerCase();
+            if (ADMIN_EMAILS.includes(userEmail) && parsed.sessionToken) {
+                adminSession = {
+                    objectId: parsed.objectId,
+                    sessionToken: parsed.sessionToken,
+                    username: parsed.attributes?.username || userEmail.split('@')[0],
+                    email: parsed.attributes?.email || userEmail
+                };
+                document.getElementById('adminUsername').textContent = adminSession.username;
+                document.getElementById('previewSender').textContent = adminSession.username;
+
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+
+                showAdminToast(`Session Admin connectée : ${adminSession.username}`, 'success');
+                loadSentNotifications();
+                startHistoryPolling();
+            }
+        }
+    } catch(e) {
+        console.warn('Auto admin login check note:', e);
+    }
+});
+
 // ============ AUTH ============
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -256,8 +292,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion...';
 
-    const res = await apiCall('/login', 'GET', null, null);
-    // Use query params for login
+    // Direct login query to Back4App REST API with credentials
     const loginRes = await fetch(
         `${BACK4APP_CONFIG.url}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
         {
@@ -265,23 +300,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             headers: {
                 'X-Parse-Application-Id': BACK4APP_CONFIG.appId,
                 'X-Parse-REST-API-Key': BACK4APP_CONFIG.clientKey,
+                'X-Parse-Revocable-Session': '1',
                 'Content-Type': 'application/json'
             },
             mode: 'cors'
         }
     );
 
-    const loginData = await loginRes.json();
-
-    // ===== ADMIN EMAIL WHITELIST =====
-    const ADMIN_EMAILS = [
-        'karlluberisse1308@gmail.com',
-        'karlito2best@gmail.com'
-    ];
+    let loginData = {};
+    try { loginData = await loginRes.json(); } catch {}
 
     if (loginRes.ok && loginData.sessionToken) {
-        const userEmail = loginData.email || '';
-        if (!ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
+        const userEmail = (loginData.email || '').toLowerCase();
+        if (!ADMIN_EMAILS.includes(userEmail)) {
             showAdminToast('Accès refusé — compte non autorisé', 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Accéder au panneau</span>';
@@ -299,7 +330,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         loadSentNotifications();
         startHistoryPolling();
     } else {
-        showAdminToast(loginData.error || 'Identifiants incorrects', 'error');
+        showAdminToast(loginData.error || 'Identifiants incorrects (403/401)', 'error');
     }
 
     btn.disabled = false;
@@ -368,35 +399,45 @@ async function sendNotification() {
     const title = document.getElementById('notifTitle').value.trim();
     const message = document.getElementById('notifMessage').value.trim();
     const type = document.querySelector('input[name="notifType"]:checked')?.value || 'info';
-    const targetUsername = currentTarget === 'user' ? document.getElementById('targetUsername').value.trim() : null;
+    const targetInput = currentTarget === 'user' ? document.getElementById('targetUsername').value.trim() : null;
 
     if (!title) { showAdminToast('Veuillez saisir un titre', 'warning'); return; }
     if (!message) { showAdminToast('Veuillez saisir un message', 'warning'); return; }
-    if (currentTarget === 'user' && !targetUsername) {
-        showAdminToast('Veuillez saisir un nom d\'utilisateur', 'warning'); return;
+    if (currentTarget === 'user' && !targetInput) {
+        showAdminToast('Veuillez saisir un nom d\'utilisateur ou email', 'warning'); return;
     }
 
     const btn = document.getElementById('sendNotifBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Envoi en cours...</span>';
 
-    // Resolve targetUserId if specific user
+    // Resolve target user by username OR email
     let targetUserId = currentTarget === 'global' ? '*' : null;
-    let resolvedUsername = currentTarget === 'global' ? null : targetUsername;
+    let resolvedUsername = currentTarget === 'global' ? null : targetInput;
+    let resolvedEmail = null;
 
     if (currentTarget === 'user') {
-        // Look up user by username
+        const searchWhere = {
+            "$or": [
+                { "username": targetInput },
+                { "email": targetInput },
+                { "email": targetInput.toLowerCase() }
+            ]
+        };
         const lookupRes = await apiCall(
-            `/users?where=${encodeURIComponent(JSON.stringify({ username: targetUsername }))}`,
+            `/users?where=${encodeURIComponent(JSON.stringify(searchWhere))}`,
             'GET', null, adminSession.sessionToken
         );
         if (!lookupRes.ok || !lookupRes.data?.results?.length) {
-            showAdminToast(`Utilisateur "${targetUsername}" introuvable`, 'error');
+            showAdminToast(`Utilisateur "${targetInput}" introuvable`, 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Envoyer la notification</span>';
             return;
         }
-        targetUserId = lookupRes.data.results[0].objectId;
+        const foundUser = lookupRes.data.results[0];
+        targetUserId = foundUser.objectId;
+        resolvedUsername = foundUser.username;
+        resolvedEmail = foundUser.email || '';
     }
 
     const payload = {
@@ -405,7 +446,9 @@ async function sendNotification() {
         message,
         targetUserId,
         targetUsername: resolvedUsername,
-        sentBy: adminSession.username,
+        targetEmail: resolvedEmail,
+        sentBy: adminSession.username || adminSession.email,
+        senderEmail: adminSession.email || '',
         readBy: [],
         replies: [],
         expiresAt: { __type: 'Date', iso: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }
@@ -434,14 +477,14 @@ async function loadSentNotifications() {
     if (!adminSession) return;
 
     const icon = document.getElementById('refreshIcon');
-    icon.classList.add('fa-spin');
+    if (icon) icon.classList.add('fa-spin');
 
     const res = await apiCall(
         `/classes/AdminNotifications?order=-createdAt&limit=30`,
         'GET', null, adminSession.sessionToken
     );
 
-    icon.classList.remove('fa-spin');
+    if (icon) icon.classList.remove('fa-spin');
 
     const list = document.getElementById('notifList');
 
@@ -465,7 +508,14 @@ function renderNotifCard(n) {
     const readCount = (n.readBy || []).length;
     const typeLabels = { info: 'Info', success: 'Succès', warning: 'Warning', error: 'Erreur', update: 'Mise à Jour' };
     const typeIcons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', update: 'fa-rocket' };
-    const targetLabel = n.targetUserId === '*' ? '<span class="badge badge-global"><i class="fas fa-globe"></i> Global</span>' : `<span class="badge badge-user"><i class="fas fa-user"></i> ${escapeHtml(n.targetUsername || n.targetUserId)}</span>`;
+    
+    let targetLabel = '<span class="badge badge-global"><i class="fas fa-globe"></i> Global</span>';
+    if (n.targetUserId !== '*') {
+        const uDisp = escapeHtml(n.targetUsername || n.targetUserId);
+        const eDisp = n.targetEmail ? `<small style="opacity:0.85; margin-left:4px">(${escapeHtml(n.targetEmail)})</small>` : '';
+        targetLabel = `<span class="badge badge-user"><i class="fas fa-user"></i> ${uDisp} ${eDisp}</span>`;
+    }
+    
     const createdAt = new Date(n.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
     const repliesHtml = replies.length ? `
@@ -474,10 +524,13 @@ function renderNotifCard(n) {
             ${replies.map(r => `
                 <div class="reply-item">
                     <div class="reply-meta">
-                        <span class="reply-user"><i class="fas fa-user"></i> ${escapeHtml(r.username)}</span>
-                        <span class="reply-time">${new Date(r.createdAt).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
+                        <span class="reply-user">
+                            <i class="fas fa-user"></i> <strong>${escapeHtml(r.username || r.senderUsername || 'Utilisateur')}</strong>
+                            ${r.email ? `<small style="color:var(--text-muted); font-weight:normal; margin-left:4px">(${escapeHtml(r.email)})</small>` : ''}
+                        </span>
+                        <span class="reply-time">${new Date(r.createdAt || Date.now()).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
-                    <p class="reply-text">${escapeHtml(r.text)}</p>
+                    <p class="reply-text">${escapeHtml(r.text || r.message || '')}</p>
                 </div>
             `).join('')}
         </div>

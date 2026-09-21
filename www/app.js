@@ -113,10 +113,17 @@ function openChangelogModal() {
 }
 window.openChangelogModal = openChangelogModal;
 
+const ADMIN_EMAILS = [
+    'karlluberisse1308@gmail.com',
+    'karlito2best@gmail.com'
+];
+
 function showGuestSettingsUI() {
     document.getElementById('guestNotice').classList.remove('hidden');
     document.getElementById('accountFields').classList.add('hidden');
     document.getElementById('deleteAccountBtn').classList.add('hidden');
+    const adminSec = document.getElementById('adminNotifSection');
+    if (adminSec) adminSec.classList.add('hidden');
 }
 
 function showUserSettingsUI(user) {
@@ -125,8 +132,22 @@ function showUserSettingsUI(user) {
     document.getElementById('deleteAccountBtn').classList.remove('hidden');
     const un = document.getElementById('settingsUsername');
     const em = document.getElementById('settingsEmail');
+    const userEmail = (user.get('email') || '').toLowerCase();
+    const username = (user.get('username') || '').toLowerCase();
+
     if (un) un.value = user.get('username') || '';
     if (em) em.value = user.get('email') || '';
+    
+    // Toggle Admin Notification Panel in Settings (Only for the 2 admin emails)
+    const adminSec = document.getElementById('adminNotifSection');
+    if (adminSec) {
+        if (ADMIN_EMAILS.includes(userEmail)) {
+            adminSec.classList.remove('hidden');
+        } else {
+            adminSec.classList.add('hidden');
+        }
+    }
+
     // Load avatar
     if (typeof getUserAvatar === 'function') {
         updateAvatarDisplay(getUserAvatar());
@@ -1861,4 +1882,219 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log('[App v9.0.1] Module loaded');
+
+// ============================================
+// ADMIN NOTIFICATION PANEL MODAL & REALTIME PUSH SYSTEM
+// ============================================
+
+function openAdminNotifModal() {
+    const modal = document.getElementById('adminNotifModal');
+    const iframe = document.getElementById('adminNotifIframe');
+    if (modal && iframe) {
+        if (iframe.src === 'about:blank' || !iframe.src.includes('notif.html')) {
+            iframe.src = 'notif.html';
+        }
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+}
+window.openAdminNotifModal = openAdminNotifModal;
+
+function closeAdminNotifModal() {
+    const modal = document.getElementById('adminNotifModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+window.closeAdminNotifModal = closeAdminNotifModal;
+
+// Active Push Notification context for replying
+let currentReplyingNotifId = null;
+
+function openNotifReplyModal(notifId, title, message) {
+    currentReplyingNotifId = notifId;
+    const modal = document.getElementById('notifReplyModal');
+    const titleEl = document.getElementById('replyContextTitle');
+    const msgEl = document.getElementById('replyContextMsg');
+    const textarea = document.getElementById('replyTextarea');
+
+    if (titleEl) titleEl.textContent = title || 'Notification';
+    if (msgEl) msgEl.textContent = message || '';
+    if (textarea) textarea.value = '';
+
+    if (modal) modal.classList.add('active');
+}
+window.openNotifReplyModal = openNotifReplyModal;
+
+function closeNotifReplyModal() {
+    currentReplyingNotifId = null;
+    const modal = document.getElementById('notifReplyModal');
+    if (modal) modal.classList.remove('active');
+}
+window.closeNotifReplyModal = closeNotifReplyModal;
+
+async function submitNotifReply() {
+    if (!currentReplyingNotifId) return;
+    const textarea = document.getElementById('replyTextarea');
+    const replyText = (textarea?.value || '').trim();
+    if (!replyText) {
+        if (window.showToast) window.showToast('Veuillez saisir votre réponse', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('replySendBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+    }
+
+    try {
+        const user = typeof Parse !== 'undefined' && Parse.User ? Parse.User.current() : null;
+        const senderUsername = user ? user.get('username') : 'Invité';
+        const senderEmail = user ? user.get('email') : '';
+        const sessionToken = user ? user.getSessionToken() : null;
+
+        // Fetch current notification to append reply
+        const getRes = await back4appApiCall(`/classes/AdminNotifications/${currentReplyingNotifId}`, 'GET', null, sessionToken);
+        if (getRes.ok && getRes.data) {
+            const existingReplies = getRes.data.replies || [];
+            existingReplies.push({
+                username: senderUsername,
+                email: senderEmail,
+                text: replyText,
+                createdAt: new Date().toISOString()
+            });
+
+            const updateRes = await back4appApiCall(
+                `/classes/AdminNotifications/${currentReplyingNotifId}`,
+                'PUT',
+                { replies: existingReplies },
+                sessionToken
+            );
+
+            if (updateRes.ok) {
+                if (window.showToast) window.showToast('Votre réponse a été envoyée !', 'success');
+                closeNotifReplyModal();
+            } else {
+                if (window.showToast) window.showToast('Erreur lors de l\'envoi de la réponse', 'error');
+            }
+        } else {
+            if (window.showToast) window.showToast('Impossible d\'accéder à la notification', 'error');
+        }
+    } catch(e) {
+        console.error('Submit reply error:', e);
+        if (window.showToast) window.showToast('Erreur de connexion', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
+        }
+    }
+}
+window.submitNotifReply = submitNotifReply;
+
+// ============ REALTIME CLIENT PUSH NOTIFICATION POLLING ============
+let clientPushInterval = null;
+
+function startClientPushListener() {
+    if (clientPushInterval) clearInterval(clientPushInterval);
+    
+    // Poll every 8 seconds for fast instant notifications
+    clientPushInterval = setInterval(checkIncomingPushNotifications, 8000);
+    // Initial check
+    setTimeout(checkIncomingPushNotifications, 2000);
+}
+
+async function checkIncomingPushNotifications() {
+    try {
+        const user = typeof Parse !== 'undefined' && Parse.User ? Parse.User.current() : null;
+        const sessionToken = user ? user.getSessionToken() : null;
+        const userEmail = (user ? user.get('email') || '' : '').toLowerCase();
+        const username = (user ? user.get('username') || '' : '').toLowerCase();
+        const userId = user ? user.id : null;
+
+        const res = await back4appApiCall(
+            '/classes/AdminNotifications?order=-createdAt&limit=10',
+            'GET', null, sessionToken
+        );
+
+        if (!res.ok || !res.data?.results) return;
+
+        let seenIds = [];
+        try {
+            seenIds = JSON.parse(localStorage.getItem('manlore_seen_push_ids') || '[]');
+        } catch {}
+
+        const notifs = res.data.results;
+        for (const notif of notifs) {
+            if (seenIds.includes(notif.objectId)) continue;
+
+            // Check if notification target applies to this user
+            const isTargeted = 
+                notif.targetUserId === '*' ||
+                (userId && notif.targetUserId === userId) ||
+                (username && (notif.targetUsername || '').toLowerCase() === username) ||
+                (userEmail && (notif.targetEmail || '').toLowerCase() === userEmail);
+
+            if (isTargeted) {
+                // Mark as seen locally
+                seenIds.push(notif.objectId);
+                if (seenIds.length > 100) seenIds.shift();
+                localStorage.setItem('manlore_seen_push_ids', JSON.stringify(seenIds));
+
+                // Show push toast & native push
+                showPushToastNotification(notif);
+                if (typeof sendPushNotification === 'function') {
+                    sendPushNotification(notif.title, notif.message);
+                }
+            }
+        }
+    } catch(e) {
+        console.warn('Push check note:', e);
+    }
+}
+
+function showPushToastNotification(notif) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast-push ${notif.type || 'info'}`;
+    const icons = { info: 'fa-info-circle', success: 'fa-check-circle', warning: 'fa-exclamation-triangle', error: 'fa-times-circle', update: 'fa-rocket' };
+
+    toast.innerHTML = `
+        <div class="toast-push-icon"><i class="fas ${icons[notif.type] || 'fa-bell'}"></i></div>
+        <div class="toast-push-body">
+            <div class="toast-push-header">
+                <span class="toast-push-title">${escapeHtml(notif.title || 'Notification')}</span>
+                <button class="toast-push-close" onclick="this.closest('.toast-push').remove()" title="Fermer"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="toast-push-message">${escapeHtml(notif.message || '')}</p>
+            <div class="toast-push-footer">
+                <span class="toast-push-sender"><i class="fas fa-user-shield"></i> De : ${escapeHtml(notif.sentBy || 'Admin')}</span>
+                <button class="toast-push-reply-btn" onclick="openNotifReplyModal('${notif.objectId}', '${escapeHtml(notif.title || '').replace(/'/g, "\\'")}', '${escapeHtml(notif.message || '').replace(/'/g, "\\'")}')">
+                    <i class="fas fa-reply"></i> Répondre
+                </button>
+            </div>
+            <div class="toast-push-progress"><div class="toast-push-progress-bar"></div></div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100px)';
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, 5000);
+}
+
+// Start listener on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    startClientPushListener();
+});
 

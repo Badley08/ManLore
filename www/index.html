@@ -559,6 +559,19 @@
                 </div>
             </div>
 
+            <!-- Admin Notification Sender Panel (Reservé aux emails administrateurs) -->
+            <div class="section-card hidden" id="adminNotifSection" style="border: 1px solid rgba(168, 85, 247, 0.4); background: linear-gradient(135deg, rgba(108, 92, 231, 0.12), rgba(168, 85, 247, 0.08));">
+                <h3 class="section-title" style="color: #a855f7;">
+                    <i class="fas fa-paper-plane"></i> <span>Expéditeur de Notifications Admin</span>
+                </h3>
+                <p class="text-sm text-muted" style="margin-bottom: 1.2rem; line-height: 1.4;">
+                    Accès administrateur exclusif pour diffuser des notifications globales ou cibler un utilisateur en temps réel.
+                </p>
+                <button type="button" id="openAdminNotifBtn" onclick="openAdminNotifModal()" class="btn-primary full-width" style="background: linear-gradient(135deg, #6c5ce7, #a855f7); font-weight: 700; box-shadow: 0 4px 18px rgba(108, 92, 231, 0.45); font-family: 'Luckiest Guy', cursive, sans-serif; font-size: 1.05rem; letter-spacing: 0.04em;">
+                    <i class="fas fa-bell"></i> Ouvrir le Panneau Expéditeur Admin
+                </button>
+            </div>
+
             <!-- Danger Zone -->
             <div class="danger-zone">
                 <h3 class="danger-zone-title">
@@ -1245,6 +1258,23 @@
                 <span class="import-stat-val" id="importStatTime">~0s</span>
                 <span class="import-stat-label" data-i18n="data.import.estimated">Temps estimé</span>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ADMIN NOTIFICATION PANEL MODAL ==================== -->
+<div id="adminNotifModal" class="modal-overlay hidden" style="position:fixed; inset:0; z-index:9999; background:rgba(5,5,12,0.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:1rem;">
+    <div class="modal-card admin-notif-modal-card" style="max-width:1100px; width:100%; height:90vh; max-height:900px; padding:0; overflow:hidden; display:flex; flex-direction:column; border-radius:20px; border:1px solid rgba(168,85,247,0.35); background:#0c0d18; box-shadow:0 12px 50px rgba(0,0,0,0.8);">
+        <div class="modal-header" style="padding:0.9rem 1.4rem; background:rgba(20,20,38,0.95); border-bottom:1px solid rgba(108,92,231,0.25); display:flex; justify-content:space-between; align-items:center;">
+            <h3 class="modal-title" style="margin:0; font-family:'Luckiest Guy', cursive; color:#a855f7; font-size:1.25rem; display:flex; align-items:center; gap:0.6rem;">
+                <i class="fas fa-paper-plane"></i> <span>Panneau Expéditeur Admin</span>
+            </h3>
+            <button class="modal-close-btn" onclick="closeAdminNotifModal()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e0e0ff; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s ease;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div style="flex:1; width:100%; height:100%; position:relative; background:#0d0d1a;">
+            <iframe id="adminNotifIframe" src="about:blank" style="width:100%; height:100%; border:none; display:block;"></iframe>
         </div>
     </div>
 </div>
