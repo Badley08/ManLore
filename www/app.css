@@ -229,6 +229,7 @@
 .status-abandonne { background: rgba(var(--color-danger-rgb), 0.15); color: var(--color-danger); border: 1px solid rgba(var(--color-danger-rgb), 0.4); }
 .status-en-pause { background: rgba(230, 126, 34, 0.15); color: #e67e22; border: 1px solid rgba(230, 126, 34, 0.4); }
 .status-re-lecture { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.4); }
+.status-attente-chapitres, .status-attente-chap, .status-attente { background: rgba(155, 89, 182, 0.18); color: #9b59b6; border: 1px solid rgba(155, 89, 182, 0.4); }
 
 .item-genres {
     display: flex;
