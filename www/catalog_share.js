@@ -2,13 +2,39 @@
    MANLORE v9.1.0 - CATALOG_SHARE.JS
    Partage Temporaire de Catalogue, Révocation,
    Comparaison de Collections & Mode Battle ⚔️
-   ULTRA ÉDITION — SVG Icons, User Avatars,
-   Multilingual i18n, 1-Click Wishlist Import
+   W3C Web Share API, User Avatars, i18n, 1-Click Import
    ============================================ */
 
 'use strict';
 
 let activeShareLinks = [];
+
+// ============ W3C WEB SHARE API COMPLIANT FUNCTION ============
+async function shareCatalogUrl(url, title = 'Mon Catalogue ManLore') {
+    const text = 'Découvre mon catalogue ManLore et défie-moi en duel Arena !';
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: title,
+                text: text,
+                url: url
+            });
+            return { success: true, sharedViaSheet: true };
+        } catch(e) {
+            console.log('[W3C WebShare] Note:', e.message);
+        }
+    }
+    // Fallback: Clipboard API
+    try {
+        await navigator.clipboard.writeText(url);
+        if (window.showToast) window.showToast(t('battle.link_copied', 'Lien copié dans le presse-papier !'), 'success');
+        return { success: true, copied: true };
+    } catch(e) {
+        if (window.showToast) window.showToast(url, 'info');
+        return { success: false };
+    }
+}
+window.shareCatalogUrl = shareCatalogUrl;
 
 // ============ PER-USER STORAGE KEY ============
 function getUserStoragePrefix() {
@@ -55,6 +81,26 @@ function t(key, fallback = '', params = {}) {
     });
     return res;
 }
+
+// ============ MODAL CONTROLS ============
+function openShareCatalogModal() {
+    const modal = document.getElementById('shareCatalogModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        renderActiveShareLinksList();
+    }
+}
+window.openShareCatalogModal = openShareCatalogModal;
+
+function closeShareCatalogModal() {
+    const modal = document.getElementById('shareCatalogModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+window.closeShareCatalogModal = closeShareCatalogModal;
 
 // ============ GENERATE SHARE LINK ============
 async function createSharedCatalogLink(durationHours = 24) {
@@ -253,8 +299,8 @@ function renderActiveShareLinksList() {
                     <p style="font-size:0.72rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0">${l.shareUrl}</p>
                 </div>
                 <div style="display:flex; gap:0.4rem; flex-shrink:0">
-                    <button type="button" class="btn-secondary" style="padding:0.35rem 0.65rem; font-size:0.78rem" onclick="navigator.clipboard.writeText('${l.shareUrl}'); if(window.showToast) window.showToast('${t('battle.link_copied', 'Lien copié !')}', 'success')">
-                        <i class="fas fa-copy"></i>
+                    <button type="button" class="btn-secondary" style="padding:0.35rem 0.65rem; font-size:0.78rem" onclick="shareCatalogUrl('${l.shareUrl}')">
+                        <i class="fas fa-share-nodes"></i>
                     </button>
                     <button type="button" class="btn-danger-sm" style="padding:0.35rem 0.6rem; font-size:0.78rem" onclick="revokeSharedCatalogLink('${l.shareCode}')" title="Révoker / Supprimer">
                         <i class="fas fa-trash-alt"></i>
@@ -299,7 +345,7 @@ function calculateBattlePower(items) {
 
 function computeDetailedStats(items) {
     const stats = {
-        totalTitles: items.length,
+        totalTitles: items ? items.length : 0,
         totalChapters: 0,
         completedCount: 0,
         inProgressCount: 0,
@@ -308,6 +354,8 @@ function computeDetailedStats(items) {
         genres: new Set(),
         longestTitle: { title: '-', chapters: 0 }
     };
+
+    if (!items) return stats;
 
     let ratingSum = 0, ratedCount = 0;
     items.forEach(i => {
@@ -367,7 +415,7 @@ function addFriendTitleToWishlist(title, type, image) {
 window.addFriendTitleToWishlist = addFriendTitleToWishlist;
 
 // ============ OPEN BATTLE OVERLAY ============
-function openBattleMode(friendName, friendItems, shareCode, friendAvatar = '') {
+function openBattleMode(friendName = '', friendItems = null, shareCode = '', friendAvatar = '') {
     let overlay = document.getElementById('battleOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -391,16 +439,20 @@ function openBattleMode(friendName, friendItems, shareCode, friendAvatar = '') {
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 
+    // Handle case when opened without friend data (Solo / Join mode)
+    if (!friendItems) {
+        friendName = 'Ami Mystère';
+        friendItems = [];
+    }
+
     overlay.innerHTML = `
         <style>
             @keyframes battleFadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
             @keyframes battlePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(168,85,247,0.7); } }
             @keyframes battleFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-            @keyframes battleGlowRing { 0%,100% { box-shadow: 0 0 15px #a855f7; } 50% { box-shadow: 0 0 30px #00d2ff; } }
-            .battle-tab-btn { background: none; border: none; padding: 0.6rem 1rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; }
+            .battle-tab-btn { background: none; border: none; padding: 0.65rem 1rem; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; }
             .battle-tab-btn.active { color: #a855f7; border-bottom-color: #a855f7; text-shadow: 0 0 10px rgba(168,85,247,0.4); }
             .battle-animate-in { animation: battleFadeIn 0.4s ease-out; }
-            .avatar-glow-ring { border: 3px solid #a855f7; animation: battleGlowRing 3s infinite; }
         </style>
 
         <!-- HEADER -->
@@ -409,15 +461,15 @@ function openBattleMode(friendName, friendItems, shareCode, friendAvatar = '') {
                 <i class="fas fa-swords" style="font-size:1.3rem; color:#a855f7"></i>
                 <div>
                     <h3 style="margin:0; font-family:var(--font-title); font-size:1.1rem; color:#fff">${t('battle.title', 'DUEL DE LECTEURS ARENA')}</h3>
-                    <span style="font-size:0.7rem; color:var(--text-muted)">Code: ${escapeHtml(shareCode)}</span>
+                    <span style="font-size:0.7rem; color:var(--text-muted)">Code: ${shareCode ? escapeHtml(shareCode) : 'Solo / Mode Libre'}</span>
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem">
-                ${!isStandalone ? `
+                ${!isStandalone && shareCode ? `
                 <a href="web+manlore://share?share=${escapeHtml(shareCode)}" class="btn-secondary" style="font-size:0.75rem; padding:0.4rem 0.8rem; background:linear-gradient(135deg, rgba(46,204,113,0.2), rgba(0,184,148,0.3)); border:1px solid #2ecc7166; color:#2ecc71" title="Ouvrir dans l'app WebAPK">
                     <i class="fas fa-mobile-screen-button"></i> App
                 </a>` : ''}
-                <button type="button" class="btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.78rem" onclick="navigator.clipboard.writeText('${window.location.origin}${window.location.pathname}?share=${escapeHtml(shareCode)}'); if(window.showToast) window.showToast('${t('battle.link_copied', 'Lien copié !')}', 'success')">
+                <button type="button" class="btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.78rem" onclick="shareCatalogUrl('${window.location.origin}${window.location.pathname}?share=${escapeHtml(shareCode)}')">
                     <i class="fas fa-share-nodes"></i> ${t('battle.copy_link', 'Partager')}
                 </button>
                 <button type="button" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:0.2rem 0.5rem" onclick="document.getElementById('battleOverlay').remove()">
@@ -447,7 +499,7 @@ function openBattleMode(friendName, friendItems, shareCode, friendAvatar = '') {
         </div>
     `;
 
-    renderBattleArena(myItems, friendItems, friendName, myUsername, myAvatar, friendAvatar);
+    renderBattleArena(myItems, friendItems, friendName, myUsername, myAvatar, friendAvatar, shareCode);
     renderComparisonView(myItems, friendItems, friendName);
     renderFriendCatalogView(friendItems, friendName, friendAvatar);
 }
@@ -474,7 +526,7 @@ function normT(title) {
 }
 
 // ============ RENDER BATTLE ARENA ============
-function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous', myAvatar = '', friendAvatar = '') {
+function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous', myAvatar = '', friendAvatar = '', shareCode = '') {
     const container = document.getElementById('battleTabContent');
     if (!container) return;
 
@@ -494,6 +546,8 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
     let isDraw = myPower === friendPower;
     const diff = Math.abs(myPower - friendPower);
 
+    const hasFriend = friendItems && friendItems.length > 0;
+
     const categories = [
         { icon: 'fa-book-open', label: t('battle.chapters', 'Chapitres Lus'), my: myStats.totalChapters, fr: frStats.totalChapters, format: v => v.toLocaleString() },
         { icon: 'fa-layer-group', label: t('battle.titles', 'Total Titres'), my: myStats.totalTitles, fr: frStats.totalTitles, format: v => v.toString() },
@@ -503,7 +557,11 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
     ];
 
     let winnerTitle, winnerSub, winnerIcon;
-    if (isDraw) {
+    if (!hasFriend) {
+        winnerTitle = 'PROMOTION SOLO ARENA';
+        winnerSub = 'Entrez un code ami ci-dessus pour lancer un véritable duel !';
+        winnerIcon = 'fa-user-astronaut';
+    } else if (isDraw) {
         winnerTitle = t('battle.draw', 'ÉGALITÉ PARFAITE !');
         winnerSub = t('battle.draw_desc', 'Deux forces de lecture parfaitement équilibrées !');
         winnerIcon = 'fa-scale-balanced';
@@ -553,7 +611,16 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
     container.innerHTML = `
         <div class="battle-arena-main" style="position:relative; overflow:hidden">
 
-            <!-- ARENA TITLE & VICTORY BANNER -->
+            <!-- CODE INPUT BAR (IF NO FRIEND LOADED YET) -->
+            ${!hasFriend ? `
+            <div style="background:rgba(168,85,247,0.15); border:1px solid #a855f755; border-radius:14px; padding:1rem; margin-bottom:1.2rem; display:flex; gap:0.6rem; align-items:center">
+                <input type="text" id="arenaJoinCodeInput" class="form-control" placeholder="Code ami (ex: ML-X8K9P2)" style="text-transform:uppercase; flex:1">
+                <button type="button" class="btn-primary" style="background:linear-gradient(135deg, #a855f7, #6c5ce7); border:none; padding:0.6rem 1rem; white-space:nowrap" onclick="const c = document.getElementById('arenaJoinCodeInput').value.trim(); if(c) fetchAndOpenSharedCatalog(c); else if(window.showToast) window.showToast('Entrez un code.', 'warning')">
+                    <i class="fas fa-swords"></i> Lancer le Duel
+                </button>
+            </div>` : ''}
+
+            <!-- ARENA TITLE -->
             <div class="battle-animate-in" style="text-align:center; margin-bottom:1.2rem">
                 <span style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.15em; color:var(--text-muted); margin-bottom:0.2rem; display:block">${t('battle.subtitle', 'MANLORE ARENA PRÉSENTE')}</span>
                 <h2 style="font-family:var(--font-title); font-size:clamp(1.3rem, 4vw, 2rem); margin:0; background:linear-gradient(135deg, #a855f7, #fd79a8, #ffd700); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text">
@@ -565,8 +632,8 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
             <div class="battle-animate-in" style="display:grid; grid-template-columns:1fr auto 1fr; gap:clamp(0.5rem, 2vw, 1.2rem); align-items:center; margin-bottom:1.5rem">
                 
                 <!-- MY FIGHTER -->
-                <div style="background:linear-gradient(135deg, rgba(108,92,231,0.18), rgba(168,85,247,0.1)); border:2px solid ${winnerIsMe ? '#00b894' : 'rgba(108,92,231,0.4)'}; border-radius:18px; padding:1rem; text-align:center; position:relative; overflow:hidden; ${winnerIsMe ? 'box-shadow:0 0 25px rgba(0,184,148,0.3)' : ''}">
-                    ${winnerIsMe ? '<div style="position:absolute; top:6px; right:10px; color:#ffd700; font-size:1.2rem" title="Vainqueur"><i class="fas fa-crown"></i></div>' : ''}
+                <div style="background:linear-gradient(135deg, rgba(108,92,231,0.18), rgba(168,85,247,0.1)); border:2px solid ${winnerIsMe && hasFriend ? '#00b894' : 'rgba(108,92,231,0.4)'}; border-radius:18px; padding:1rem; text-align:center; position:relative; overflow:hidden; ${winnerIsMe && hasFriend ? 'box-shadow:0 0 25px rgba(0,184,148,0.3)' : ''}">
+                    ${winnerIsMe && hasFriend ? '<div style="position:absolute; top:6px; right:10px; color:#ffd700; font-size:1.2rem" title="Vainqueur"><i class="fas fa-crown"></i></div>' : ''}
                     
                     <div style="width:70px; height:70px; margin:0 auto 0.5rem auto; border-radius:50%; overflow:hidden; border:3px solid ${myRank.color}; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(108,92,231,0.4)">
                         ${myAvatar ? `<img src="${myAvatar}" style="width:100%; height:100%; object-fit:cover">` : `<i class="fas fa-user-astronaut" style="font-size:2rem; color:#6c5ce7"></i>`}
@@ -598,8 +665,8 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
                 </div>
 
                 <!-- FRIEND FIGHTER -->
-                <div style="background:linear-gradient(135deg, rgba(253,121,168,0.18), rgba(162,155,254,0.1)); border:2px solid ${!winnerIsMe && !isDraw ? '#00b894' : 'rgba(253,121,168,0.4)'}; border-radius:18px; padding:1rem; text-align:center; position:relative; overflow:hidden; ${!winnerIsMe && !isDraw ? 'box-shadow:0 0 25px rgba(0,184,148,0.3)' : ''}">
-                    ${!winnerIsMe && !isDraw ? '<div style="position:absolute; top:6px; right:10px; color:#ffd700; font-size:1.2rem" title="Vainqueur"><i class="fas fa-crown"></i></div>' : ''}
+                <div style="background:linear-gradient(135deg, rgba(253,121,168,0.18), rgba(162,155,254,0.1)); border:2px solid ${!winnerIsMe && !isDraw && hasFriend ? '#00b894' : 'rgba(253,121,168,0.4)'}; border-radius:18px; padding:1rem; text-align:center; position:relative; overflow:hidden; ${!winnerIsMe && !isDraw && hasFriend ? 'box-shadow:0 0 25px rgba(0,184,148,0.3)' : ''}">
+                    ${!winnerIsMe && !isDraw && hasFriend ? '<div style="position:absolute; top:6px; right:10px; color:#ffd700; font-size:1.2rem" title="Vainqueur"><i class="fas fa-crown"></i></div>' : ''}
                     
                     <div style="width:70px; height:70px; margin:0 auto 0.5rem auto; border-radius:50%; overflow:hidden; border:3px solid ${frRank.color}; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(253,121,168,0.4)">
                         ${friendAvatar ? `<img src="${friendAvatar}" style="width:100%; height:100%; object-fit:cover">` : `<i class="fas fa-user-ninja" style="font-size:2rem; color:#fd79a8"></i>`}
@@ -643,6 +710,16 @@ function renderBattleArena(myItems, friendItems, friendName, myUsername = 'Vous'
 function renderComparisonView(myItems, friendItems, friendName) {
     const container = document.getElementById('comparisonTabContent');
     if (!container) return;
+
+    if (!friendItems || friendItems.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:2rem; color:var(--text-muted)">
+                <i class="fas fa-scale-balanced" style="font-size:2rem; margin-bottom:0.6rem; color:#a855f7; display:block"></i>
+                <div style="font-family:var(--font-title); font-size:1rem; color:#fff; margin-bottom:0.4rem">Aucun ami comparé pour le moment</div>
+                <p style="font-size:0.8rem">Entrez un code de partage d'ami ou ouvrez un lien de partage pour afficher l'analyse comparative détaillée.</p>
+            </div>`;
+        return;
+    }
 
     const friendMap = new Map();
     friendItems.forEach(i => friendMap.set(normT(i.title), i));
@@ -746,6 +823,16 @@ function renderComparisonView(myItems, friendItems, friendName) {
 function renderFriendCatalogView(friendItems, friendName, friendAvatar = '') {
     const container = document.getElementById('catalogViewTabContent');
     if (!container) return;
+
+    if (!friendItems || friendItems.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:2rem; color:var(--text-muted)">
+                <i class="fas fa-book-open" style="font-size:2rem; margin-bottom:0.6rem; color:#fd79a8; display:block"></i>
+                <div style="font-family:var(--font-title); font-size:1rem; color:#fff; margin-bottom:0.4rem">Aucun catalogue d'ami chargé</div>
+                <p style="font-size:0.8rem">Chargez un code ami pour afficher sa collection complète et importer ses titres en 1 clic.</p>
+            </div>`;
+        return;
+    }
 
     const stats = computeDetailedStats(friendItems);
     const frRank = computeRankInfo(stats.totalChapters);
