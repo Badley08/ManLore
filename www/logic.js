@@ -1,20 +1,30 @@
 /* ============================================
-   MANLORE v8.0.0 - LOGIC.JS
-   Clean Dedicated Server Architecture (Server A)
+   MANLORE v10.0.0 - LOGIC.JS
+   Clean Dedicated Server Architecture (Server B — Fresh)
    Universal Multi-App Export & Archive (com.karlitodev.manlore/exported)
-   Diagnostic Logs Storage (com.karlitodev.manlore/logs)
    Instant Stale-While-Revalidate, Row Level Security (RLS) & Offline Sync
    ============================================ */
 
 'use strict';
 
-// ============ BACK4APP CONFIGURATION (SERVEUR OFFICIEL) ============
-const BACK4APP_CONFIG = {
-    name: 'Serveur ManLore Cloud',
+// ============ ANCIEN SERVEUR (LECTURE SEULE POUR MIGRATION) ============
+const OLD_BACK4APP_CONFIG = {
+    name: 'Ancien Serveur ManLore Cloud',
     appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
     clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
     restApiKey: 'qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW',
     webhookKey: 'K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH',
+    url: 'https://parseapi.back4app.com'
+};
+
+// ============ NOUVEAU SERVEUR OFFICIEL (SERVEUR B) ============
+const BACK4APP_CONFIG = {
+    name: 'Serveur ManLore Cloud',
+    appId: 'OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu',
+    clientKey: 'WPvwJkRsmofv2u480N2f2c2wluTh5zGyBIhkc4dP',
+    restApiKey: 'acTOYDhGPdosi5nHVEVuNI7OcO225MId72dJaiIq',
+    webhookKey: 'Z6dJFJ9Ul7LCV1fqQID1e7PucuiYVEl8fcyXSzwC',
+    filekey: '195026e1-cce2-4e64-a376-f1a923b87e37',
     url: 'https://parseapi.back4app.com'
 };
 
@@ -171,9 +181,6 @@ function loadUserSessionFromLocal() {
 
 // Initialisation immédiate de la session utilisateur
 currentUser = loadUserSessionFromLocal();
-if (currentUser) {
-    console.log('[Auth] Session active restaurée pour :', currentUser.get('username') || currentUser.id);
-}
 
 // ============================================
 // COMPATIBILITÉ SDK PARSE GLOBAL
@@ -302,8 +309,6 @@ function generateUniqueUserToken(username) {
 }
 
 async function initializeBackend() {
-    console.log('[Backend] Initialisation v5.0.1 (Serveur Cloud ManLore)...');
-
     storageMode = localStorage.getItem('manlore_storage_mode') || 'cloud';
     isGuestMode = localStorage.getItem('manlore_guest_mode') === 'true';
 
@@ -335,7 +340,6 @@ async function initializeBackend() {
 // ============================================
 
 async function signUp(username, email, password) {
-    const startTime = Date.now();
     const cleanUser = username.trim();
     const cleanEmail = email.trim().toLowerCase();
     const userToken = generateUniqueUserToken(cleanUser);
@@ -349,7 +353,6 @@ async function signUp(username, email, password) {
         rank: 'E'
     };
 
-    console.log('[Auth] Inscription sur le serveur Cloud...');
     const res = await back4appApiCall('/users', 'POST', payload);
 
     if (res.ok) {
@@ -371,26 +374,16 @@ async function signUp(username, email, password) {
             window.questManager.syncFromCloud();
         }
 
-        if (window.appLogger) {
-            window.appLogger.trackNetwork('signUp', Date.now() - startTime, 200);
-            window.appLogger.log('auth_success', 'Compte créé avec succès', { username: cleanUser });
-        }
-
         return { success: true, user: currentUser };
     }
 
     const errMsg = res.data?.error || res.error || 'Erreur lors de l\'inscription';
-    if (window.appLogger) {
-        window.appLogger.log('auth_error', `Échec d'inscription : ${errMsg}`, { username: cleanUser });
-    }
     return { success: false, error: errMsg };
 }
 
 async function logIn(usernameOrEmail, password) {
-    const startTime = Date.now();
     const cleanInput = usernameOrEmail.trim();
 
-    console.log('[Auth] Connexion au compte...');
     const endpoint = `/login?username=${encodeURIComponent(cleanInput)}&password=${encodeURIComponent(password)}`;
 
     const res = await back4appApiCall(endpoint, 'GET');
@@ -414,18 +407,10 @@ async function logIn(usernameOrEmail, password) {
             window.questManager.syncFromCloud();
         }
 
-        if (window.appLogger) {
-            window.appLogger.trackNetwork('logIn', Date.now() - startTime, 200);
-            window.appLogger.log('auth_success', 'Connexion réussie', { username: userData.username });
-        }
-
         return { success: true, user: currentUser };
     }
 
     const errMsg = res.data?.error || res.error || 'Identifiants invalides';
-    if (window.appLogger) {
-        window.appLogger.log('auth_error', `Échec de connexion : ${errMsg}`, { input: cleanInput });
-    }
     return { success: false, error: errMsg };
 }
 
@@ -471,9 +456,7 @@ async function saveUserSettingsToCloud(key, value) {
         if (key === 'language') payload.preferredLanguage = value;
         
         await back4appApiCall(`/users/${currentUser.id}`, 'PUT', payload, currentUser.sessionToken);
-    } catch (e) {
-        console.error('[Cloud] Error saving user settings:', e);
-    }
+    } catch {}
 }
 
 // ============ GESTION DE LA PHOTO DE PROFIL (BASE64) ============
@@ -500,9 +483,6 @@ async function updateUserProfileAvatar(base64Data) {
                     { avatarBase64: base64Data || '' },
                     currentUser.getSessionToken()
                 );
-                if (res.ok) {
-                    console.log('[Avatar] Photo de profil synchronisée avec Back4App avec succès');
-                }
             }
         }
         return { success: true, avatar: base64Data };
@@ -647,14 +627,10 @@ async function autoRemoveDuplicates(items) {
 
     // Perform deletions
     if (toDelete.length > 0) {
-        console.log(`[Deduplication] Found ${toDelete.length} duplicates. Deleting...`);
         for (const item of toDelete) {
             try {
                 await deleteItem(item.id || item.objectId);
-                console.log(`[Deduplication] Deleted duplicate: ${item.title}`);
-            } catch (e) {
-                console.warn(`[Deduplication] Failed to delete ${item.title}:`, e);
-            }
+            } catch {}
         }
         if (window.showToast) {
             window.showToast(`${toDelete.length} doublons supprimés automatiquement.`, 'info');
@@ -666,7 +642,6 @@ async function autoRemoveDuplicates(items) {
 window.normalizeTitle = normalizeTitle;
 
 async function deduplicateCollection() {
-    console.log('[Deduplication] Analyse des doublons dans la collection...');
     const items = loadFromLocalStorage();
     const map = new Map();
     const toDelete = [];
@@ -713,7 +688,7 @@ async function deduplicateCollection() {
                     await back4appApiCall(`/classes/Items/${id}`, 'DELETE', null, currentUser.getSessionToken());
                 }
             } catch (e) {
-                console.warn('[Deduplication] Note delete duplicate cloud:', id, e);
+
             }
         }
 
@@ -726,7 +701,7 @@ async function deduplicateCollection() {
             } catch (e) {}
         }
 
-        console.log(`[Deduplication] ${mergedCount} doublons fusionnés et nettoyés avec succès.`);
+
         if (window.showToast) {
             window.showToast(`✨ Nettoyage : ${mergedCount} doublon(s) fusionné(s) sans perte de données`, 'success');
         }
@@ -744,13 +719,12 @@ async function requestPushPermissions() {
         if ('Notification' in window) {
             const perm = await Notification.requestPermission();
             if (perm === 'granted') {
-                console.log('[Push] Permissions notifications accordées');
                 if (window.showToast) window.showToast('🔔 Notifications activées', 'success');
                 return true;
             }
         }
     } catch (e) {
-        console.warn('[Push] Notification permission note:', e);
+
     }
     return false;
 }
@@ -775,7 +749,7 @@ function sendPushNotification(title, body, tag = 'manlore-alert') {
             });
         }
     } catch (e) {
-        console.log('[Push Notification Note]', e);
+
     }
 }
 window.sendPushNotification = sendPushNotification;
@@ -1004,25 +978,248 @@ window.parseItemToObject = parseItemToObject;
 // (WhatsApp, Telegram, Google Drive, ZArchiver, etc.)
 // Sauvegarde locale archivée dans : com.karlitodev.manlore/exported
 // ============================================
+// FORMATS DE SÉRIALISATION ULTRA-OPTIMISÉS (TOON & STRICT JSON)
+// ============================================
 
-async function exportData(items, filename) {
+// Échappement pour le format TOON
+function escapeToonField(val) {
+    if (val === null || val === undefined) return '';
+    return String(val)
+        .replace(/\\/g, '\\\\')
+        .replace(/\|/g, '\\|')
+        .replace(/\r?\n/g, '\\n');
+}
+
+function unescapeToonField(val) {
+    if (!val) return '';
+    return String(val)
+        .replace(/\\n/g, '\n')
+        .replace(/\\\|/g, '|')
+        .replace(/\\\\/g, '\\');
+}
+
+// 1. SÉRIALISATION TOON (Token-Optimized Object Notation)
+function serializeToToon(payload) {
+    const lines = [];
+    lines.push('#TOON:MANLORE:v10');
+    lines.push('@META');
+    lines.push(`app=${escapeToonField(payload.app || 'ManLore')}`);
+    lines.push(`version=${escapeToonField(payload.version || '10.0.0')}`);
+    lines.push(`userRank=${escapeToonField(payload.userRank || 'F-Rank')}`);
+    lines.push(`userEmail=${escapeToonField(payload.userEmail || 'anonyme')}`);
+    lines.push(`exportedAt=${escapeToonField(payload.exportedAt || new Date().toISOString())}`);
+    lines.push(`exp=${payload.progression?.exp || 0}`);
+    lines.push(`itemsCount=${payload.items?.length || 0}`);
+
+    lines.push('@SCHEMA');
+    lines.push('id|title|type|status|rating|chapters|genres|link|image|notes|malId');
+
+    lines.push('@ITEMS');
+    if (Array.isArray(payload.items)) {
+        for (const it of payload.items) {
+            const genresStr = Array.isArray(it.genres) ? it.genres.join(',') : (it.genres || '');
+            const row = [
+                escapeToonField(it.id || it.objectId || ''),
+                escapeToonField(it.title || ''),
+                escapeToonField(it.type || 'Manga'),
+                escapeToonField(it.status || 'En cours'),
+                escapeToonField(it.rating ?? 0),
+                escapeToonField(it.chapters ?? 0),
+                escapeToonField(genresStr),
+                escapeToonField(it.link || ''),
+                escapeToonField(it.image || it.imageUrl || ''),
+                escapeToonField(it.notes || ''),
+                escapeToonField(it.malId || '')
+            ].join('|');
+            lines.push(row);
+        }
+    }
+    lines.push('#END');
+    return lines.join('\n');
+}
+
+// DÉCODEUR TOON
+function parseToon(toonStr) {
+    const lines = toonStr.split(/\r?\n/);
+    let section = null;
+    const meta = {};
+    const items = [];
+
+    for (let line of lines) {
+        line = line.trim();
+        if (!line || line.startsWith('#')) {
+            if (line === '#END') break;
+            continue;
+        }
+
+        if (line.startsWith('@')) {
+            section = line.substring(1);
+            continue;
+        }
+
+        if (section === 'META') {
+            const eqIdx = line.indexOf('=');
+            if (eqIdx !== -1) {
+                const key = line.substring(0, eqIdx).trim();
+                const val = unescapeToonField(line.substring(eqIdx + 1).trim());
+                meta[key] = val;
+            }
+        } else if (section === 'ITEMS') {
+            // Découpage en respectant les \| échappés
+            const tokens = [];
+            let curr = '';
+            let escaped = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (escaped) {
+                    curr += ch;
+                    escaped = false;
+                } else if (ch === '\\') {
+                    escaped = true;
+                    curr += ch;
+                } else if (ch === '|') {
+                    tokens.push(unescapeToonField(curr));
+                    curr = '';
+                } else {
+                    curr += ch;
+                }
+            }
+            tokens.push(unescapeToonField(curr));
+
+            const [id, title, type, status, rating, chapters, genres, link, image, notes, malId] = tokens;
+            if (title || id) {
+                items.push({
+                    id: id || ('import_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
+                    title: title || 'Sans titre',
+                    type: type || 'Manga',
+                    status: status || 'En cours',
+                    rating: parseFloat(rating) || 0,
+                    chapters: parseInt(chapters, 10) || 0,
+                    genres: genres ? genres.split(',').map(g => g.trim()).filter(Boolean) : [],
+                    link: link || '',
+                    image: image || '',
+                    imageUrl: image || '',
+                    notes: notes || '',
+                    malId: malId || ''
+                });
+            }
+        }
+    }
+
+    return {
+        app: meta.app || 'ManLore',
+        version: meta.version || '10.0.0',
+        userRank: meta.userRank || 'F-Rank',
+        userEmail: meta.userEmail || 'anonyme',
+        progression: meta.exp ? { exp: parseInt(meta.exp, 10) || 0 } : null,
+        items
+    };
+}
+
+// 2. SÉRIALISATION JSON STRICT (Ultra-minimaliste / Compact)
+function serializeToStrictJson(payload) {
+    const compactItems = (payload.items || []).map(it => [
+        it.id || it.objectId || '',
+        it.title || '',
+        it.type || 'Manga',
+        it.status || 'En cours',
+        typeof it.rating === 'number' ? it.rating : (parseFloat(it.rating) || 0),
+        typeof it.chapters === 'number' ? it.chapters : (parseInt(it.chapters, 10) || 0),
+        Array.isArray(it.genres) ? it.genres : [],
+        it.link || '',
+        it.image || it.imageUrl || '',
+        it.notes || '',
+        it.malId || ''
+    ]);
+
+    const strictObj = {
+        $t: 'ML_STRICT',
+        v: payload.version || '10.0.0',
+        r: payload.userRank || 'F-Rank',
+        e: payload.userEmail || 'anonyme',
+        d: payload.exportedAt || new Date().toISOString(),
+        x: payload.progression?.exp || 0,
+        s: ['id','title','type','status','rating','chapters','genres','link','image','notes','malId'],
+        i: compactItems
+    };
+
+    return JSON.stringify(strictObj);
+}
+
+// DÉCODEUR JSON STRICT
+function parseStrictJson(obj) {
+    const items = (obj.i || []).map(row => ({
+        id: row[0] || ('import_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
+        title: row[1] || 'Sans titre',
+        type: row[2] || 'Manga',
+        status: row[3] || 'En cours',
+        rating: typeof row[4] === 'number' ? row[4] : (parseFloat(row[4]) || 0),
+        chapters: typeof row[5] === 'number' ? row[5] : (parseInt(row[5], 10) || 0),
+        genres: Array.isArray(row[6]) ? row[6] : (row[6] ? String(row[6]).split(',') : []),
+        link: row[7] || '',
+        image: row[8] || '',
+        imageUrl: row[8] || '',
+        notes: row[9] || '',
+        malId: row[10] || ''
+    }));
+
+    return {
+        app: 'ManLore',
+        version: obj.v || '10.0.0',
+        userRank: obj.r || 'F-Rank',
+        userEmail: obj.e || 'anonyme',
+        progression: obj.x !== undefined ? { exp: parseInt(obj.x, 10) || 0 } : null,
+        items
+    };
+}
+
+// ============================================
+// EXPORTATION UNIVERSELLE MULTI-FORMATS
+// ============================================
+
+async function exportData(items, filename, format = 'toon') {
     try {
         const date = new Date().toISOString().split('T')[0];
-        const finalFilename = filename || `manlore_export_${date}.json`;
+        const userRank = window.questManager?.getCurrentRank?.()?.name || window.questManager?.data?.rank || 'F-Rank';
+        const userEmail = (currentUser && currentUser.email) || 
+                          (currentUser && currentUser.username && currentUser.username.includes('@') ? currentUser.username : (currentUser?.username || 'anonyme'));
 
-        // 1. Structure de sauvegarde complète et enrichie
         const exportPayload = {
             app: 'ManLore',
-            version: '7.0.0',
+            version: '10.0.0',
             package: 'com.karlitodev.manlore',
             exportedAt: new Date().toISOString(),
+            userRank: userRank,
+            userEmail: userEmail,
+            format: format,
             itemsCount: items ? items.length : 0,
             progression: window.questManager?.data || null,
             items: items || []
         };
 
-        const jsonString = JSON.stringify(exportPayload, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
+        let fileContent = '';
+        let mimeType = 'application/json';
+        let defaultExt = '.json';
+
+        if (format === 'toon') {
+            fileContent = serializeToToon(exportPayload);
+            mimeType = 'text/plain';
+            defaultExt = '.toon';
+        } else if (format === 'strict') {
+            fileContent = serializeToStrictJson(exportPayload);
+            mimeType = 'application/json';
+            defaultExt = '.min.json';
+        } else {
+            // 'pure' JSON
+            fileContent = JSON.stringify(exportPayload, null, 2);
+            mimeType = 'application/json';
+            defaultExt = '.json';
+        }
+
+        let baseName = filename ? filename.replace(/\.(json|toon|min\.json)$/i, '') : `manlore_export_${date}`;
+        let finalFilename = baseName + defaultExt;
+
+        const blob = new Blob([fileContent], { type: mimeType });
 
         // 2. Archivage automatique dans com.karlitodev.manlore/exported
         const EXPORT_STORAGE_KEY = 'com.karlitodev.manlore/exported';
@@ -1035,55 +1232,63 @@ async function exportData(items, filename) {
         archiveList.unshift({
             filename: finalFilename,
             timestamp: new Date().toISOString(),
+            userRank: userRank,
+            userEmail: userEmail,
+            format: format,
             itemsCount: exportPayload.itemsCount,
             data: exportPayload
         });
 
-        // Conserver les 15 dernières sauvegardes locales
         if (archiveList.length > 15) archiveList = archiveList.slice(0, 15);
         localStorage.setItem(EXPORT_STORAGE_KEY, JSON.stringify(archiveList));
-        console.log(`[Export] Copie archivée avec succès dans : ${EXPORT_STORAGE_KEY}`);
 
-        // 3. Partage universel natif (Web Share API pour WhatsApp, Drive, Telegram, ZArchiver, etc.)
-        let sharedViaSheet = false;
+        // 3. Téléchargement direct universel Web (HTML5 Blob Download)
+        let downloaded = false;
         try {
-            const file = new File([blob], finalFilename, { type: 'application/json' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'Sauvegarde ManLore',
-                    text: `Exportation de votre collection ManLore (${exportPayload.itemsCount} titres)`,
-                    files: [file]
-                });
-                sharedViaSheet = true;
-            }
-        } catch (shareErr) {
-            console.log('[Export] Note partage direct:', shareErr.message);
-        }
-
-        // 4. Téléchargement direct (Fallback pour navigateurs de bureau & Webviews)
-        if (!sharedViaSheet) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = url;
             a.download = finalFilename;
+            a.setAttribute('download', finalFilename);
             document.body.appendChild(a);
             a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setTimeout(() => {
+                try {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch {}
+            }, 1500);
+            downloaded = true;
+        } catch (dlErr) {
+            console.warn('[Web Export Download]', dlErr);
         }
 
-        if (window.appLogger) {
-            window.appLogger.log('data_export', 'Exportation des données réussie', {
-                filename: finalFilename,
-                itemsCount: exportPayload.itemsCount,
-                archiveKey: EXPORT_STORAGE_KEY
-            });
+        // 4. Partage Mobile Web Share API optionnel si disponible sur mobile
+        let sharedViaSheet = false;
+        if (navigator.share && /android|iphone|ipad|mobile/i.test(navigator.userAgent || '')) {
+            try {
+                const file = new File([blob], finalFilename, { type: mimeType });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'Sauvegarde ManLore',
+                        text: `Exportation ManLore (${format.toUpperCase()} - ${exportPayload.itemsCount} titres - Rang: ${userRank})`,
+                        files: [file]
+                    });
+                    sharedViaSheet = true;
+                }
+            } catch (shareErr) {
+                // Annulation utilisateur ou non-support du partage de fichier
+            }
         }
 
         return {
             success: true,
             filename: finalFilename,
+            format,
             archiveLocation: 'com.karlitodev.manlore/exported',
+            userRank,
+            userEmail,
             sharedViaSheet
         };
     } catch (e) {
@@ -1092,24 +1297,57 @@ async function exportData(items, filename) {
     }
 }
 
+// ============================================
+// IMPORTATION UNIVERSELLE (AUTO-DÉTECTION TOON / STRICT / PUR)
+// ============================================
+
 async function importDataFromFile(file) {
     try {
         const text = await file.text();
-        const parsed = JSON.parse(text);
+        let parsedPayload = null;
 
-        let rawItems = [];
-        if (Array.isArray(parsed)) {
-            rawItems = parsed;
-        } else if (parsed && Array.isArray(parsed.items)) {
-            rawItems = parsed.items;
-            if (parsed.progression && window.questManager) {
-                window.questManager.data.exp = Math.max(window.questManager.data.exp || 0, parsed.progression.exp || 0);
-                window.questManager.saveProgression(true);
-            }
+        // Auto-détection du format
+        if (text.trim().startsWith('#TOON')) {
+            parsedPayload = parseToon(text);
         } else {
-            return { success: false, count: 0, error: 'Format invalide' };
+            try {
+                const jsonObj = JSON.parse(text);
+                if (jsonObj && jsonObj.$t === 'ML_STRICT') {
+                    parsedPayload = parseStrictJson(jsonObj);
+                } else if (Array.isArray(jsonObj)) {
+                    parsedPayload = { items: jsonObj };
+                } else if (jsonObj && Array.isArray(jsonObj.items)) {
+                    parsedPayload = jsonObj;
+                } else {
+                    return { success: false, count: 0, error: 'Format JSON non reconnu' };
+                }
+            } catch (jsonErr) {
+                return { success: false, count: 0, error: 'Fichier invalide ou corrompu' };
+            }
         }
 
+        // Vérification de l'adresse email si présente
+        if (parsedPayload.userEmail && parsedPayload.userEmail !== 'anonyme' && currentUser && !isGuestMode) {
+            const currentEmail = currentUser.email || currentUser.username;
+            if (currentEmail && parsedPayload.userEmail.toLowerCase() !== currentEmail.toLowerCase()) {
+                const msg = (typeof i18n !== 'undefined' && i18n.t)
+                    ? i18n.t('import.emailMismatch', { exportEmail: parsedPayload.userEmail, currentEmail: currentEmail })
+                    : `Attention : Ce fichier de sauvegarde est associé à "${parsedPayload.userEmail}".\n\nVous êtes connecté avec "${currentEmail}".\n\nSouhaitez-vous quand même importer ces données ?`;
+                
+                const confirmed = window.confirm(msg);
+                if (!confirmed) {
+                    return { success: false, cancelled: true, error: 'Importation annulée par l\'utilisateur.' };
+                }
+            }
+        }
+
+        // Restaurer la progression des quêtes / EXP si présente
+        if (parsedPayload.progression && window.questManager) {
+            window.questManager.data.exp = Math.max(window.questManager.data.exp || 0, parsedPayload.progression.exp || 0);
+            window.questManager.saveProgression(true);
+        }
+
+        const rawItems = parsedPayload.items || [];
         const items = rawItems.map(item => ({
             id: item.id || item.objectId || ('import_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)),
             title: (item.title || 'Sans titre').trim(),
@@ -1127,11 +1365,89 @@ async function importDataFromFile(file) {
             updatedAt: item.updatedAt || new Date().toISOString()
         }));
 
-        return { success: true, count: items.length, items };
+        return { 
+            success: true, 
+            count: items.length, 
+            items, 
+            userRank: parsedPayload.userRank || null,
+            userEmail: parsedPayload.userEmail || null
+        };
     } catch (e) {
         return { success: false, count: 0, error: e.message };
     }
 }
+
+// ============ MIGRATION VERS LE NOUVEAU SERVEUR (BATCH OPTIMISÉ) ============
+async function migrateDataToNewServer(onProgress) {
+    if (!currentUser || isGuestMode) {
+        return { success: false, error: 'Vous devez être connecté avec un compte pour synchroniser vers le nouveau serveur.' };
+    }
+
+    try {
+        const localItems = loadFromLocalStorage() || [];
+        if (localItems.length === 0) {
+            // Synchroniser au moins la progression des quêtes
+            if (window.questManager) {
+                await window.questManager.saveProgression(true);
+            }
+            return { success: true, count: 0, message: 'Aucun titre à transférer.' };
+        }
+
+        const sessionToken = currentUser.getSessionToken();
+        const batchSize = 40;
+        let processed = 0;
+
+        for (let i = 0; i < localItems.length; i += batchSize) {
+            const chunk = localItems.slice(i, i + batchSize);
+            const requests = chunk.map(item => ({
+                method: 'POST',
+                path: '/1/classes/Items',
+                body: {
+                    title: (item.title || 'Sans titre').trim(),
+                    type: item.type || 'Manga',
+                    status: item.status || 'En cours',
+                    rating: typeof item.rating === 'number' ? item.rating : (parseFloat(item.rating) || 0),
+                    genres: Array.isArray(item.genres) ? item.genres : [],
+                    link: item.link || '',
+                    image: item.image || item.imageUrl || '',
+                    imageUrl: item.imageUrl || item.image || '',
+                    chapters: typeof item.chapters === 'number' ? item.chapters : (parseInt(item.chapters || '0', 10) || 0),
+                    notes: item.notes || '',
+                    malId: item.malId || '',
+                    originalCreatedAt: item.createdAt || null,
+                    userId: { __type: 'Pointer', className: '_User', objectId: currentUser.id },
+                    ACL: {
+                        [currentUser.id]: { read: true, write: true }
+                    }
+                }
+            }));
+
+            const batchRes = await back4appApiCall('/batch', 'POST', { requests }, sessionToken);
+            if (!batchRes.ok && batchRes.status !== 200) {
+                // Si le batch n'est pas disponible, insérer séquentiellement sans flood
+                for (const singleItem of chunk) {
+                    await createItemCloud(singleItem);
+                }
+            }
+
+            processed += chunk.length;
+            if (typeof onProgress === 'function') {
+                onProgress(processed, localItems.length);
+            }
+        }
+
+        // Synchroniser également la progression des quêtes
+        if (window.questManager) {
+            await window.questManager.saveProgression(true);
+        }
+
+        return { success: true, count: localItems.length };
+    } catch (err) {
+        console.error('[Server Migration Error]', err);
+        return { success: false, error: err.message };
+    }
+}
+window.migrateDataToNewServer = migrateDataToNewServer;
 
 // ============ GESTION DU STOCKAGE LOCAL (ISOLÉ PAR UTILISATEUR) ============
 
@@ -1301,7 +1617,7 @@ async function processSyncQueue() {
             else if (item.action === 'update') await updateItem(item.data.id, item.data);
             else if (item.action === 'delete') await deleteItem(item.data.id);
         } catch (e) {
-            console.warn('[Sync] Échec tâche différée:', e);
+
             syncQueue.push(item);
         }
     }
@@ -1360,4 +1676,4 @@ async function sendServerAnnouncementNotification(payload) {
 }
 window.sendServerAnnouncementNotification = sendServerAnnouncementNotification;
 
-console.log('[Logic v8.0.0] Dedicated Cloud Engine & Universal Exporter loaded');
+

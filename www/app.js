@@ -79,8 +79,90 @@ async function showApp() {
     updateStorageModeUI();
     await loadAndRenderItems();
     navigateTo('home');
+    checkServerMigrationModal();
     checkWhatsNewModal();
 }
+
+// ============ MODAL MIGRATION SERVEUR CLOUD ============
+function checkServerMigrationModal() {
+    const dismissed = localStorage.getItem('manlore_server_migration_dismissed_v10');
+    if (!dismissed) {
+        setTimeout(() => {
+            if (typeof openModal === 'function') openModal('serverMigrationModal');
+        }, 500);
+    }
+}
+window.checkServerMigrationModal = checkServerMigrationModal;
+
+function closeServerMigrationModal() {
+    const check = document.getElementById('dontShowServerMigrationCheck');
+    if (check && check.checked) {
+        localStorage.setItem('manlore_server_migration_dismissed_v10', 'true');
+    }
+    const modalEl = document.getElementById('serverMigrationModal');
+    if (modalEl) modalEl.classList.remove('active');
+}
+window.closeServerMigrationModal = closeServerMigrationModal;
+
+async function triggerMigrationExport() {
+    if (typeof openModal === 'function') {
+        openModal('exportFormatModal');
+    } else {
+        const items = typeof loadFromLocalStorage === 'function' ? loadFromLocalStorage() : [];
+        const res = await exportData(items, null, 'toon');
+        if (res.success && typeof showToast === 'function') {
+            showToast((typeof i18n !== 'undefined' && i18n.t ? i18n.t('data.exportSuccess') : 'Exportation réussie !') + (res.userRank ? ' (' + res.userRank + ')' : ''), 'success');
+        }
+    }
+}
+window.triggerMigrationExport = triggerMigrationExport;
+
+async function triggerServerDataTransfer() {
+    const statusEl = document.getElementById('serverMigrationStatus');
+    const transferBtn = document.getElementById('serverMigrateTransferBtn');
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'rgba(168,85,247,0.15)';
+        statusEl.style.border = '1px solid #a855f7';
+        statusEl.style.color = '#c084fc';
+        statusEl.textContent = typeof i18n !== 'undefined' && i18n.t ? i18n.t('serverMigration.transferring') : 'Transfert en cours...';
+    }
+    if (transferBtn) transferBtn.disabled = true;
+
+    try {
+        const res = await migrateDataToNewServer((processed, total) => {
+            if (statusEl) statusEl.textContent = `Transfert : ${processed} / ${total} titres...`;
+        });
+
+        if (res.success) {
+            if (statusEl) {
+                statusEl.style.background = 'rgba(46,204,113,0.15)';
+                statusEl.style.border = '1px solid #2ecc71';
+                statusEl.style.color = '#2ecc71';
+                statusEl.textContent = typeof i18n !== 'undefined' && i18n.t ? i18n.t('serverMigration.transferSuccess') : 'Données transférées avec succès vers le nouveau serveur !';
+            }
+            if (typeof showToast === 'function') showToast('Migration réussie !', 'success');
+            localStorage.setItem('manlore_server_migration_dismissed_v10', 'true');
+        } else {
+            if (statusEl) {
+                statusEl.style.background = 'rgba(231,76,60,0.15)';
+                statusEl.style.border = '1px solid #e74c3c';
+                statusEl.style.color = '#e74c3c';
+                statusEl.textContent = (typeof i18n !== 'undefined' && i18n.t ? i18n.t('serverMigration.transferError') : 'Erreur: ') + (res.error || '');
+            }
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.style.background = 'rgba(231,76,60,0.15)';
+            statusEl.style.border = '1px solid #e74c3c';
+            statusEl.style.color = '#e74c3c';
+            statusEl.textContent = 'Erreur: ' + err.message;
+        }
+    } finally {
+        if (transferBtn) transferBtn.disabled = false;
+    }
+}
+window.triggerServerDataTransfer = triggerServerDataTransfer;
 
 const WHATS_NEW_VERSION = 'v9.1.0';
 
@@ -91,7 +173,7 @@ function checkWhatsNewModal() {
     if (!dismissed) {
         setTimeout(() => {
             if (typeof openModal === 'function') openModal('whatsNewModal');
-        }, 600);
+        }, 1200);
     }
 }
 
@@ -856,29 +938,44 @@ function applyStoredSettings() {
 
 // ============ EXPORT / IMPORT ============
 async function handleExport() {
-    if (allItems.length === 0) { showToast('Aucune donnée à exporter', 'warning'); return; }
+    if (allItems.length === 0) { 
+        showToast('Aucune donnée à exporter', 'warning'); 
+        return; 
+    }
+    openModal('exportFormatModal');
+}
+
+async function selectExportFormat(format = 'toon') {
+    closeModal('exportFormatModal');
     
     const date = new Date().toISOString().split('T')[0];
     const defaultName = `manlore-export-${date}`;
 
+    const extMap = {
+        toon: '.toon',
+        strict: '.min.json',
+        pure: '.json'
+    };
+    const currentExt = extMap[format] || '.json';
+
     showPromptDialog(
-        i18n.t('nav.settings'), // just using a localized title or plain string
-        "Entrez un nom pour votre sauvegarde :",
+        i18n.t('exportFormat.modalTitle') || 'Format d\'Exportation',
+        `Entrez un nom pour votre sauvegarde (${format.toUpperCase()} ${currentExt}) :`,
         defaultName,
         "Exporter",
         async (val) => {
             let filename = val.trim() || defaultName;
-            if (!filename.endsWith('.json')) filename += '.json';
             
-            showLoading(true, 'Préparation de l\'export...');
-            const result = await exportData(allItems, filename);
+            showLoading(true, 'Génération de l\'export ' + format.toUpperCase() + '...');
+            const result = await exportData(allItems, filename, format);
             showLoading(false);
+            
             if (result.success) {
-                showToast(`✓ Export réussi ! Copie archivée dans com.karlitodev.manlore/exported`, 'success');
+                showToast(`✓ Export ${format.toUpperCase()} réussi ! (${result.filename})`, 'success');
                 if (!result.sharedViaSheet) {
                     showAlertDialog(
                         'Sauvegarde Réussie',
-                        `Vos données ont été téléchargées (${filename}).<br><br>📁 Une copie de sauvegarde a été automatiquement archivée dans :<br><strong>com.karlitodev.manlore/exported</strong>`,
+                        `Vos données ont été exportées en <strong>${format.toUpperCase()}</strong> (${result.filename}).<br><br>📁 Archivé dans :<br><strong>com.karlitodev.manlore/exported</strong>`,
                         'OK'
                     );
                 }
@@ -888,6 +985,7 @@ async function handleExport() {
         }
     );
 }
+window.selectExportFormat = selectExportFormat;
 
 function handleImportClick() {
     document.getElementById('importFile')?.click();
@@ -929,8 +1027,15 @@ async function handleImportFile(file) {
     if (!file) return;
     try {
         const parsed = await importDataFromFile(file);
+        if (parsed.cancelled) {
+            const fileInput = document.getElementById('importFile');
+            if (fileInput) fileInput.value = '';
+            return;
+        }
         if (!parsed.success || parsed.count === 0) {
-            showToast('Fichier invalide ou vide', 'error');
+            showToast(parsed.error || 'Fichier invalide ou vide', 'error');
+            const fileInput = document.getElementById('importFile');
+            if (fileInput) fileInput.value = '';
             return;
         }
 
@@ -1894,7 +1999,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuickPreviewListeners();
 });
 
-console.log('[App v9.0.1] Module loaded');
+
 
 // ============================================
 // ADMIN NOTIFICATION PANEL MODAL & REALTIME PUSH SYSTEM
@@ -2013,10 +2118,10 @@ let clientPushInterval = null;
 function startClientPushListener() {
     if (clientPushInterval) clearInterval(clientPushInterval);
     
-    // Poll every 8 seconds for fast instant notifications
-    clientPushInterval = setInterval(checkIncomingPushNotifications, 8000);
-    // Initial check
-    setTimeout(checkIncomingPushNotifications, 2000);
+    // Poll every 60 seconds (reduced from 8s to save server requests)
+    clientPushInterval = setInterval(checkIncomingPushNotifications, 60000);
+    // Initial check after 5s
+    setTimeout(checkIncomingPushNotifications, 5000);
 }
 
 async function checkIncomingPushNotifications() {

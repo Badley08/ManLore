@@ -363,20 +363,20 @@
                 <div class="export-import-card">
                     <div class="export-import-icon"><i class="fas fa-download"></i></div>
                     <h3 class="export-import-title" data-i18n="data.export.title">Exporter</h3>
-                    <p class="export-import-desc" data-i18n="data.export.desc">Sauvegarder vos données en JSON</p>
+                    <p class="export-import-desc" data-i18n="data.export.desc">Sauvegarder vos données (TOON, JSON)</p>
                     <button id="exportBtn" class="btn-primary full-width">
                         <i class="fas fa-download"></i>
-                        <span data-i18n="data.export.btn">Exporter JSON</span>
+                        <span data-i18n="data.export.btn">Exporter la collection</span>
                     </button>
                 </div>
                 <div class="export-import-card">
                     <div class="export-import-icon"><i class="fas fa-upload"></i></div>
                     <h3 class="export-import-title" data-i18n="data.import.title">Importer</h3>
-                    <p class="export-import-desc" data-i18n="data.import.desc">Restaurer depuis un fichier JSON</p>
-                    <input type="file" id="importFile" accept=".json" class="hidden">
+                    <p class="export-import-desc" data-i18n="data.import.desc">Restaurer depuis un fichier (TOON, JSON)</p>
+                    <input type="file" id="importFile" accept=".json,.toon,.txt,.min.json" class="hidden">
                     <button id="importBtn" class="btn-primary full-width">
                         <i class="fas fa-upload"></i>
-                        <span data-i18n="data.import.btn">Importer JSON</span>
+                        <span data-i18n="data.import.btn">Importer un fichier</span>
                     </button>
                 </div>
             </div>
@@ -1059,6 +1059,129 @@
             <button class="modal-close" onclick="closeModal('releaseTrackerModal')"><i class="fas fa-times"></i></button>
         </div>
         <div id="releaseTrackerModalBody" class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem"></div>
+    </div>
+</div>
+
+<!-- Export Format Selection Modal -->
+<div id="exportFormatModal" class="modal">
+    <div class="modal-content" style="max-width:480px; max-height:90vh; display:flex; flex-direction:column; border:1px solid rgba(0,210,255,0.3); box-shadow:0 10px 40px rgba(0,210,255,0.15);">
+        <div class="modal-header" style="background:linear-gradient(135deg, rgba(0,210,255,0.25), rgba(108,92,231,0.25)); border-bottom:1px solid rgba(0,210,255,0.2);">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <i class="fas fa-file-export" style="color:#00d2ff; font-size:1.2rem;"></i>
+                <h2 class="modal-title" style="margin:0; font-size:1.1rem;" data-i18n="exportFormat.modalTitle">Format d'Exportation</h2>
+            </div>
+            <button class="modal-close" onclick="closeModal('exportFormatModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem; font-size:0.9rem;">
+            <p style="margin:0 0 1rem 0; color:var(--text-muted); font-size:0.85rem;" data-i18n="exportFormat.modalDesc">
+                Choisissez le format de sauvegarde adapté à vos besoins :
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                <!-- Option 1: TOON -->
+                <div class="export-format-card" onclick="selectExportFormat('toon')" style="cursor:pointer; padding:1rem; border-radius:12px; background:linear-gradient(135deg, rgba(0,210,255,0.12), rgba(58,123,213,0.12)); border:1.5px solid #00d2ff; transition:transform 0.2s, box-shadow 0.2s;">
+                    <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                        <i class="fas fa-bolt" style="font-size:1.5rem; color:#00d2ff; margin-top:0.2rem;"></i>
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+                                <strong style="color:#00d2ff; font-size:0.95rem;" data-i18n="exportFormat.toonTitle">Format TOON (Recommandé)</strong>
+                                <span style="font-size:0.65rem; font-weight:700; background:#00d2ff; color:#000; padding:0.1rem 0.4rem; border-radius:4px;">.TOON</span>
+                            </div>
+                            <p style="margin:0; font-size:0.8rem; line-height:1.4; color:var(--text-muted);" data-i18n="exportFormat.toonDesc">
+                                Format Token-Optimized. Jusqu'à 75% plus léger, économie maximale de bande passante et de requêtes serveur.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Option 2: JSON Strict -->
+                <div class="export-format-card" onclick="selectExportFormat('strict')" style="cursor:pointer; padding:1rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border-color); transition:transform 0.2s, border-color 0.2s;">
+                    <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                        <i class="fas fa-compress" style="font-size:1.4rem; color:#a855f7; margin-top:0.2rem;"></i>
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+                                <strong style="color:var(--text-main); font-size:0.95rem;" data-i18n="exportFormat.strictTitle">JSON Strict &amp; Minimaliste</strong>
+                                <span style="font-size:0.65rem; font-weight:700; background:#a855f7; color:#fff; padding:0.1rem 0.4rem; border-radius:4px;">.MIN.JSON</span>
+                            </div>
+                            <p style="margin:0; font-size:0.8rem; line-height:1.4; color:var(--text-muted);" data-i18n="exportFormat.strictDesc">
+                                Format JSON compressé sur une ligne sans espaces ni métadonnées superflues.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Option 3: JSON Pur -->
+                <div class="export-format-card" onclick="selectExportFormat('pure')" style="cursor:pointer; padding:1rem; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border-color); transition:transform 0.2s, border-color 0.2s;">
+                    <div style="display:flex; align-items:flex-start; gap:0.85rem;">
+                        <i class="fas fa-file-code" style="font-size:1.4rem; color:#2ecc71; margin-top:0.2rem;"></i>
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+                                <strong style="color:var(--text-main); font-size:0.95rem;" data-i18n="exportFormat.pureTitle">JSON Pur &amp; Lisible</strong>
+                                <span style="font-size:0.65rem; font-weight:700; background:#2ecc71; color:#000; padding:0.1rem 0.4rem; border-radius:4px;">.JSON</span>
+                            </div>
+                            <p style="margin:0; font-size:0.8rem; line-height:1.4; color:var(--text-muted);" data-i18n="exportFormat.pureDesc">
+                                Format JSON standard complet et indenté pour lisibilité humaine.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid var(--border-color); padding:0.75rem 1.25rem;">
+            <button class="btn-secondary" style="width:100%; border:1px solid var(--border-color);" onclick="closeModal('exportFormatModal')">
+                <span data-i18n="exportFormat.cancel">Annuler</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Server Migration Modal -->
+<div id="serverMigrationModal" class="modal">
+    <div class="modal-content" style="max-width:540px; max-height:90vh; display:flex; flex-direction:column; border:1px solid rgba(255,107,107,0.4); box-shadow:0 10px 40px rgba(255,75,43,0.25);">
+        <div class="modal-header" style="background:linear-gradient(135deg, rgba(255,65,108,0.35), rgba(255,75,43,0.3)); border-bottom:1px solid rgba(255,107,107,0.3);">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <i class="fas fa-server" style="color:#ff6b6b; font-size:1.3rem;"></i>
+                <h2 class="modal-title" style="margin:0; font-size:1.15rem;" data-i18n="serverMigration.title">Migration Serveur ManLore Cloud</h2>
+            </div>
+            <button class="modal-close" onclick="closeServerMigrationModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="overflow-y:auto; flex:1; padding:1.25rem; font-size:0.9rem; line-height:1.6;">
+            <div style="margin-bottom:1rem; padding:0.9rem; border-radius:12px; background:linear-gradient(135deg, rgba(255,75,43,0.18), rgba(255,65,108,0.12)); border:1px solid rgba(255,75,43,0.4); display:flex; align-items:flex-start; gap:0.85rem;">
+                <i class="fas fa-triangle-exclamation" style="font-size:2rem; color:#ff4757; flex-shrink:0; margin-top:0.2rem;"></i>
+                <div>
+                    <span style="display:inline-block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; background:#ff4757; color:#fff; padding:0.15rem 0.5rem; border-radius:4px; margin-bottom:0.35rem;" data-i18n="serverMigration.badge">MIGRATION IMPORTANTE</span>
+                    <strong style="color:#fff; display:block; font-size:1rem; margin-bottom:0.3rem;" data-i18n="serverMigration.alertTitle">Nouveau Serveur Cloud Dédié</strong>
+                    <p class="text-xs text-muted" style="margin:0; line-height:1.5;" data-i18n="serverMigration.alertDesc">L'ancien serveur a atteint sa limite maximale de requêtes. ManLore a basculé vers une toute nouvelle infrastructure cloud dédiée et ultra-rapide.</p>
+                </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem; margin-bottom:1.2rem;">
+                <p style="margin:0 0 0.8rem 0; font-size:0.88rem; color:var(--text-main); font-weight:600;" data-i18n="serverMigration.urgentText">
+                    Exportez immédiatement votre sauvegarde complète pour sécuriser votre collection et vos quêtes, ou transférez vos données vers le nouveau serveur.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <button id="serverMigrateExportBtn" class="btn-primary" style="background:linear-gradient(135deg, #00d2ff, #3a7bd5); color:#fff; border:none; padding:0.75rem 1rem; border-radius:8px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:0.5rem; cursor:pointer;" onclick="triggerMigrationExport()">
+                        <i class="fas fa-file-export"></i> <span data-i18n="serverMigration.exportBtn">Exporter ma sauvegarde (.json)</span>
+                    </button>
+                    <button id="serverMigrateTransferBtn" class="btn-primary" style="background:linear-gradient(135deg, #a855f7, #6c5ce7); color:#fff; border:none; padding:0.75rem 1rem; border-radius:8px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:0.5rem; cursor:pointer;" onclick="triggerServerDataTransfer()">
+                        <i class="fas fa-cloud-arrow-up"></i> <span data-i18n="serverMigration.transferBtn">Transférer mes données vers le nouveau serveur</span>
+                    </button>
+                </div>
+                <div id="serverMigrationStatus" style="display:none; margin-top:0.8rem; font-size:0.82rem; padding:0.6rem; border-radius:6px;"></div>
+            </div>
+
+            <div style="border-top:1px solid var(--border-color); padding-top:0.8rem;">
+                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.85rem;" class="text-muted">
+                    <input type="checkbox" id="dontShowServerMigrationCheck">
+                    <span data-i18n="serverMigration.dontShow">Ne plus afficher ce message</span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid var(--border-color); padding:0.75rem 1.25rem;">
+            <button class="btn-secondary" style="width:100%; border:1px solid var(--border-color);" onclick="closeServerMigrationModal()">
+                <span data-i18n="serverMigration.close">J'ai compris / Fermer</span>
+            </button>
+        </div>
     </div>
 </div>
 
