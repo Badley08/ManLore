@@ -27,7 +27,12 @@ class AppLogger {
                 this.buffer = this.buffer.slice(-this.maxLocalLogs);
             }
             localStorage.setItem(this.storageKey, JSON.stringify(this.buffer));
-        } catch {}
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                this.buffer = [];
+                try { localStorage.removeItem(this.storageKey); } catch {}
+            }
+        }
     }
 
     log(type, message, details = {}) {

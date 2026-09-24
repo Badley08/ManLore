@@ -139,8 +139,8 @@ class QuestManager {
             if (!raw) {
                 const legacy = localStorage.getItem(QUESTS_STORAGE_KEY);
                 if (legacy && key !== QUESTS_STORAGE_KEY) {
-                    localStorage.setItem(key, legacy);
                     raw = legacy;
+                    try { localStorage.setItem(key, legacy); } catch {}
                 }
             }
             if (raw) {
@@ -188,27 +188,97 @@ class QuestManager {
         };
     }
 
-    saveProgression(immediateCloud = false) {
+    cleanStorageQuota() {
         try {
-            const serializable = {
-                ...this.data,
-                titlesViewedToday: Array.isArray(this.data.titlesViewedToday) ? this.data.titlesViewedToday : [],
-                titlesViewedWeek: Array.isArray(this.data.titlesViewedWeek) ? this.data.titlesViewedWeek : [],
-                titlesViewedMonth: Array.isArray(this.data.titlesViewedMonth) ? this.data.titlesViewedMonth : [],
-                titlesViewedYear: Array.isArray(this.data.titlesViewedYear) ? this.data.titlesViewedYear : [],
-                actionsToday: Array.from(this.data.actionsToday || []),
-                actionsWeek: Array.from(this.data.actionsWeek || []),
-                actionsMonth: Array.from(this.data.actionsMonth || []),
-                activeDaysThisWeek: Array.from(this.data.activeDaysThisWeek || []),
-                activeDaysThisMonth: Array.from(this.data.activeDaysThisMonth || []),
-                activeDaysThisYear: Array.from(this.data.activeDaysThisYear || []),
-                claimedQuests: this.data.claimedQuests || {}
-            };
-            localStorage.setItem(this.getStorageKey(), JSON.stringify(serializable));
-            this.syncToCloud(serializable, immediateCloud);
+            console.warn('[Quests] Nettoyage d\'urgence du localStorage suite à QuotaExceededError...');
+
+            try { localStorage.removeItem('manlore_translation_cache'); } catch {}
+            try { localStorage.removeItem('manlore_jikan_cache_v6'); } catch {}
+            try { localStorage.removeItem('com.karlitodev.manlore/logs'); } catch {}
+
+            const legacyKeys = [
+                'manlore_quest_progression_v1',
+                'manlore_quest_progression_v2',
+                'manlore_quest_progression_v3',
+                'manlore_quest_progression_v4'
+            ];
+            legacyKeys.forEach(k => {
+                if (k !== this.getStorageKey()) {
+                    try { localStorage.removeItem(k); } catch {}
+                }
+            });
+
+            if (Array.isArray(this.data.titlesViewedYear)) {
+                this.data.titlesViewedYear = this.data.titlesViewedYear.slice(-100);
+            }
+            if (Array.isArray(this.data.titlesViewedMonth)) {
+                this.data.titlesViewedMonth = this.data.titlesViewedMonth.slice(-100);
+            }
+            if (Array.isArray(this.data.titlesViewedWeek)) {
+                this.data.titlesViewedWeek = this.data.titlesViewedWeek.slice(-50);
+            }
+            if (Array.isArray(this.data.titlesViewedToday)) {
+                this.data.titlesViewedToday = this.data.titlesViewedToday.slice(-30);
+            }
         } catch (e) {
-            console.warn('[Quests] Erreur sauvegarde', e);
+            console.warn('[Quests] Nettoyage quota échoué:', e);
         }
+    }
+
+    saveProgression(immediateCloud = false) {
+        if (Array.isArray(this.data.titlesViewedYear) && this.data.titlesViewedYear.length > 300) {
+            this.data.titlesViewedYear = this.data.titlesViewedYear.slice(-300);
+        }
+        if (Array.isArray(this.data.titlesViewedMonth) && this.data.titlesViewedMonth.length > 300) {
+            this.data.titlesViewedMonth = this.data.titlesViewedMonth.slice(-300);
+        }
+        if (Array.isArray(this.data.titlesViewedWeek) && this.data.titlesViewedWeek.length > 150) {
+            this.data.titlesViewedWeek = this.data.titlesViewedWeek.slice(-150);
+        }
+        if (Array.isArray(this.data.titlesViewedToday) && this.data.titlesViewedToday.length > 100) {
+            this.data.titlesViewedToday = this.data.titlesViewedToday.slice(-100);
+        }
+
+        const serializable = {
+            ...this.data,
+            titlesViewedToday: Array.isArray(this.data.titlesViewedToday) ? this.data.titlesViewedToday : [],
+            titlesViewedWeek: Array.isArray(this.data.titlesViewedWeek) ? this.data.titlesViewedWeek : [],
+            titlesViewedMonth: Array.isArray(this.data.titlesViewedMonth) ? this.data.titlesViewedMonth : [],
+            titlesViewedYear: Array.isArray(this.data.titlesViewedYear) ? this.data.titlesViewedYear : [],
+            actionsToday: Array.from(this.data.actionsToday || []),
+            actionsWeek: Array.from(this.data.actionsWeek || []),
+            actionsMonth: Array.from(this.data.actionsMonth || []),
+            activeDaysThisWeek: Array.from(this.data.activeDaysThisWeek || []),
+            activeDaysThisMonth: Array.from(this.data.activeDaysThisMonth || []),
+            activeDaysThisYear: Array.from(this.data.activeDaysThisYear || []),
+            claimedQuests: this.data.claimedQuests || {}
+        };
+
+        try {
+            localStorage.setItem(this.getStorageKey(), JSON.stringify(serializable));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22 || e.number === -2147024882) {
+                this.cleanStorageQuota();
+                try {
+                    const retrySerializable = {
+                        ...serializable,
+                        titlesViewedYear: (serializable.titlesViewedYear || []).slice(-100),
+                        titlesViewedMonth: (serializable.titlesViewedMonth || []).slice(-100)
+                    };
+                    localStorage.setItem(this.getStorageKey(), JSON.stringify(retrySerializable));
+                    console.log('[Quests] Sauvegarde locale réussie après libération du quota.');
+                } catch (retryErr) {
+                    if (!this._quotaWarned) {
+                        console.warn('[Quests] Stockage local plein. La synchronisation cloud reste active.', retryErr);
+                        this._quotaWarned = true;
+                    }
+                }
+            } else {
+                console.warn('[Quests] Erreur sauvegarde locale', e);
+            }
+        }
+
+        this.syncToCloud(serializable, immediateCloud);
     }
 
     onLogout() {
@@ -299,14 +369,16 @@ class QuestManager {
         return 0; // Streak expired
     }
 
-    recordDailyActivity() {
+    recordDailyActivity(skipSave = false) {
         const today = new Date().toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const lastDate = this.data.lastStreakDate;
+        let changed = false;
 
         if (!lastDate) {
             this.data.streakCount = 1;
             this.data.lastStreakDate = today;
+            changed = true;
         } else if (lastDate === today) {
             // Already counted today
         } else if (lastDate === yesterday) {
@@ -318,18 +390,24 @@ class QuestManager {
             if (window.showToast && this.data.streakCount > 1) {
                 window.showToast(`🔥 Série active : ${this.data.streakCount} jours consécutifs !`, 'success');
             }
+            changed = true;
         } else {
             // Broken streak
             this.data.streakCount = 1;
             this.data.lastStreakDate = today;
+            changed = true;
         }
 
         if (this.data.streakCount % 7 === 0) {
             this.data.completedDailyStreaks = (this.data.completedDailyStreaks || 0) + 1;
+            changed = true;
         }
 
         this.checkStreakNotification();
-        this.saveProgression();
+        if (changed && !skipSave) {
+            this.saveProgression();
+        }
+        return changed;
     }
 
     checkStreakNotification() {
@@ -355,6 +433,8 @@ class QuestManager {
         const monthNum = now.getMonth();
         const yearNum = now.getFullYear();
 
+        let modified = false;
+
         if (Array.isArray(this.data.actionsToday)) this.data.actionsToday = new Set(this.data.actionsToday);
         if (Array.isArray(this.data.actionsWeek)) this.data.actionsWeek = new Set(this.data.actionsWeek);
         if (Array.isArray(this.data.actionsMonth)) this.data.actionsMonth = new Set(this.data.actionsMonth);
@@ -373,6 +453,7 @@ class QuestManager {
             this.data.titlesRatedToday = 0;
             this.data.titlesViewedToday = [];
             this.data.actionsToday = new Set();
+            modified = true;
         }
 
         if (this.data.lastWeekNumber !== weekNum) {
@@ -386,6 +467,7 @@ class QuestManager {
             this.data.titlesViewedWeek = [];
             this.data.actionsWeek = new Set();
             this.data.activeDaysThisWeek = new Set([today]);
+            modified = true;
         }
 
         if (this.data.lastMonth !== monthNum) {
@@ -399,6 +481,7 @@ class QuestManager {
             this.data.titlesViewedMonth = [];
             this.data.actionsMonth = new Set();
             this.data.activeDaysThisMonth = new Set([today]);
+            modified = true;
         }
 
         if (this.data.lastYear !== yearNum) {
@@ -411,14 +494,26 @@ class QuestManager {
             this.data.titlesRatedYear = 0;
             this.data.titlesViewedYear = [];
             this.data.activeDaysThisYear = new Set([today]);
+            modified = true;
         }
 
-        this.data.activeDaysThisWeek.add(today);
-        this.data.activeDaysThisMonth.add(today);
-        this.data.activeDaysThisYear.add(today);
+        if (!this.data.activeDaysThisWeek.has(today)) {
+            this.data.activeDaysThisWeek.add(today);
+            modified = true;
+        }
+        if (!this.data.activeDaysThisMonth.has(today)) {
+            this.data.activeDaysThisMonth.add(today);
+            modified = true;
+        }
+        if (!this.data.activeDaysThisYear.has(today)) {
+            this.data.activeDaysThisYear.add(today);
+            modified = true;
+        }
 
-        this.recordDailyActivity();
-        this.saveProgression();
+        const streakChanged = this.recordDailyActivity(true);
+        if (modified || streakChanged) {
+            this.saveProgression();
+        }
     }
 
     initActiveTimer() {
@@ -615,7 +710,6 @@ class QuestManager {
         this.data.actionsWeek?.add('title_add');
         this.data.actionsMonth?.add('title_add');
         this.addExp(25, 'Titre ajouté');
-        this.saveProgression();
     }
 
     onTitleEdited() {
@@ -628,7 +722,6 @@ class QuestManager {
         this.data.actionsWeek?.add('title_edit');
         this.data.actionsMonth?.add('title_edit');
         this.addExp(15, 'Titre modifié');
-        this.saveProgression();
     }
 
     onTitleDeleted() {
@@ -641,7 +734,6 @@ class QuestManager {
         this.data.actionsWeek?.add('title_delete');
         this.data.actionsMonth?.add('title_delete');
         this.addExp(10, 'Titre supprimé');
-        this.saveProgression();
     }
 
     onTitleViewed(id) {
@@ -672,7 +764,6 @@ class QuestManager {
         this.data.actionsWeek?.add('chapter_read');
         this.data.actionsMonth?.add('chapter_read');
         this.addExp(count * 5, `${count} chapitre(s) lu(s)`);
-        this.saveProgression();
     }
 
     onCustomEvent(eventName, count = 1) {
@@ -694,7 +785,6 @@ class QuestManager {
         this.data.actionsWeek?.add('title_rated');
         this.data.actionsMonth?.add('title_rated');
         this.addExp(15, 'Titre noté');
-        this.saveProgression();
     }
 
     getQuestsForTab(tabKey) {

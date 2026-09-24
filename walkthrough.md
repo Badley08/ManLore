@@ -1,6 +1,11 @@
-# Bilan des Modifications — Migration Serveur Cloud, Formats TOON/JSON & Support WebApp Universel
+# Bilan des Modifications — Migration Serveur Cloud, Formats, Support WebApp & Correctif QuotaExceededError
 
 ## 📊 Récapitulatif des Fonctionnalités
+- Correctif définitif de l'erreur `QuotaExceededError` dans `QuestManager.saveProgression` [X]
+- Routine de nettoyage d'urgence du `localStorage` (`cleanStorageQuota()`) pour libérer du stockage automatiquement [X]
+- Élimination des boucles et appels de sauvegarde redondants dans `checkResets()`, `recordDailyActivity()` et les handlers d'événements [X]
+- Bornage strict de la taille des tableaux de suivi (`titlesViewedYear`, `titlesViewedMonth`, etc.) [X]
+- Gestion du quota de stockage dans les caches Jikan (`jikan.js`) et le journal d'erreurs diagnostic (`logger.js`) [X]
 - Suppression définitive et intégrale du premier/ancien serveur Back4App (`vnaPY79T...`) de tout le projet [X]
 - Configuration exclusive du nouveau serveur Back4App dédié "Serveur ManLore Cloud" (`OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu`) [X]
 - Suppression des requêtes serveur superflues (logs cloud désactivés, push polling à 60s) [X]

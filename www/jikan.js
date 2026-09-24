@@ -32,7 +32,18 @@ class JikanAPI {
         try {
             localStorage.setItem(JIKAN_CACHE_KEY, JSON.stringify(this.cache));
         } catch (e) {
-            console.warn('[Jikan] Cache save failed', e);
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                const keys = Object.keys(this.cache || {});
+                if (keys.length > 10) {
+                    keys.slice(0, Math.floor(keys.length / 2)).forEach(k => delete this.cache[k]);
+                    try { localStorage.setItem(JIKAN_CACHE_KEY, JSON.stringify(this.cache)); } catch {}
+                } else {
+                    this.cache = {};
+                    try { localStorage.removeItem(JIKAN_CACHE_KEY); } catch {}
+                }
+            } else {
+                console.warn('[Jikan] Cache save failed', e);
+            }
         }
     }
 
@@ -46,7 +57,12 @@ class JikanAPI {
     saveTranslationCache() {
         try {
             localStorage.setItem('manlore_translation_cache', JSON.stringify(this.translationCache));
-        } catch (e) {}
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                this.translationCache = {};
+                try { localStorage.removeItem('manlore_translation_cache'); } catch {}
+            }
+        }
     }
 
     getCached(key) {
