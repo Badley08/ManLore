@@ -1,24 +1,36 @@
-# Bilan des Modifications — Pop-up des Nouveautés (What's New v9.1.0) 🚀⚔️
+# Bilan des Modifications — Migration Serveur Cloud, Formats TOON/JSON & Support WebApp Universel
 
 ## 📊 Récapitulatif des Fonctionnalités
-- Mise à jour de la pop-up des Nouveautés `whatsNewModal` vers la version v9.1.0 [X]
-- Présentation dynamique du Mode Battle ⚔️, du Partage Temporaire et de la Révocation [X]
-- Présentation de l'ouverture directe WebApp (Deep Links) et de l'isolation multi-utilisateurs [X]
-- Traduction i18n complète (FR, EN, ES) des nouveautés et de l'historique changelog [X]
-- Mise à jour des identificateurs de version globale (`WHATS_NEW_VERSION = 'v9.1.0'`) [X]
-- Inclusions de fonctionnalités admin dans la pop-up utilisateur [-] (exclues selon la demande)
+- Suppression définitive et intégrale du premier/ancien serveur Back4App (`vnaPY79T...`) de tout le projet [X]
+- Configuration exclusive du nouveau serveur Back4App dédié "Serveur ManLore Cloud" (`OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu`) [X]
+- Suppression des requêtes serveur superflues (logs cloud désactivés, push polling à 60s) [X]
+- Pop-up d'alerte de migration serveur multilingue (FR, EN, ES) [X]
+- Intégration du Rang utilisateur (`userRank`) et de l'Email (`userEmail`) dans les exports [X]
+- Vérification et confirmation de l'email lors de l'importation en cas de compte différent [X]
+- Module de sérialisation et désérialisation du format **TOON** (Token-Optimized Object Notation) [X]
+- Option d'exportation au format **JSON Strict / Ultra-minimaliste** (`.min.json`) [X]
+- Option d'exportation au format **JSON Pur / Standard** (`.json`) [X]
+- Modale de sélection interactive du format d'exportation (TOON, JSON Strict, JSON Pur) [X]
+- Auto-détection universelle du format de fichier à l'importation (`.toon`, `.min.json`, `.json`, `.txt`) [X]
+- Téléchargement direct HTML5 Blob garanti sur navigateur Web (Desktop, Mobile, PWA) [X]
+- Transfert de données par lots (`/batch`) vers le nouveau serveur sans fingerprinting [X]
+- Maintien ou stockage des identifiants de l'ancien serveur [-] (supprimé à 100% comme demandé)
 
 ---
 
-## 🛠️ Détails des Implémentations
+## 🛠️ Détails des Éléments Implémentés
 
-### 1. 🚀 Pop-up des Nouveautés (`www/index.html` & `www/app.js`)
-- **Version globale** : Passage à la version `v9.1.0` dans `app.js` (`WHATS_NEW_VERSION = 'v9.1.0'`).
-- **Cartes de fonctionnalités utilisateur** :
-  1. **Arena Mode Battle ⚔️ & Comparateur Duel** : Trophée, jauges de puissance animées, analyse croisée des lectures et chapitres lu.
-  2. **Partage Temporaire & Révocation Réciproque** : Durée de 1h à 72h max, révocation cloud instantanée et consultation réciproque des catalogues amis.
-  3. **Ouverture WebApp Directe (Deep Links)** : Lancement automatique de l'application WebAPK lors des clics sur liens de partage.
-  4. **Isolation des Données Multi-Utilisateurs** : Sécurisation 100% par compte empêchant le mélange de stats sur téléphone partagé.
+### 1. 🗑️ Suppression Intégrale de l'Ancien Serveur
+- Toutes les références, clés d'API, AppID (`vnaPY79T...`) et configurations (`OLD_BACK4APP_CONFIG`) de l'ancien serveur ont été **définitivement supprimées** du code source ([`www/logic.js`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/www/logic.js) et [`www/notif.html`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/www/notif.html)).
+- Le projet communique exclusivement avec le **nouveau serveur officiel**.
 
-### 2. 🌍 Traduction Multilingue i18n (`www/i18n.js`)
-- Clés `whatsnew.title`, `whatsnew.f1.*`, `whatsnew.f2.*`, `whatsnew.f3.*`, `whatsnew.f4.*` et `changelog.v910.*` ajoutées et traduites en Français, Anglais et Espagnol.
+### 2. 🌐 Compatibilité WebApp & Téléchargement Universel Web
+- Téléchargement direct HTML5 (`URL.createObjectURL(blob)` avec attribut `download`) garantissant un fonctionnement immédiat sur tous les navigateurs sans dépendre d'APIs Android natives.
+- Partage mobile via Web Share API en option non-bloquante.
+
+### 3. ⚡ Formats de Données Ultra-Légers (TOON & JSON Strict)
+- **Format TOON (`.toon`)** : Réduction jusqu'à 75% du poids des données via tuples structurés.
+- **JSON Strict (`.min.json`)** : JSON compact sur une ligne.
+- **JSON Pur (`.json`)** : JSON complet indenté.
+- **Modal de choix** : Sélection transparente du format au moment de l'exportation.
+- **Importation intelligente** : Détection automatique et vérification de correspondance email/utilisateur.

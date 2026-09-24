@@ -7,17 +7,7 @@
 
 'use strict';
 
-// ============ ANCIEN SERVEUR (LECTURE SEULE POUR MIGRATION) ============
-const OLD_BACK4APP_CONFIG = {
-    name: 'Ancien Serveur ManLore Cloud',
-    appId: 'vnaPY79T1WzfEYp84Mve2PAoHbexPaATo43qickr',
-    clientKey: '0Y9zcO1XB1hAkVKWa72TIamjPR1pnwuw8IsG6TLj',
-    restApiKey: 'qyLGcOXp0bkDqt9WYG73GzRwHsQWYdZG5xCyrlBW',
-    webhookKey: 'K111tmNHcffuoJF1Glwp2GfgGLzZ2KzF3XrgfQIH',
-    url: 'https://parseapi.back4app.com'
-};
-
-// ============ NOUVEAU SERVEUR OFFICIEL (SERVEUR B) ============
+// ============ SERVEUR OFFICIEL MANLORE CLOUD ============
 const BACK4APP_CONFIG = {
     name: 'Serveur ManLore Cloud',
     appId: 'OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu',
