@@ -69,3 +69,8 @@ test.lrc
 SUMMARY.md
 simple-export.json
 .walkthrough.md
+*/ToDo.md
+manlore.db
+*yomiku_build*.md
+*yomiku_suppression_*.md
+*yomiku_ci_erreurs*.md
