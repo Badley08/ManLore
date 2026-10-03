@@ -144,6 +144,19 @@
 
 ---
 
+## Session 7 — Purge Intégrale de x86/x86_64 & Alignement SDK
+
+### Élimination Totale du Code x86/x86_64
+- Suppression des entrées `x86` et `x86_64` de `ReleaseServiceImpl.kt` (`BUILD_TYPES`) [X]
+  - L'in-app updater ne référence plus que les architectures ARM (`arm64-v8a`, `armeabi-v7a` et FOSS)
+- Zéro mention ou binaire x86/x86_64 restant dans toute la base de code du projet [X]
+
+### Alignement Target SDK & Java 17
+- Java / JVM Target configuré en **Java 17** (`JDK 17 LTS`) [X]
+- Target SDK configuré à **API 36** (Android 16, le niveau SDK maximum actuellement fourni et supporté par Google dans l'écosystème Android) [X]
+
+---
+
 ## Points Restants
 
 - [ ] Vulnérabilités Dependabot (61 signalées : 3 critical, 27 high, 28 moderate, 3 low) — mise à jour des dépendances Gradle nécessaire
