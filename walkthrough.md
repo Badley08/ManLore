@@ -1,61 +1,108 @@
 # Walkthrough & Bilan des Modifications — Yomiku V1 (ManLore + Komikku)
 
-## 📊 Récapitulatif des Fonctionnalités
+## Récapitulatif des Fonctionnalités
 
-### 🎨 Nouveau Logo & Identité Visuelle Yomiku
+### Nouveau Logo & Identité Visuelle Yomiku
 - Remplacement intégral du logo de Komikku par le caractère Hiragana japonais **« よ »** (Yo de Yomiku) [X]
 - Implémentation 100% vectorielle XML native Android (`ic_launcher_foreground.xml`, `ic_launcher_background.xml`, `ic_launcher_monochrome.xml`) [X]
-- Palette de couleurs moderne **Bleu Ciel Pâle** (`#74B9FF` / `#5DADE2`) sur fond nuit ardoise (`#0F172A`) [X]
+- Palette de couleurs Bleu Ciel Pâle (`#74B9FF` / `#5DADE2`) sur fond nuit ardoise (`#0F172A`) [X]
 - Mise à jour des icônes in-app vectorielles (`ic_komikku.xml`, `ic_komikku_dark.xml`) [X]
-- Génération des assets matriciels 200x200 (`komikku.png`) pour les notifications étendues et l'écran À propos [X]
+- Génération des assets matriciels 200x200 (`komikku.png`) pour notifications et écran À propos [X]
 - Harmonisation de la couleur de notification `ic_launcher` dans `colors.xml` (`#74b9ff`) [X]
 
-### 📈 Statistiques de Lecture (Heures ou Jours + Minutes)
-- Correction de l'affichage des durées dans `TimeUtils.kt` pour préserver systématiquement les minutes même lorsque le temps dépasse un ou plusieurs jours [X]
-- Création de la fonction `toHoursDurationString` pour convertir la durée totale de lecture directement en heures cumulées et minutes (ex: `124 h 35 min`) [X]
-- Ajout de l'interactivité par clic (`Modifier.clickable`) sur `StatsOverviewItem` dans `StatsItem.kt` [X]
-- Intégration dans `StatsScreenContent.kt` du basculement d'affichage (clic sur la carte de temps de lecture pour alterner instantanément entre jours + heures + minutes et total en heures) [X]
-- Conservation de l'état de vue choisi via `rememberSaveable` [X]
+### Correction Build (erreur critique)
+- Ajout de l'import manquant `androidx.compose.runtime.Composable` dans `StatsScreenContent.kt` [X]
+  - Résout 14 erreurs de compilation : `Unresolved reference 'Composable'` et `@Composable invocations can only happen from the context of a @Composable function`
 
-### 📖 Métadonnées Manga Directement depuis l'UI/UX pour ManLore
-- Suppression des dépendances de requêtes externes (pas de fetch AniList, Jikan ou MyAnimeList) [X]
-- Capture directe des métadonnées du modèle `Manga` présent dans l'UI/UX (`title`, `description`, `thumbnailUrl`, `genre`, `author`, `artist`) traduit selon la langue de l'appareil et la source [X]
-- Évolution de `ManLoreVaultManager` pour enregistrer l'intégralité des métadonnées du manga lors de la progression de lecture [X]
-- Implémentation du pont WebView `YomikuWebBridge` avec exposition de `getVaultEntriesJson()` et `getDeviceLanguage()` [X]
-- Implémentation de `window.syncFromYomikuUI` dans les scripts de ManLore (`logic.js`) pour insérer ou mettre à jour automatiquement les mangas sans requête réseau tierce [X]
+### Sécurité — Service Worker sw.js (CodeQL)
+- Remplacement des vérifications `String.includes()` par des `Set` d'hôtes exacts (`hostnameAllowed`) [X]
+  - Élimine : `js/incomplete-url-substring-sanitization` (×10)
+  - Élimine : `js/functionality-from-untrusted-source` (×2)
+  - Élimine : `js/incomplete-sanitization` (×6)
+  - Élimine : `js/incomplete-multi-character-sanitization` (×2)
+  - Élimine : `js/xss-through-dom` (×4)
+- Rejet des URLs non-HTTPS cross-origin dans le handler `fetch` [X]
+- Validation stricte des données `push` (objet plat uniquement, extraction `safeStr`) [X]
+- Blocage silencieux des requêtes cross-origin non listées [X]
 
-### 🛠️ Workflows CI/CD GitHub Actions & PRs
-- Correction des chemins de sortie dans `.github/workflows/build_push.yml` (`releaseDirectory: app/build/outputs/apk/release` et mapping `outputs/mapping/release`) [X]
-- Gestion du fallback automatique entre APK signé et non signé dans le workflow [X]
-- Merge des Pull Requests GitHub dépendantes (PR #1 dependabot) : laissé de côté selon consigne utilisateur en raison des règles de protection de branche nécessitant une approbation par un tiers [-]
+### Workflows CI/CD GitHub Actions
+- Correction `build_pull_request.yml` : ajout du bloc `permissions` explicite (`actions/missing-workflow-permissions`) [X]
+- Renommage des artifacts APK de `Komikku-*` en `Yomiku-*` dans `build_pull_request.yml` [X]
+- Suppression des workflows sans rapport avec le build [-] (non requis — tous les 5 fichiers existants concernent le build ou les previews)
+- `build_push.yml` / `build_preview.yml` / `build_release.yml` : permissions déjà correctes [X]
+
+### README.md — Documentation Professionnelle
+- Refonte complète sans emoji dans les titres [X]
+- Logo SVG vectoriel inline en en-tête [X]
+- Badges SVG via shields.io (CI status, release, license, Android) [X]
+- Tableau des fonctionnalités, tableau d'installation par variante APK [X]
+- Section Build avec prérequis et commandes Gradle [X]
+- Tableau des workflows CI/CD [X]
+- Arborescence du projet [X]
+- Section Sécurité et Acknowledgements [X]
+
+### Statistiques de Lecture (Heures ou Jours + Minutes)
+- Correction de `TimeUtils.kt` — `toHoursDurationString` (ex: `124 h 35 min`) [X]
+- `StatsOverviewItem` clickable pour basculer entre les deux vues [X]
+- État persistant via `rememberSaveable` [X]
+
+### Métadonnées Manga depuis l'UI/UX pour ManLore
+- `ManLoreVaultManager` — enregistrement des métadonnées UI sans AniList [X]
+- `YomikuWebBridge` — pont JavaScript `getVaultEntriesJson()` [X]
+- `window.syncFromYomikuUI` dans `logic.js` [X]
 
 ---
 
-## 🛠️ Détails des Fichiers Modifiés et Ajoutés
+## Commits Poussés
 
-1. [`yomiku/app/src/main/res/drawable/ic_launcher_foreground.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/drawable/ic_launcher_foreground.xml)
-   - Tracé vectoriel précis de l'Hiragana japonais « よ » en blanc pur `#FFFFFFFF`.
-2. [`yomiku/app/src/main/res/drawable/ic_launcher_background.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/drawable/ic_launcher_background.xml)
-   - Disque Bleu Ciel Pâle (`#74B9FF` / `#5DADE2`) centré sur fond nuit `#0F172A`.
-3. [`yomiku/app/src/main/res/drawable/ic_launcher_monochrome.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/drawable/ic_launcher_monochrome.xml)
-   - Icône monochrome thématique pour Android 13+.
-4. [`yomiku/app/src/main/res/drawable/ic_komikku.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/drawable/ic_komikku.xml) & [`ic_komikku_dark.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/drawable/ic_komikku_dark.xml)
-   - Logos in-app vectoriels avec l'Hiragana « よ ».
-5. [`yomiku/app/src/main/res/values/colors.xml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/res/values/colors.xml)
-   - Définition de `ic_launcher` en bleu ciel pâle `#74b9ff`.
-6. [`yomiku/app/src/main/java/eu/kanade/presentation/util/TimeUtils.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/presentation/util/TimeUtils.kt)
-   - Ajout de `toHoursDurationString` et correction de la visibilité des minutes avec les jours.
-7. [`yomiku/app/src/main/java/eu/kanade/presentation/more/stats/components/StatsItem.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/presentation/more/stats/components/StatsItem.kt)
-   - Support du clic utilisateur (`onClick`) sur les items de statistiques.
-8. [`yomiku/app/src/main/java/eu/kanade/presentation/more/stats/StatsScreenContent.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/presentation/more/stats/StatsScreenContent.kt)
-   - Gestion dynamique du basculement d'affichage (heures totales vs jours + heures + minutes).
-9. [`yomiku/app/src/main/java/eu/kanade/domain/manlore/ManLoreVaultManager.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/domain/manlore/ManLoreVaultManager.kt)
-   - Gestionnaire persistant de données manga UI/UX (titre, description, jaquette, genres, progression) sans dépendance AniList.
-10. [`yomiku/app/src/main/java/eu/kanade/tachiyomi/ui/reader/ReaderViewModel.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/tachiyomi/ui/reader/ReaderViewModel.kt)
-    - Transmission automatique de toutes les métadonnées de l'UI locale vers `ManLoreVaultManager`.
-11. [`yomiku/app/src/main/java/eu/kanade/tachiyomi/ui/manlore/ManLoreTab.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/tachiyomi/ui/manlore/ManLoreTab.kt)
-    - Pont JavaScript `YomikuBridge` et injection automatique des métadonnées lors du chargement de la WebView.
-12. [`yomiku/app/src/main/assets/manlore/logic.js`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/assets/manlore/logic.js)
-    - Fonction `window.syncFromYomikuUI` pour intégrer directement les mangas lus dans le Vault ManLore.
-13. [`yomiku/.github/workflows/build_push.yml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/.github/workflows/build_push.yml)
-    - Correction des chemins `app/build/outputs/apk/release` et mapping associé.
+| Hash | Description |
+|---|---|
+| `e7f6625` | feat: new pale sky blue Hiragana logo, read time stats, direct UI/UX metadata sync, cleanup workflows |
+| `46a9309` | fix: resolve build error, harden sw.js security, fix workflow permissions, rewrite README |
+
+---
+
+## Fichiers Modifiés dans ce Session
+
+1. [`StatsScreenContent.kt`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/java/eu/kanade/presentation/more/stats/StatsScreenContent.kt) — import `@Composable` ajouté (fix build critique)
+2. [`sw.js`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/app/src/main/assets/manlore/sw.js) — réécriture sécurisée complète (CodeQL)
+3. [`build_pull_request.yml`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/.github/workflows/build_pull_request.yml) — permissions + renommage Yomiku
+4. [`README.md`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/README.md) — documentation professionnelle
+
+---
+
+## Session 3 — Nettoyage & Consolidation
+
+### Config Gemini Code Review
+- Correction de l'indentation YAML cassée dans `.gemini/config.yaml` (`code_review: true` était imbriqué sous `summary`) [X]
+
+### Workflows CI/CD
+- Suppression de `build_dispatch_preview.yml` (dispatch manuel redondant) [X]
+- Suppression de `build_preview.yml` (preview redondant) [X]
+- Workflows restants : `build_push.yml`, `build_pull_request.yml`, `build_release.yml` [X]
+
+### Package Name / Application ID
+- `applicationId` vérifié : **`app.yomiku`** — déjà correct [X]
+- `namespace` Java : `eu.kanade.tachiyomi` (hérité Tachiyomi — changer nécessiterait de renommer des centaines de fichiers source) [-]
+
+### Branche Git
+- Merge de `feature/yomiku-v1-updates` → `main` via rebase fast-forward [X]
+- Suppression de la branche `feature/yomiku-v1-updates` locale et distante [X]
+- Push direct sur `main` désormais (plus de branches feature) [X]
+
+---
+
+## Session 4 — Nettoyage Ultime Workflows & Fix `secrets` Expression
+
+### Workflow GitHub Actions Unique
+- Renommage du workflow principal en **`BUILD RELEASE`** [X]
+- Correction de l'erreur d'analyse GitHub Actions `Unrecognized named-value: 'secrets'` [X]
+  - Remplacement du test invalide `if: secrets.GOOGLE_SERVICES_JSON != ''` par une écriture scriptée sécurisée via variable d'environnement `env:`
+- Suppression totale des workflows superflus (`build_pull_request.yml`, `build_release.yml`) [X]
+- Un seul et unique workflow actif dans `.github/workflows/` : `build_push.yml` (`BUILD RELEASE`) [X]
+
+---
+
+## Points Restants
+
+- [ ] Vulnérabilités Dependabot (61 signalées : 3 critical, 27 high, 28 moderate, 3 low) — mise à jour des dépendances Gradle nécessaire

@@ -74,3 +74,5 @@ manlore.db
 *yomiku_build*.md
 *yomiku_suppression_*.md
 *yomiku_ci_erreurs*.md
+*.log
+yomiku-signing/KEYSTORE_CREDENTIALS.md
