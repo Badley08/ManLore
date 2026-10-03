@@ -103,6 +103,24 @@
 
 ---
 
+## Session 5 — Élimination des Warnings Répétitifs & Configuration Secrets CI
+
+### Suppression des Warnings Kotlin Redondants
+- Suppression de l'argument `-Xcontext-parameters` dans `buildSrc/src/main/kotlin/mihon/buildlogic/ProjectExtensions.kt` [X]
+  - Élimine le warning répété en boucle lors de la compilation de chaque module : `w: The argument '-Xcontext-parameters' is redundant for the current language version 2.4.`
+- Suppression de l'argument `-Xannotation-default-target=param-property` dans `app/build.gradle.kts` [X]
+  - Élimine le warning : `w: The argument '-Xannotation-default-target=param-property' is redundant for the current language version 2.4.`
+
+### Résolution de l'Échec de Build CI (Sign APK)
+- Cause de l'échec : Aucun secret de signature n'était configuré sur le dépôt GitHub `Badley08/yomiku` (créant un keystore vide et provoquant `java.io.IOException: Tag number over 30 is not supported` sur `apksigner`) [X]
+- Configuration via `gh secret set` des 4 secrets de signature de release [X] :
+  - `ALIAS` (`yomiku-key`)
+  - `KEY_STORE_PASSWORD` (`Yomiku@Secure2025!`)
+  - `KEY_PASSWORD` (`Yomiku@Secure2025!`)
+  - `SIGNING_KEY` (keystore JKS complet encodé en Base64)
+
+---
+
 ## Points Restants
 
 - [ ] Vulnérabilités Dependabot (61 signalées : 3 critical, 27 high, 28 moderate, 3 low) — mise à jour des dépendances Gradle nécessaire
