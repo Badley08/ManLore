@@ -121,6 +121,29 @@
 
 ---
 
+## Session 6 — Cible Exclusive ARM (v7 & v8), Téléchargement Direct APK & GitHub Releases
+
+### Restriction Stricte aux Architectures ARM
+- Ajout de `ndk.abiFilters += listOf("armeabi-v7a", "arm64-v8a")` dans `defaultConfig` (`app/build.gradle.kts`) [X]
+  - Garantit que seules les librairies natives ARM (`.so`) sont compilées et embarquées (x86 et x86_64 complètement exclus)
+- Mise à jour de `splits.abi.include` : `include("armeabi-v7a", "arm64-v8a")` [X]
+- Suppression des variantes x86 et x86_64 de la documentation [`README.md`](file:///home/luberisse/Bureau/WORKSPACE/ManLore/yomiku/README.md) [X]
+
+### Téléchargement Direct APK (Fin des Fichiers ZIP)
+- Séparation explicite et renommage des APKs produits dans le workflow CI/CD [X] :
+  - `Yomiku-arm64-v8a.apk` (ARM 64-bit moderne)
+  - `Yomiku-armeabi-v7a.apk` (ARM 32-bit legacy)
+  - `Yomiku-universal.apk` (Universel ARMv7 + ARMv8)
+- Vérification de signature via `apksigner verify` sur l'ensemble des APKs ARM produits [X]
+
+### Publication Automatique en GitHub Release
+- Intégration de la création / mise à jour automatique d'une **GitHub Release** via `gh release create` [X]
+  - La release apparaît directement sur la page d'accueil du dépôt à droite dans la section **Releases**
+  - Contient les notes de version structurées et professionnelles en Markdown
+  - Permet le téléchargement direct du fichier `.apk` brut (sans aucun emballage `.zip` imposé par les artifacts d'action)
+
+---
+
 ## Points Restants
 
 - [ ] Vulnérabilités Dependabot (61 signalées : 3 critical, 27 high, 28 moderate, 3 low) — mise à jour des dépendances Gradle nécessaire
