@@ -49,6 +49,14 @@ class AppLogger {
         };
         this.buffer.push(entry);
         this.saveLocalLogs();
+
+        // Forward to Yomiku native logcat if running inside Yomiku
+        if (window.YomikuBridge && typeof window.YomikuBridge.log === 'function') {
+            try {
+                const detailStr = Object.keys(details || {}).length ? ' ' + JSON.stringify(details) : '';
+                window.YomikuBridge.log(type, 'ManLore', `${message}${detailStr}`);
+            } catch (e) {}
+        }
     }
 
     // No-op stubs — prevent crashes in callers but generate zero server traffic

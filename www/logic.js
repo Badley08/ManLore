@@ -7,7 +7,17 @@
 
 'use strict';
 
-// ============ SERVEUR OFFICIEL MANLORE CLOUD ============
+// ============ SERVEUR OFFICIEL MANLORE FIREBASE CLOUD ============
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAcNODBuDohjZ-IJuvXKbd-O_tMIhh_FAM",
+    authDomain: "manlore-v1.firebaseapp.com",
+    projectId: "manlore-v1",
+    storageBucket: "manlore-v1.firebasestorage.app",
+    messagingSenderId: "520465524191",
+    appId: "1:520465524191:web:95e97a15fd3c238760506a",
+    measurementId: "G-BPJFEMFGM7"
+};
+
 const BACK4APP_CONFIG = {
     name: 'Serveur ManLore Cloud',
     appId: 'OH5yq9tgEzqkn2TNoegJlF6XVLuzEMH6vKwYg5qu',
@@ -24,6 +34,34 @@ let isOnline = navigator.onLine;
 let autoSyncInterval = null;
 let isGuestMode = false;
 let storageMode = 'cloud'; // 'local' | 'cloud'
+
+// ============================================
+// CLIENT AUTH FIREBASE REST HAUTE FIABILITÉ
+// ============================================
+
+async function firebaseAuthApiCall(action, data) {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${FIREBASE_CONFIG.apiKey}`;
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            mode: 'cors'
+        });
+        const json = await response.json();
+        return {
+            ok: response.ok,
+            status: response.status,
+            data: json
+        };
+    } catch (err) {
+        return {
+            ok: false,
+            status: 0,
+            error: err.message
+        };
+    }
+}
 
 // ============================================
 // CLIENT REST HTTP BACK4APP ULTRA-RÉSILIENT
@@ -334,27 +372,52 @@ async function signUp(username, email, password) {
     const cleanEmail = email.trim().toLowerCase();
     const userToken = generateUniqueUserToken(cleanUser);
 
-    const payload = {
-        username: cleanUser,
+    if (!cleanUser) {
+        return { success: false, error: "Veuillez entrer un nom d'utilisateur" };
+    }
+    if (!cleanEmail) {
+        return { success: false, error: "Veuillez entrer une adresse email" };
+    }
+    if (!password || password.length < 6) {
+        return { success: false, error: "Le mot de passe doit comporter au moins 6 caractères" };
+    }
+
+    // Authentification officielle Firebase
+    const res = await firebaseAuthApiCall('signUp', {
         email: cleanEmail,
         password: password,
-        userUniqueToken: userToken,
-        exp: 0,
-        rank: 'E'
-    };
+        returnSecureToken: true
+    });
 
-    const res = await back4appApiCall('/users', 'POST', payload);
+    if (res.ok && res.data?.idToken) {
+        const idToken = res.data.idToken;
+        const localId = res.data.localId;
 
-    if (res.ok) {
+        // Mise à jour du profil Firebase (displayName)
+        await firebaseAuthApiCall('update', {
+            idToken: idToken,
+            displayName: cleanUser,
+            returnSecureToken: true
+        }).catch(() => {});
+
+        // Sauvegarder correspondance username -> email pour faciliter la connexion
+        try {
+            const known = JSON.parse(localStorage.getItem('manlore_known_users') || '{}');
+            known[cleanUser.toLowerCase()] = cleanEmail;
+            localStorage.setItem('manlore_known_users', JSON.stringify(known));
+        } catch {}
+
         const userData = {
-            objectId: res.data.objectId,
+            objectId: localId,
+            id: localId,
             username: cleanUser,
             email: cleanEmail,
             userUniqueToken: userToken,
             exp: 0,
             rank: 'E'
         };
-        currentUser = new UserSession(userData, res.data.sessionToken);
+
+        currentUser = new UserSession(userData, idToken);
         saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
@@ -367,31 +430,64 @@ async function signUp(username, email, password) {
         return { success: true, user: currentUser };
     }
 
-    const errMsg = res.data?.error || res.error || 'Erreur lors de l\'inscription';
+    let errMsg = "Erreur lors de l'inscription";
+    const fbError = res.data?.error?.message;
+    if (fbError) {
+        if (fbError.includes('EMAIL_EXISTS')) {
+            errMsg = "Cette adresse email est déjà enregistrée. Veuillez vous connecter.";
+        } else if (fbError.includes('WEAK_PASSWORD')) {
+            errMsg = "Le mot de passe doit comporter au moins 6 caractères.";
+        } else if (fbError.includes('INVALID_EMAIL')) {
+            errMsg = "Format d'adresse email invalide.";
+        } else {
+            errMsg = fbError;
+        }
+    }
     return { success: false, error: errMsg };
 }
 
 async function logIn(usernameOrEmail, password) {
     const cleanInput = usernameOrEmail.trim();
+    if (!cleanInput || !password) {
+        return { success: false, error: "Veuillez renseigner tous les champs" };
+    }
 
-    const endpoint = `/login?username=${encodeURIComponent(cleanInput)}&password=${encodeURIComponent(password)}`;
-
-    const res = await back4appApiCall(endpoint, 'GET');
-
-    if (res.ok && res.data?.sessionToken) {
-        const userData = { ...res.data };
-
-        if (!userData.userUniqueToken) {
-            userData.userUniqueToken = generateUniqueUserToken(userData.username);
+    let targetEmail = cleanInput.toLowerCase();
+    if (!targetEmail.includes('@')) {
+        try {
+            const known = JSON.parse(localStorage.getItem('manlore_known_users') || '{}');
+            targetEmail = known[cleanInput.toLowerCase()] || `${cleanInput.toLowerCase()}@manlore.app`;
+        } catch {
+            targetEmail = `${cleanInput.toLowerCase()}@manlore.app`;
         }
+    }
 
-        currentUser = new UserSession(userData, res.data.sessionToken);
+    let res = await firebaseAuthApiCall('signInWithPassword', {
+        email: targetEmail,
+        password: password,
+        returnSecureToken: true
+    });
+
+    if (res.ok && res.data?.idToken) {
+        const idToken = res.data.idToken;
+        const localId = res.data.localId;
+        const username = res.data.displayName || cleanInput.split('@')[0];
+
+        const userData = {
+            objectId: localId,
+            id: localId,
+            username: username,
+            email: res.data.email || targetEmail,
+            userUniqueToken: generateUniqueUserToken(username),
+            exp: 0,
+            rank: 'E'
+        };
+
+        currentUser = new UserSession(userData, idToken);
         saveUserSessionToLocal(currentUser);
         isGuestMode = false;
         localStorage.removeItem('manlore_guest_mode');
         localStorage.setItem('manlore_user_token', userData.userUniqueToken);
-
-        startAutoSync();
 
         if (window.questManager) {
             window.questManager.syncFromCloud();
@@ -400,7 +496,17 @@ async function logIn(usernameOrEmail, password) {
         return { success: true, user: currentUser };
     }
 
-    const errMsg = res.data?.error || res.error || 'Identifiants invalides';
+    let errMsg = "Identifiants invalides";
+    const fbError = res.data?.error?.message;
+    if (fbError) {
+        if (fbError.includes('INVALID_LOGIN_CREDENTIALS') || fbError.includes('EMAIL_NOT_FOUND') || fbError.includes('INVALID_PASSWORD')) {
+            errMsg = "Email ou mot de passe incorrect.";
+        } else if (fbError.includes('USER_DISABLED')) {
+            errMsg = "Ce compte utilisateur a été désactivé.";
+        } else {
+            errMsg = fbError;
+        }
+    }
     return { success: false, error: errMsg };
 }
 

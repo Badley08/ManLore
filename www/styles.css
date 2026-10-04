@@ -1422,29 +1422,34 @@ option:checked, option:hover {
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(10, 11, 20, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 400;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
 }
 
 .loading-spinner {
-    width: 52px;
-    height: 52px;
-    border: 3px solid rgba(var(--color-primary-rgb), 0.2);
-    border-top-color: var(--color-primary);
+    width: 58px;
+    height: 58px;
+    border: 4px solid rgba(168, 85, 247, 0.2);
+    border-top-color: #a855f7;
+    border-right-color: #38bdf8;
     border-radius: 50%;
-    animation: spin 0.75s linear infinite;
+    animation: spin 0.8s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
 }
 
 .loading-text {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
